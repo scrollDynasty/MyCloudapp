@@ -1,0 +1,48 @@
+{
+  "name": "vps-billing-backend",
+  "version": "1.0.0",
+  "description": "VPS Billing System Backend with MariaDB integration",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "create-db": "node scripts/create-database.js",
+    "setup-db": "node scripts/setup-database.js",
+    "import-data": "node scripts/import-excel-data.js",
+    "add-test-data": "node scripts/add-test-data.js",
+    "init-system": "node scripts/initialize-system.js",
+    "validate": "node scripts/validate-database.js"
+  },
+  "keywords": [
+    "vps",
+    "billing",
+    "mariadb",
+    "express",
+    "nodejs"
+  ],
+  "author": "Senior Full-Stack Developer",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.2",
+    "bcryptjs": "^3.0.2",
+    "body-parser": "^1.20.2",
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-session": "^1.18.2",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "mysql2": "^3.6.5",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

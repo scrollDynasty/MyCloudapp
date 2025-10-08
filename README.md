@@ -1,6 +1,47 @@
-# Welcome to your Expo app 👋
+# VPS Billing System
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## 🚀 Запуск
+
+### Backend
+```bash
+cd backend
+node app.js
+# Backend: http://localhost:5000
+```
+
+### Frontend
+```bash
+npx expo start
+# Frontend: http://localhost:8081 (нажмите 'w' для web)
+```
+
+## � Тестовые данные для входа
+
+| Email | Password | Role |
+|-------|----------|------|
+| admin@vps-billing.com | admin123 | admin |
+| john@individual.com | user123 | individual |
+| test@test.com | test123 | individual |
+| info@techcorp.uz | legal123 | legal_entity |
+
+## 🔧 Google OAuth Настройка
+
+**Ошибка: Error 400: redirect_uri_mismatch**
+
+**Решение - в Google Cloud Console:**
+1. https://console.cloud.google.com/apis/credentials
+2. OAuth 2.0 Client: `735617581412-e8ceb269bj7qqrv9sl066q63g5dr5sne`
+3. Добавьте в "Authorized redirect URIs":
+   ```
+   http://localhost:5000/api/auth/google/callback
+   ```
+4. Сохраните, перезапустите backend
+
+## 📊 Система
+
+- 6 пользователей, 145 VPS планов, 14 провайдеров
+- База: MariaDB `vps_billing`
+- Backend показывает детальные логи для отладки
 
 ## Get started
 
