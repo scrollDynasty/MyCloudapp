@@ -17,18 +17,31 @@ class PaymeHelper {
   createCheckoutUrl(orderId, amount, returnUrl) {
     // amount in tiyin (1 UZS = 100 tiyin)
     const amountInTiyin = Math.round(amount * 100);
+
+    // Validate merchant ID
+    if (!this.merchantId || this.merchantId.length === 0) {
+      console.error('❌ PAYME_MERCHANT_ID is not configured!');
+      throw new Error('PAYME_MERCHANT_ID is not configured');
+    }
     
     // Encode params
-    const params = Buffer.from(JSON.stringify({
+    const paramsObject = {
       m: this.merchantId,
       ac: {
         order_id: orderId.toString()
       },
-      a: amountInTiyin,
-      c: returnUrl
-    })).toString('base64');
+      a: amountInTiyin
+    };
 
-    return `${this.url}/${params}`;
+    // Only add return URL if it's provided and not empty
+    if (returnUrl && returnUrl.trim() !== '') {
+      paramsObject.c = returnUrl;
+    }
+
+    const params = Buffer.from(JSON.stringify(paramsObject)).toString('base64');
+    const fullUrl = `${this.url}/${params}`;
+
+    return fullUrl;
   }
 
   // Verify Payme request signature

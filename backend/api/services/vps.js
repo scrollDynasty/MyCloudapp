@@ -75,6 +75,7 @@ router.get('/', async (req, res) => {
     const query = `
       SELECT 
         vp.id,
+        vp.provider_id,
         p.name as provider,
         vp.plan_name,
         vp.cpu_cores,
@@ -113,6 +114,7 @@ router.get('/', async (req, res) => {
     const formattedPlans = plans.map(plan => ({
       plan_id: plan.id, // используем plan_id для совместимости с фронтендом
       id: plan.id,
+      provider_id: plan.provider_id, // добавляем provider_id
       provider_name: plan.provider,
       plan_name: plan.plan_name,
       cpu_cores: plan.cpu_cores,

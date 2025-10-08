@@ -10,6 +10,8 @@ require('dotenv').config();
 
 // Import routes
 const vpsRoutes = require('./api/services/vps');
+const vpsAdminRoutes = require('./api/services/vps-admin');
+const providersRoutes = require('./api/services/providers');
 const paymentsRoutes = require('./api/payments/payme');
 const ordersRoutes = require('./api/orders/orders');
 const authRoutes = require('./api/auth/auth');
@@ -25,7 +27,7 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(helmet()); // Security headers
 app.use(compression()); // Compress responses
-app.use(morgan('combined')); // Logging
+app.use(morgan('dev')); // Logging - only HTTP status codes
 
 // CORS configuration - allow multiple origins for development
 const allowedOrigins = [
@@ -82,6 +84,8 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/vps', vpsRoutes);
+app.use('/api/vps-admin', vpsAdminRoutes);
+app.use('/api/providers', providersRoutes);
 app.use('/api/payments', paymentsRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/auth', authRoutes);

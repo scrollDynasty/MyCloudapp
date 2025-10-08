@@ -89,19 +89,36 @@ export default function CheckoutScreen() {
         
         // Open Payme checkout in browser
         if (Platform.OS === 'web') {
-          window.open(data.data.checkout_url, '_blank');
+          const paymentWindow = window.open(data.data.checkout_url, '_blank');
+          
+          if (paymentWindow) {
+            console.log('✅ Payment URL:', data.data.checkout_url);
+          } else {
+            // If popup blocked, show the URL
+            alert('⚠️ Разрешите всплывающие окна или используйте эту ссылку:\n\n' + data.data.checkout_url);
+          }
         } else {
-          await Linking.openURL(data.data.checkout_url);
+          const canOpen = await Linking.canOpenURL(data.data.checkout_url);
+          if (canOpen) {
+            await Linking.openURL(data.data.checkout_url);
+          } else {
+            alert('Не удалось открыть страницу оплаты');
+          }
         }
-
-        // Show success message
-        console.log('Payment URL:', data.data.checkout_url);
       } else {
-        alert('Ошибка создания платежа: ' + data.error);
+        // Improved error message
+        let errorMsg = 'Ошибка создания платежа: ' + data.error;
+        
+        if (data.error && data.error.includes('Merchant')) {
+          errorMsg += '\n\n💡 Для разработки: настройте тестовый Merchant ID в .env файле.\nПодробности в backend/PAYME_SETUP.md';
+        }
+        
+        alert(errorMsg);
+        console.error('Payment error:', data);
       }
     } catch (error) {
       console.error('Payment error:', error);
-      alert('Не удалось инициировать оплату');
+      alert('Не удалось инициировать оплату. Проверьте консоль для деталей.');
     } finally {
       setProcessing(false);
     }

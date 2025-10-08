@@ -122,19 +122,14 @@ router.post('/', async (req, res) => {
   try {
     await db.connect();
     
-    console.log('📦 Create Order Request Body:', JSON.stringify(req.body, null, 2));
-    
     const {
       user_id,
       vps_plan_id,
       notes
     } = req.body;
 
-    console.log('📝 Extracted values:', { user_id, vps_plan_id, notes });
-
     // Validate input
     if (!user_id || !vps_plan_id) {
-      console.log('❌ Validation failed - missing fields');
       return res.status(400).json({
         success: false,
         error: 'Missing required fields: user_id, vps_plan_id'

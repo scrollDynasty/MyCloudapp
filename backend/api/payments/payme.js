@@ -67,11 +67,28 @@ router.post('/payme', authenticate, async (req, res) => {
       });
     }
 
+    // Payme only accepts UZS - convert if needed
+    let amountInUzs = order.amount;
+    if (order.currency !== 'UZS') {
+      // If currency is USD, convert to UZS (approximate rate: 1 USD = 12,500 UZS)
+      const USD_TO_UZS_RATE = 12500;
+      amountInUzs = order.amount * USD_TO_UZS_RATE;
+    }
+
+    // For development: Use a valid public URL or leave empty
+    // Payme REJECTS localhost URLs
+    let validReturnUrl = return_url;
+    
+    // If return_url is localhost, use a placeholder or your actual domain
+    if (return_url && return_url.includes('localhost')) {
+      validReturnUrl = process.env.RETURN_URL || 'https://myapp.uz/orders';
+    }
+
     // Generate Payme checkout URL
     const checkoutUrl = payme.createCheckoutUrl(
       order_id,
-      order.amount,
-      return_url || `http://localhost:3000/orders/${order_id}`
+      amountInUzs,
+      validReturnUrl
     );
 
     // Update order
@@ -128,8 +145,6 @@ router.post('/payme/callback', async (req, res) => {
     
     const { method, params } = req.body;
     const { id: transactionId } = params;
-
-    console.log('Payme Callback:', { method, params });
 
     switch (method) {
       case 'CheckPerformTransaction':
