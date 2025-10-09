@@ -7,6 +7,17 @@ const { authenticate } = require('../../core/utils/auth');
 const router = express.Router();
 const payme = new PaymeHelper();
 
+/**
+ * Logger for Payme requests/responses
+ */
+function logPayme(type, method, data) {
+  const timestamp = new Date().toISOString();
+  console.log(`\n${'='.repeat(80)}`);
+  console.log(`[${timestamp}] 💳 PAYME ${type.toUpperCase()}: ${method}`);
+  console.log(JSON.stringify(data, null, 2));
+  console.log('='.repeat(80));
+}
+
 // POST /api/payments/payme - Create Payme payment (Authenticated users only)
 router.post('/payme', authenticate, async (req, res) => {
   try {
@@ -75,6 +86,32 @@ router.post('/payme', authenticate, async (req, res) => {
       amountInUzs = order.amount * USD_TO_UZS_RATE;
     }
 
+    // Валидация суммы для Payme
+    const amountInTiyin = Math.round(amountInUzs * 100);
+    const MIN_AMOUNT_TIYIN = 100; // Минимум 1 UZS
+    const MAX_AMOUNT_TIYIN = 99999999999; // Максимум ~1 млрд UZS
+    
+    if (amountInTiyin < MIN_AMOUNT_TIYIN) {
+      return res.status(400).json({
+        success: false,
+        error: 'Amount too small',
+        message: `Minimum amount is 1 UZS (got ${amountInUzs} UZS)`
+      });
+    }
+    
+    if (amountInTiyin > MAX_AMOUNT_TIYIN) {
+      return res.status(400).json({
+        success: false,
+        error: 'Amount too large',
+        message: `Maximum amount is 999,999,999 UZS (got ${amountInUzs} UZS)`
+      });
+    }
+
+    console.log('✅ Валидация суммы:');
+    console.log('  Amount (UZS):', amountInUzs);
+    console.log('  Amount (Tiyin):', amountInTiyin);
+    console.log('  В диапазоне:', MIN_AMOUNT_TIYIN, '-', MAX_AMOUNT_TIYIN, '✅');
+
     // For development: Use a valid public URL or leave empty
     // Payme REJECTS localhost URLs
     let validReturnUrl = return_url;
@@ -84,12 +121,52 @@ router.post('/payme', authenticate, async (req, res) => {
       validReturnUrl = process.env.RETURN_URL || 'https://myapp.uz/orders';
     }
 
+    // Валидация Merchant ID
+    const merchantId = process.env.PAYME_MERCHANT_ID;
+    if (!merchantId || merchantId.length !== 24) {
+      console.error('❌ Invalid PAYME_MERCHANT_ID:', merchantId);
+      return res.status(500).json({
+        success: false,
+        error: 'Payment system configuration error',
+        message: 'Merchant ID is not properly configured'
+      });
+    }
+
+    // Валидация order_id (должен быть положительным числом)
+    const orderIdNum = parseInt(order_id, 10);
+    if (isNaN(orderIdNum) || orderIdNum <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid order_id',
+        message: 'Order ID must be a positive number'
+      });
+    }
+
+    console.log('✅ Валидация параметров Payme:');
+    console.log('  Merchant ID:', merchantId);
+    console.log('  Order ID:', orderIdNum);
+    console.log('  Return URL:', validReturnUrl);
+    console.log('  All parameters valid ✅');
+
     // Generate Payme checkout URL
     const checkoutUrl = payme.createCheckoutUrl(
       order_id,
       amountInUzs,
       validReturnUrl
     );
+
+    // Decode URL to show what's being sent
+    const urlParts = checkoutUrl.split('/');
+    const encodedParams = urlParts[urlParts.length - 1];
+    const decodedParams = Buffer.from(encodedParams, 'base64').toString('utf-8');
+
+    console.log('💳 Payme Payment Details:');
+    console.log('  Order ID:', order_id);
+    console.log('  Amount (UZS):', amountInUzs);
+    console.log('  Amount (Tiyin):', Math.round(amountInUzs * 100));
+    console.log('  Return URL:', validReturnUrl);
+    console.log('  Params String:', decodedParams);
+    console.log('  Checkout URL:', checkoutUrl);
 
     // Update order
     await db.query(
@@ -131,293 +208,594 @@ router.post('/payme', authenticate, async (req, res) => {
 // POST /api/payments/payme/callback - Payme merchant API callback
 router.post('/payme/callback', async (req, res) => {
   try {
+    logPayme('request', req.body.method, req.body);
+
     // Verify Payme signature
     if (!payme.verifySignature(req)) {
-      return res.json({
+      const errorResponse = {
         error: {
-          code: -32504,
-          message: 'Insufficient privilege to perform this method'
+          code: PaymeHelper.ERRORS.INSUFFICIENT_PRIVILEGE,
+          message: {
+            ru: 'Недостаточно привилегий для выполнения метода',
+            uz: 'Usul bajarish uchun yetarli huquq yo\'q',
+            en: 'Insufficient privilege to perform this method'
+          }
         }
-      });
+      };
+      logPayme('response', req.body.method, errorResponse);
+      return res.json(errorResponse);
     }
 
     await db.connect();
     
-    const { method, params } = req.body;
-    const { id: transactionId } = params;
+    const { method, params, id: requestId } = req.body;
+    let response;
 
     switch (method) {
       case 'CheckPerformTransaction':
-        // Check if transaction can be performed
-        const { account } = params;
-        const orderId = account.order_id;
-        const amount = params.amount;
-
-        const orderExists = await db.query(
-          'SELECT id, amount, currency, payment_status FROM orders WHERE id = ?',
-          [orderId]
-        );
-        
-        if (orderExists.length === 0) {
-          return res.json({
-            error: {
-              code: PaymeHelper.ERRORS.INVALID_ACCOUNT,
-              message: 'Order not found'
-            }
-          });
-        }
-
-        const order = orderExists[0];
-
-        // Check amount
-        const expectedAmount = payme.toTiyin(order.amount);
-        if (amount !== expectedAmount) {
-          return res.json({
-            error: {
-              code: PaymeHelper.ERRORS.INVALID_AMOUNT,
-              message: `Invalid amount. Expected ${expectedAmount}, got ${amount}`
-            }
-          });
-        }
-
-        if (order.payment_status === 'paid') {
-          return res.json({
-            error: {
-              code: PaymeHelper.ERRORS.COULD_NOT_PERFORM,
-              message: 'Order is already paid'
-            }
-          });
-        }
-
-        res.json({ 
-          result: { 
-            allow: true 
-          } 
-        });
+        response = await handleCheckPerformTransaction(params);
         break;
 
       case 'CreateTransaction':
-        // Create transaction record
-        const createAccount = params.account;
-        const createOrderId = createAccount.order_id;
-        const createTime = params.time;
-        
-        // Check if transaction already exists
-        const existing = await db.query(
-          'SELECT id FROM orders WHERE payme_transaction_id = ?',
-          [transactionId]
-        );
-
-        if (existing.length > 0) {
-          // Transaction already created
-          res.json({
-            result: {
-              create_time: createTime,
-              transaction: transactionId.toString(),
-              state: PaymeHelper.STATES.CREATED
-            }
-          });
-          break;
-        }
-
-        // Update order with transaction info
-        await db.query(`
-          UPDATE orders 
-          SET payme_transaction_id = ?,
-              payme_transaction_time = ?,
-              payment_status = 'pending',
-              updated_at = NOW()
-          WHERE id = ?
-        `, [transactionId, createTime, createOrderId]);
-
-        res.json({
-          result: {
-            create_time: createTime,
-            transaction: transactionId.toString(),
-            state: PaymeHelper.STATES.CREATED
-          }
-        });
+        response = await handleCreateTransaction(params);
         break;
 
       case 'PerformTransaction':
-        // Perform (complete) transaction
-        const performOrder = await db.query(
-          'SELECT id, payme_transaction_time FROM orders WHERE payme_transaction_id = ?',
-          [transactionId]
-        );
-
-        if (performOrder.length === 0) {
-          return res.json({
-            error: {
-              code: PaymeHelper.ERRORS.TRANSACTION_NOT_FOUND,
-              message: 'Transaction not found'
-            }
-          });
-        }
-
-        const performTime = Date.now();
-
-        // Mark order as paid and active
-        await db.query(`
-          UPDATE orders 
-          SET status = 'active',
-              payment_status = 'paid',
-              paid_at = NOW(),
-              activated_at = NOW(),
-              updated_at = NOW()
-          WHERE payme_transaction_id = ?
-        `, [transactionId]);
-
-        res.json({
-          result: {
-            transaction: transactionId.toString(),
-            perform_time: performTime,
-            state: PaymeHelper.STATES.COMPLETED
-          }
-        });
+        response = await handlePerformTransaction(params);
         break;
 
       case 'CancelTransaction':
-        // Cancel transaction
-        const cancelReason = params.reason || 0;
-        
-        const cancelOrder = await db.query(
-          'SELECT id, payment_status, payme_transaction_time FROM orders WHERE payme_transaction_id = ?',
-          [transactionId]
-        );
-
-        if (cancelOrder.length === 0) {
-          return res.json({
-            error: {
-              code: PaymeHelper.ERRORS.TRANSACTION_NOT_FOUND,
-              message: 'Transaction not found'
-            }
-          });
-        }
-
-        const cancelTime = Date.now();
-        const wasPaid = cancelOrder[0].payment_status === 'paid';
-
-        // Cancel order
-        await db.query(`
-          UPDATE orders 
-          SET status = 'cancelled',
-              payment_status = 'failed',
-              updated_at = NOW()
-          WHERE payme_transaction_id = ?
-        `, [transactionId]);
-
-        res.json({
-          result: {
-            transaction: transactionId.toString(),
-            cancel_time: cancelTime,
-            state: wasPaid ? PaymeHelper.STATES.CANCELLED_AFTER_COMPLETE : PaymeHelper.STATES.CANCELLED
-          }
-        });
+        response = await handleCancelTransaction(params);
         break;
 
       case 'CheckTransaction':
-        // Check transaction status
-        const checkOrder = await db.query(
-          'SELECT payment_status, payme_transaction_time, paid_at FROM orders WHERE payme_transaction_id = ?',
-          [transactionId]
-        );
-
-        if (checkOrder.length === 0) {
-          return res.json({
-            error: {
-              code: PaymeHelper.ERRORS.TRANSACTION_NOT_FOUND,
-              message: 'Transaction not found'
-            }
-          });
-        }
-
-        const txOrder = checkOrder[0];
-        let state = PaymeHelper.STATES.CREATED;
-        let performTimeResult = 0;
-        let cancelTimeResult = 0;
-
-        if (txOrder.payment_status === 'paid') {
-          state = PaymeHelper.STATES.COMPLETED;
-          performTimeResult = txOrder.paid_at ? new Date(txOrder.paid_at).getTime() : Date.now();
-        } else if (txOrder.payment_status === 'failed') {
-          state = PaymeHelper.STATES.CANCELLED;
-          cancelTimeResult = Date.now();
-        }
-
-        res.json({
-          result: {
-            create_time: txOrder.payme_transaction_time || Date.now(),
-            perform_time: performTimeResult,
-            cancel_time: cancelTimeResult,
-            transaction: transactionId.toString(),
-            state: state,
-            reason: null
-          }
-        });
+        response = await handleCheckTransaction(params);
         break;
 
       case 'GetStatement':
-        // Get statement (list of transactions)
-        const { from, to } = params;
-        
-        const transactions = await db.query(`
-          SELECT 
-            payme_transaction_id as transaction,
-            payme_transaction_time as create_time,
-            paid_at,
-            payment_status,
-            amount,
-            id as order_id
-          FROM orders
-          WHERE payme_transaction_id IS NOT NULL
-            AND payme_transaction_time >= ?
-            AND payme_transaction_time <= ?
-          ORDER BY payme_transaction_time DESC
-        `, [from, to]);
-
-        const statement = transactions.map(tx => ({
-          id: tx.transaction,
-          time: tx.create_time,
-          amount: payme.toTiyin(tx.amount),
-          account: {
-            order_id: tx.order_id.toString()
-          },
-          create_time: tx.create_time,
-          perform_time: tx.paid_at ? new Date(tx.paid_at).getTime() : 0,
-          cancel_time: 0,
-          transaction: tx.transaction.toString(),
-          state: tx.payment_status === 'paid' ? PaymeHelper.STATES.COMPLETED : PaymeHelper.STATES.CREATED,
-          reason: null
-        }));
-
-        res.json({
-          result: {
-            transactions: statement
-          }
-        });
+        response = await handleGetStatement(params);
         break;
 
       default:
-        res.json({
+        response = {
           error: {
-            code: -32601,
-            message: 'Method not found'
+            code: PaymeHelper.ERRORS.METHOD_NOT_FOUND,
+            message: {
+              ru: 'Метод не найден',
+              uz: 'Usul topilmadi',
+              en: 'Method not found'
+            }
           }
-        });
+        };
     }
+
+    // Add request ID to response
+    if (requestId) {
+      response.id = requestId;
+    }
+
+    logPayme('response', method, response);
+    res.json(response);
 
   } catch (error) {
     console.error('Payme Callback Error:', error);
-    res.json({
+    const errorResponse = {
       error: {
-        code: -32400,
-        message: 'Internal server error',
+        code: PaymeHelper.ERRORS.SYSTEM_ERROR,
+        message: {
+          ru: 'Внутренняя ошибка сервера',
+          uz: 'Ichki server xatosi',
+          en: 'Internal server error'
+        },
         data: error.message
       }
-    });
+    };
+    logPayme('error', req.body?.method || 'unknown', errorResponse);
+    res.json(errorResponse);
   }
 });
+
+/**
+ * CheckPerformTransaction - Check if transaction can be performed
+ * This method MUST NOT create any records, only validate
+ */
+async function handleCheckPerformTransaction(params) {
+  const { account, amount } = params;
+  const orderId = account.order_id;
+
+  // 1. Check if order exists
+  const orders = await db.query(
+    'SELECT id, user_id, amount, currency, payment_status, status FROM orders WHERE id = ?',
+    [orderId]
+  );
+  
+  if (orders.length === 0) {
+    return {
+      error: {
+        code: PaymeHelper.ERRORS.ORDER_NOT_FOUND,
+        message: {
+          ru: 'Заказ не найден',
+          uz: 'Buyurtma topilmadi',
+          en: 'Order not found'
+        },
+        data: 'order_id'
+      }
+    };
+  }
+
+  const order = orders[0];
+
+  // 2. Check if user exists
+  const users = await db.query(
+    'SELECT id, status FROM users WHERE id = ?',
+    [order.user_id]
+  );
+
+  if (users.length === 0) {
+    return {
+      error: {
+        code: PaymeHelper.ERRORS.USER_NOT_FOUND,
+        message: {
+          ru: 'Пользователь не найден',
+          uz: 'Foydalanuvchi topilmadi',
+          en: 'User not found'
+        },
+        data: 'user_id'
+      }
+    };
+  }
+
+  // 3. Check if order is already paid
+  if (order.payment_status === 'paid') {
+    return {
+      error: {
+        code: PaymeHelper.ERRORS.ORDER_ALREADY_PAID,
+        message: {
+          ru: 'Заказ уже оплачен',
+          uz: 'Buyurtma allaqachon to\'langan',
+          en: 'Order is already paid'
+        },
+        data: 'order_id'
+      }
+    };
+  }
+
+  // 4. Validate amount
+  const expectedAmount = payme.toTiyin(order.amount);
+  if (amount !== expectedAmount) {
+    return {
+      error: {
+        code: PaymeHelper.ERRORS.INVALID_AMOUNT,
+        message: {
+          ru: `Неверная сумма. Ожидается ${expectedAmount}, получено ${amount}`,
+          uz: `Noto'g'ri summa. Kutilgan ${expectedAmount}, olindi ${amount}`,
+          en: `Invalid amount. Expected ${expectedAmount}, got ${amount}`
+        },
+        data: 'amount'
+      }
+    };
+  }
+
+  // 5. Check if amount is positive
+  if (amount <= 0) {
+    return {
+      error: {
+        code: PaymeHelper.ERRORS.INVALID_AMOUNT,
+        message: {
+          ru: 'Сумма должна быть больше нуля',
+          uz: 'Summa noldan katta bo\'lishi kerak',
+          en: 'Amount must be greater than zero'
+        },
+        data: 'amount'
+      }
+    };
+  }
+
+  // 6. Check database connection (system availability)
+  try {
+    await db.query('SELECT 1');
+  } catch (error) {
+    return {
+      error: {
+        code: PaymeHelper.ERRORS.SYSTEM_ERROR,
+        message: {
+          ru: 'Система временно недоступна',
+          uz: 'Tizim vaqtincha mavjud emas',
+          en: 'System temporarily unavailable'
+        },
+        data: 'database'
+      }
+    };
+  }
+
+  // All checks passed - return success with optional additional info
+  return {
+    result: {
+      allow: true,
+      additional: {
+        order_id: order.id,
+        order_status: order.status,
+        amount: payme.fromTiyin(amount),
+        currency: order.currency
+      }
+    }
+  };
+}
+
+/**
+ * CreateTransaction - Create transaction record
+ * Must be idempotent - return existing transaction if already created
+ */
+async function handleCreateTransaction(params) {
+  const { id: transactionId, time: paymeTime, amount, account } = params;
+  const orderId = account.order_id;
+  const createTime = Date.now();
+
+  // 1. Check idempotency - if transaction already exists, return it
+  const existingTx = await db.query(
+    'SELECT * FROM payme_transactions WHERE payme_transaction_id = ?',
+    [transactionId]
+  );
+
+  if (existingTx.length > 0) {
+    const tx = existingTx[0];
+    
+    // Verify that parameters match
+    if (tx.amount !== amount || JSON.parse(tx.account).order_id !== orderId) {
+      return {
+        error: {
+          code: PaymeHelper.ERRORS.INVALID_AMOUNT,
+          message: {
+            ru: 'Параметры транзакции не совпадают с существующей',
+            uz: 'Tranzaksiya parametrlari mavjud bilan mos kelmaydi',
+            en: 'Transaction parameters do not match existing one'
+          }
+        }
+      };
+    }
+
+    // Return existing transaction
+    return {
+      result: {
+        create_time: tx.create_time,
+        transaction: tx.transaction,
+        state: tx.state
+      }
+    };
+  }
+
+  // 2. Validate order exists and available
+  const orders = await db.query(
+    'SELECT id, amount, payment_status, status FROM orders WHERE id = ?',
+    [orderId]
+  );
+
+  if (orders.length === 0) {
+    return {
+      error: {
+        code: PaymeHelper.ERRORS.ORDER_NOT_FOUND,
+        message: {
+          ru: 'Заказ не найден',
+          uz: 'Buyurtma topilmadi',
+          en: 'Order not found'
+        },
+        data: 'order_id'
+      }
+    };
+  }
+
+  const order = orders[0];
+
+  if (order.payment_status === 'paid') {
+    return {
+      error: {
+        code: PaymeHelper.ERRORS.ORDER_ALREADY_PAID,
+        message: {
+          ru: 'Заказ уже оплачен',
+          uz: 'Buyurtma allaqachon to\'langan',
+          en: 'Order is already paid'
+        }
+      }
+    };
+  }
+
+  // 3. Validate amount
+  const expectedAmount = payme.toTiyin(order.amount);
+  if (amount !== expectedAmount) {
+    return {
+      error: {
+        code: PaymeHelper.ERRORS.INVALID_AMOUNT,
+        message: {
+          ru: `Неверная сумма. Ожидается ${expectedAmount}, получено ${amount}`,
+          uz: `Noto'g'ri summa. Kutilgan ${expectedAmount}, olindi ${amount}`,
+          en: `Invalid amount. Expected ${expectedAmount}, got ${amount}`
+        }
+      }
+    };
+  }
+
+  // 4. Create transaction record in payme_transactions table
+  const internalTxId = `${orderId}-${Date.now()}`;
+  
+  await db.query(`
+    INSERT INTO payme_transactions (
+      payme_transaction_id,
+      payme_time,
+      amount,
+      account,
+      create_time,
+      state,
+      transaction,
+      order_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `, [
+    transactionId,
+    paymeTime,
+    amount,
+    JSON.stringify(account),
+    createTime,
+    PaymeHelper.STATES.CREATED,
+    internalTxId,
+    orderId
+  ]);
+
+  // 5. Update order - reserve it (set to pending payment)
+  await db.query(`
+    UPDATE orders 
+    SET payment_status = 'pending',
+        payment_method = 'payme',
+        payme_transaction_id = ?,
+        payme_transaction_time = ?,
+        payme_state = ?,
+        updated_at = NOW()
+    WHERE id = ?
+  `, [transactionId, paymeTime, PaymeHelper.STATES.CREATED, orderId]);
+
+  // 6. Return success response
+  return {
+    result: {
+      create_time: createTime,
+      transaction: internalTxId,
+      state: PaymeHelper.STATES.CREATED
+    }
+  };
+}
+
+/**
+ * PerformTransaction - Complete the transaction (payment confirmed)
+ */
+async function handlePerformTransaction(params) {
+  const { id: transactionId } = params;
+  const performTime = Date.now();
+
+  // 1. Find transaction
+  const transactions = await db.query(
+    'SELECT * FROM payme_transactions WHERE payme_transaction_id = ?',
+    [transactionId]
+  );
+
+  if (transactions.length === 0) {
+    return {
+      error: {
+        code: PaymeHelper.ERRORS.TRANSACTION_NOT_FOUND,
+        message: {
+          ru: 'Транзакция не найдена',
+          uz: 'Tranzaksiya topilmadi',
+          en: 'Transaction not found'
+        }
+      }
+    };
+  }
+
+  const tx = transactions[0];
+
+  // 2. Check if transaction is in correct state
+  if (tx.state !== PaymeHelper.STATES.CREATED) {
+    // If already performed, return existing data
+    if (tx.state === PaymeHelper.STATES.COMPLETED) {
+      return {
+        result: {
+          transaction: tx.transaction,
+          perform_time: tx.perform_time,
+          state: tx.state
+        }
+      };
+    }
+
+    // Cannot perform cancelled transaction
+    return {
+      error: {
+        code: PaymeHelper.ERRORS.COULD_NOT_PERFORM,
+        message: {
+          ru: 'Невозможно выполнить транзакцию',
+          uz: 'Tranzaksiyani bajarish mumkin emas',
+          en: 'Could not perform transaction'
+        }
+      }
+    };
+  }
+
+  // 3. Update transaction state
+  await db.query(`
+    UPDATE payme_transactions
+    SET state = ?,
+        perform_time = ?,
+        updated_at = NOW()
+    WHERE payme_transaction_id = ?
+  `, [PaymeHelper.STATES.COMPLETED, performTime, transactionId]);
+
+  // 4. Update order - mark as PAID and ACTIVE
+  await db.query(`
+    UPDATE orders 
+    SET status = 'active',
+        payment_status = 'paid',
+        payme_state = ?,
+        payme_perform_time = ?,
+        paid_at = NOW(),
+        activated_at = NOW(),
+        updated_at = NOW()
+    WHERE payme_transaction_id = ?
+  `, [PaymeHelper.STATES.COMPLETED, performTime, transactionId]);
+
+  // 5. Return success response
+  return {
+    result: {
+      transaction: tx.transaction,
+      perform_time: performTime,
+      state: PaymeHelper.STATES.COMPLETED
+    }
+  };
+}
+
+/**
+ * CancelTransaction - Cancel the transaction
+ */
+async function handleCancelTransaction(params) {
+  const { id: transactionId, reason } = params;
+  const cancelTime = Date.now();
+
+  // 1. Find transaction
+  const transactions = await db.query(
+    'SELECT * FROM payme_transactions WHERE payme_transaction_id = ?',
+    [transactionId]
+  );
+
+  if (transactions.length === 0) {
+    return {
+      error: {
+        code: PaymeHelper.ERRORS.TRANSACTION_NOT_FOUND,
+        message: {
+          ru: 'Транзакция не найдена',
+          uz: 'Tranzaksiya topilmadi',
+          en: 'Transaction not found'
+        }
+      }
+    };
+  }
+
+  const tx = transactions[0];
+
+  // 2. Determine new state based on current state
+  let newState;
+  if (tx.state === PaymeHelper.STATES.CREATED) {
+    // Cancelled before payment
+    newState = PaymeHelper.STATES.CANCELLED;
+  } else if (tx.state === PaymeHelper.STATES.COMPLETED) {
+    // Cancelled after payment (refund)
+    newState = PaymeHelper.STATES.CANCELLED_AFTER_COMPLETE;
+  } else {
+    // Already cancelled
+    return {
+      result: {
+        transaction: tx.transaction,
+        cancel_time: tx.cancel_time,
+        state: tx.state
+      }
+    };
+  }
+
+  // 3. Update transaction
+  await db.query(`
+    UPDATE payme_transactions
+    SET state = ?,
+        cancel_time = ?,
+        reason = ?,
+        updated_at = NOW()
+    WHERE payme_transaction_id = ?
+  `, [newState, cancelTime, reason, transactionId]);
+
+  // 4. Update order
+  await db.query(`
+    UPDATE orders 
+    SET status = 'cancelled',
+        payment_status = 'cancelled',
+        payme_state = ?,
+        payme_cancel_time = ?,
+        payme_cancel_reason = ?,
+        updated_at = NOW()
+    WHERE payme_transaction_id = ?
+  `, [newState, cancelTime, reason, transactionId]);
+
+  // 5. Return success response
+  return {
+    result: {
+      transaction: tx.transaction,
+      cancel_time: cancelTime,
+      state: newState
+    }
+  };
+}
+
+/**
+ * CheckTransaction - Check transaction status
+ */
+async function handleCheckTransaction(params) {
+  const { id: transactionId } = params;
+
+  // Find transaction
+  const transactions = await db.query(
+    'SELECT * FROM payme_transactions WHERE payme_transaction_id = ?',
+    [transactionId]
+  );
+
+  if (transactions.length === 0) {
+    return {
+      error: {
+        code: PaymeHelper.ERRORS.TRANSACTION_NOT_FOUND,
+        message: {
+          ru: 'Транзакция не найдена',
+          uz: 'Tranzaksiya topilmadi',
+          en: 'Transaction not found'
+        }
+      }
+    };
+  }
+
+  const tx = transactions[0];
+
+  return {
+    result: {
+      create_time: tx.create_time,
+      perform_time: tx.perform_time || 0,
+      cancel_time: tx.cancel_time || 0,
+      transaction: tx.transaction,
+      state: tx.state,
+      reason: tx.reason || null
+    }
+  };
+}
+
+/**
+ * GetStatement - Get list of transactions for a period
+ */
+async function handleGetStatement(params) {
+  const { from, to } = params;
+  
+  const transactions = await db.query(`
+    SELECT * FROM payme_transactions
+    WHERE create_time >= ? AND create_time <= ?
+    ORDER BY create_time DESC
+  `, [from, to]);
+
+  const statement = transactions.map(tx => ({
+    id: tx.payme_transaction_id,
+    time: tx.payme_time,
+    amount: tx.amount,
+    account: JSON.parse(tx.account),
+    create_time: tx.create_time,
+    perform_time: tx.perform_time || 0,
+    cancel_time: tx.cancel_time || 0,
+    transaction: tx.transaction,
+    state: tx.state,
+    reason: tx.reason || null
+  }));
+
+  return {
+    result: {
+      transactions: statement
+    }
+  };
+}
 
 // GET /api/payments/payme/status/:order_id - Check payment status (Authenticated)
 router.get('/payme/status/:order_id', authenticate, async (req, res) => {
@@ -429,6 +807,7 @@ router.get('/payme/status/:order_id', authenticate, async (req, res) => {
     const orders = await db.query(
       `SELECT 
         o.id,
+        o.user_id,
         o.status,
         o.payment_status,
         o.payment_id,

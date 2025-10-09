@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
+    Alert,
     Linking,
     Platform,
     ScrollView,
@@ -12,8 +13,8 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-
-const API_URL = 'http://localhost:5000';
+import { API_URL } from '../../config/api';
+import { getHeaders } from '../../config/fetch';
 
 interface OrderDetails {
   order_id: number;
@@ -49,7 +50,7 @@ export default function CheckoutScreen() {
     try {
       const token = await AsyncStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/orders/${orderId}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getHeaders(token || undefined),
       });
 
       const data = await response.json();
@@ -68,17 +69,15 @@ export default function CheckoutScreen() {
       setProcessing(true);
       const token = await AsyncStorage.getItem('token');
       
+      // Используем ngrok URL для всех платформ
+      const returnUrl = `${API_URL}/payment-success?order_id=${orderId}`;
+      
       const response = await fetch(`${API_URL}/api/payments/payme`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers: getHeaders(token || undefined),
         body: JSON.stringify({
           order_id: orderId,
-          return_url: Platform.OS === 'web' 
-            ? `http://localhost:8081/(user)/orders`
-            : 'myapp://orders',
+          return_url: returnUrl,
         }),
       });
 
@@ -107,18 +106,23 @@ export default function CheckoutScreen() {
         }
       } else {
         // Improved error message
-        let errorMsg = 'Ошибка создания платежа: ' + data.error;
+        const errorText = typeof data.error === 'string' 
+          ? data.error 
+          : JSON.stringify(data.error);
         
-        if (data.error && data.error.includes('Merchant')) {
+        let errorMsg = 'Ошибка создания платежа: ' + errorText;
+        
+        if (errorText && errorText.includes('Merchant')) {
           errorMsg += '\n\n💡 Для разработки: настройте тестовый Merchant ID в .env файле.\nПодробности в backend/PAYME_SETUP.md';
         }
         
-        alert(errorMsg);
+        Alert.alert('Ошибка оплаты', errorMsg);
         console.error('Payment error:', data);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Payment error:', error);
-      alert('Не удалось инициировать оплату. Проверьте консоль для деталей.');
+      const errorMsg = error?.message || 'Не удалось инициировать оплату';
+      Alert.alert('Ошибка', errorMsg);
     } finally {
       setProcessing(false);
     }

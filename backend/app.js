@@ -13,6 +13,7 @@ const vpsRoutes = require('./api/services/vps');
 const vpsAdminRoutes = require('./api/services/vps-admin');
 const providersRoutes = require('./api/services/providers');
 const paymentsRoutes = require('./api/payments/payme');
+const paymentRedirectRoutes = require('./api/payments/redirect');
 const ordersRoutes = require('./api/orders/orders');
 const authRoutes = require('./api/auth/auth');
 
@@ -51,11 +52,19 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization',
+    'ngrok-skip-browser-warning',  // Allow ngrok header
+    'User-Agent'  // Allow custom user agent
+  ]
 }));
 
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
+
+// Static files (для HTML страниц)
+app.use(express.static('public'));
 
 // Session middleware (for OAuth)
 app.use(session({
@@ -89,6 +98,9 @@ app.use('/api/providers', providersRoutes);
 app.use('/api/payments', paymentsRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/auth', authRoutes);
+
+// Payment redirect routes (без /api префикса)
+app.use('/', paymentRedirectRoutes);
 
 // Default route
 app.get('/', (req, res) => {

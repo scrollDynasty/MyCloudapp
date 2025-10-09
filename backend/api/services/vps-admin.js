@@ -42,19 +42,17 @@ router.post('/', authenticate, adminOnly, async (req, res) => {
     // Insert new plan
     const result = await db.query(`
       INSERT INTO vps_plans 
-      (provider_id, plan_name, cpu_cores, memory_gb, storage_gb, bandwidth_tb, 
-       price_per_month, currency, region, available, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+      (provider_id, name, cpu_cores, ram_gb, storage_gb, bandwidth_gb, 
+       price_monthly, available, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
     `, [
       provider_id,
       plan_name,
       cpu_cores,
       memory_gb,
       storage_gb,
-      bandwidth_tb || 0,
+      (bandwidth_tb || 0) * 1000, // Convert TB to GB
       price_per_month,
-      currency || 'USD',
-      region || 'Unknown',
       available
     ]);
 
@@ -109,7 +107,7 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
     let updateValues = [];
 
     if (plan_name !== undefined) {
-      updateFields.push('plan_name = ?');
+      updateFields.push('name = ?');
       updateValues.push(plan_name);
     }
     if (provider_id !== undefined) {
@@ -121,7 +119,7 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
       updateValues.push(cpu_cores);
     }
     if (memory_gb !== undefined) {
-      updateFields.push('memory_gb = ?');
+      updateFields.push('ram_gb = ?');
       updateValues.push(memory_gb);
     }
     if (storage_gb !== undefined) {
@@ -129,20 +127,12 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
       updateValues.push(storage_gb);
     }
     if (bandwidth_tb !== undefined) {
-      updateFields.push('bandwidth_tb = ?');
-      updateValues.push(bandwidth_tb);
+      updateFields.push('bandwidth_gb = ?');
+      updateValues.push((bandwidth_tb || 0) * 1000); // Convert TB to GB
     }
     if (price_per_month !== undefined) {
-      updateFields.push('price_per_month = ?');
+      updateFields.push('price_monthly = ?');
       updateValues.push(price_per_month);
-    }
-    if (currency !== undefined) {
-      updateFields.push('currency = ?');
-      updateValues.push(currency);
-    }
-    if (region !== undefined) {
-      updateFields.push('region = ?');
-      updateValues.push(region);
     }
     if (available !== undefined) {
       updateFields.push('available = ?');

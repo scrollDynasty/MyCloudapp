@@ -3,19 +3,20 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Linking,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import { API_URL } from '../../config/api';
+import { getHeaders } from '../../config/fetch';
 import { useAuth } from '../context/AuthContext';
-
-const API_URL = 'http://localhost:5000';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -37,9 +38,7 @@ export default function LoginScreen() {
     try {
       const response = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getHeaders(),
         body: JSON.stringify({ email, password }),
       });
 
@@ -74,18 +73,31 @@ export default function LoginScreen() {
   };
 
   const handleGoogleLogin = async () => {
-    // Для веб-версии просто перенаправляем на Google OAuth
-    const googleAuthUrl = `${API_URL}/api/auth/google`;
-    
-    // Проверяем, запущено ли приложение в браузере
-    if (typeof window !== 'undefined' && window.location) {
-      // Веб-версия - просто переходим по ссылке
-      window.location.href = googleAuthUrl;
-    } else {
-      // Мобильная версия - показываем сообщение
+    try {
+      const googleAuthUrl = `${API_URL}/api/auth/google`;
+      
+      // Для веба используем обычный переход, для мобильных - Linking
+      if (Platform.OS === 'web') {
+        // На вебе просто переходим по ссылке в том же окне
+        window.location.href = googleAuthUrl;
+      } else {
+        // На мобильных используем Linking API
+        const canOpen = await Linking.canOpenURL(googleAuthUrl);
+        
+        if (canOpen) {
+          await Linking.openURL(googleAuthUrl);
+        } else {
+          Alert.alert(
+            'Ошибка',
+            'Не удалось открыть браузер для Google входа'
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Google login error:', error);
       Alert.alert(
         'Google вход',
-        'Google OAuth в мобильной версии пока не поддерживается. Используйте веб-версию или email/пароль.',
+        'Произошла ошибка при входе через Google. Попробуйте позже.',
         [{ text: 'OK' }]
       );
     }

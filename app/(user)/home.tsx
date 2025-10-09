@@ -12,9 +12,9 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { API_URL } from '../../config/api';
+import { getHeaders } from '../../config/fetch';
 import { useAuth } from '../context/AuthContext';
-
-const API_URL = 'http://localhost:5000';
 
 interface VPSPlan {
   plan_id: number;
@@ -57,9 +57,7 @@ export default function UserHomeScreen() {
     try {
       const token = await AsyncStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/vps`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: getHeaders(token || undefined),
       });
 
       const data = await response.json();
@@ -125,10 +123,7 @@ export default function UserHomeScreen() {
 
       const response = await fetch(`${API_URL}/api/orders`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers: getHeaders(token || undefined),
         body: JSON.stringify(requestBody),
       });
 

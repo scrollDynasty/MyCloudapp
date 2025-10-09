@@ -74,8 +74,12 @@ function setupGoogleOAuth() {
           const lastName = lastNameRaw.trim() || null;
           const avatarUrl = profile.photos?.[0]?.value || null;
           
+          // Generate username from email
+          const username = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+          
           const result = await db.query(`
             INSERT INTO users (
+              username,
               email,
               google_id,
               oauth_provider,
@@ -90,8 +94,9 @@ function setupGoogleOAuth() {
               verified_at,
               last_login_at,
               created_at
-            ) VALUES (?, ?, 'google', ?, ?, ?, ?, ?, 'individual', 'active', TRUE, NOW(), NOW(), NOW())
+            ) VALUES (?, ?, ?, 'google', ?, ?, ?, ?, ?, 'individual', 'active', TRUE, NOW(), NOW(), NOW())
           `, [
+            username,
             email,
             profile.id,
             accessToken,

@@ -1,0 +1,81 @@
+# Nginx конфигурация для MyCloud API Backend
+# Файл: /etc/nginx/sites-available/apibilling.mycloud.uz
+# 
+# Установка:
+# sudo cp backend/config/nginx/apibilling.mycloud.uz /etc/nginx/sites-available/
+# sudo ln -s /etc/nginx/sites-available/apibilling.mycloud.uz /etc/nginx/sites-enabled/
+# sudo nginx -t
+# sudo systemctl reload nginx
+
+# Редирект с www на без www
+server {
+    listen 80;
+    listen [::]:80;
+    server_name www.apibilling.mycloud.uz;
+    return 301 http://apibilling.mycloud.uz$request_uri;
+}
+
+# Основной сервер
+server {
+    listen 80;
+    listen [::]:80;
+    server_name apibilling.mycloud.uz;
+
+    # Логи
+    access_log /var/log/nginx/apibilling.mycloud.uz.access.log;
+    error_log /var/log/nginx/apibilling.mycloud.uz.error.log;
+
+    # Максимальный размер загружаемых файлов
+    client_max_body_size 10M;
+
+    # Таймауты
+    proxy_connect_timeout 60s;
+    proxy_send_timeout 60s;
+    proxy_read_timeout 60s;
+
+    # Проксирование на Node.js бэкенд
+    location / {
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        
+        # Заголовки
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # Отключаем кэширование для API
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Health check endpoint
+    location /health {
+        proxy_pass http://localhost:5000/health;
+        access_log off;
+    }
+
+    # Специальная обработка для Payme callback
+    location /api/payments/payme/callback {
+        proxy_pass http://localhost:5000/api/payments/payme/callback;
+        proxy_http_version 1.1;
+        
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # Увеличенные таймауты для платежей
+        proxy_connect_timeout 120s;
+        proxy_send_timeout 120s;
+        proxy_read_timeout 120s;
+    }
+
+    # Отключаем доступ к скрытым файлам
+    location ~ /\. {
+        deny all;
+        access_log off;
+        log_not_found off;
+    }
+}

@@ -38,12 +38,12 @@ router.get('/', async (req, res) => {
     }
 
     if (min_price) {
-      whereConditions.push('vp.price_per_month >= ?');
+      whereConditions.push('vp.price_monthly >= ?');
       params.push(parseFloat(min_price));
     }
 
     if (max_price) {
-      whereConditions.push('vp.price_per_month <= ?');
+      whereConditions.push('vp.price_monthly <= ?');
       params.push(parseFloat(max_price));
     }
 
@@ -58,12 +58,12 @@ router.get('/', async (req, res) => {
     }
 
     if (min_memory) {
-      whereConditions.push('vp.memory_gb >= ?');
+      whereConditions.push('vp.ram_gb >= ?');
       params.push(parseFloat(min_memory));
     }
 
     if (max_memory) {
-      whereConditions.push('vp.memory_gb <= ?');
+      whereConditions.push('vp.ram_gb <= ?');
       params.push(parseFloat(max_memory));
     }
 
@@ -77,21 +77,17 @@ router.get('/', async (req, res) => {
         vp.id,
         vp.provider_id,
         p.name as provider,
-        vp.plan_name,
+        vp.name as plan_name,
         vp.cpu_cores,
-        vp.memory_gb,
+        vp.ram_gb as memory_gb,
         vp.storage_gb,
-        vp.bandwidth_tb,
-        vp.price_per_month,
-        vp.currency,
-        vp.region,
-        vp.available,
-        p.website as provider_website,
-        p.country as provider_country
+        vp.bandwidth_gb,
+        vp.price_monthly as price_per_month,
+        vp.available
       FROM vps_plans vp
       JOIN providers p ON vp.provider_id = p.id
       ${whereClause}
-      ORDER BY vp.price_per_month ASC
+      ORDER BY vp.price_monthly ASC
       LIMIT ? OFFSET ?
     `;
 
@@ -201,20 +197,14 @@ router.get('/:id', async (req, res) => {
       data: {
         id: plan.id,
         provider: plan.provider,
-        plan_name: plan.plan_name,
+        plan_name: plan.name,
         cpu_cores: plan.cpu_cores,
-        memory_gb: plan.memory_gb,
+        memory_gb: plan.ram_gb,
         storage_gb: plan.storage_gb,
-        bandwidth_tb: plan.bandwidth_tb,
-        price_per_month: parseFloat(plan.price_per_month),
-        currency: plan.currency,
-        region: plan.region,
+        bandwidth_gb: plan.bandwidth_gb,
+        price_per_month: parseFloat(plan.price_monthly),
         available: plan.available,
-        created_at: plan.created_at,
-        provider_info: {
-          website: plan.provider_website,
-          country: plan.provider_country
-        }
+        created_at: plan.created_at
       }
     });
 

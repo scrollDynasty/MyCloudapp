@@ -1,24 +1,56 @@
-# VPS Billing System Backend
+# 🚀 MyCloud VPS Billing - Backend
 
-🚀 **Professional VPS Billing System** с MariaDB интеграцией и импортом данных из Excel.
+Backend для системы биллинга VPS с интеграцией Payme платежей.
 
-## 📋 Описание
+## ⚡ Быстрая установка на Production
 
-Полнофункциональная система биллинга VPS серверов с:
-- ✅ MariaDB база данных 
-- ✅ Импорт данных из Excel (VPS-Price.xlsx)
-- ✅ REST API для мобильного приложения
-- ✅ Payme интеграция для платежей
-- ✅ Управление пользователями и заказами
-- ✅ Тестовые данные
+```bash
+# 1. Загрузите backend на сервер
+scp -r backend mcuser@mcbilling:~/
+
+# 2. На сервере запустите ОДИН скрипт:
+cd /home/mcuser/backend/scripts
+sudo bash setup-backend.sh
+
+# 3. Создайте администратора:
+cd /home/mcuser/backend
+node scripts/create-admin.js
+
+# 4. Настройте Nginx:
+sudo cp config/nginx/apibilling.mycloud.uz /etc/nginx/sites-available/
+sudo ln -s /etc/nginx/sites-available/apibilling.mycloud.uz /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+
+# 5. Установите SSL:
+sudo certbot --nginx -d apibilling.mycloud.uz
+
+# 6. Запустите с PM2:
+pm2 start app.js --name mycloud-api
+pm2 save && pm2 startup
+```
+
+**Готово! Backend работает на https://apibilling.mycloud.uz** 🎉
+
+## 📖 Полная документация
+
+Смотрите [DEPLOY.md](DEPLOY.md) для детальной инструкции по развертыванию.
+
+## 🎯 Что делает setup-backend.sh
+
+- ✅ Создает базу данных `vps_billing`
+- ✅ Создает пользователя MySQL с безопасным паролем
+- ✅ Генерирует файл `.env` со всеми настройками
+- ✅ Инициализирует все таблицы БД (users, orders, providers, plans, payme_transactions)
+- ✅ Устанавливает npm зависимости
 
 ## 🛠️ Технологии
 
-- **Backend**: Node.js + Express.js
-- **Database**: MariaDB 10.6+
-- **Excel**: XLSX парсер
-- **Payment**: Payme API
-- **Security**: Helmet, CORS
+- **Node.js** 22.x
+- **Express** - веб-фреймворк
+- **MariaDB/MySQL** - база данных
+- **Payme** - платежная система
+- **PM2** - менеджер процессов
+- **Nginx** - reverse proxy
 
 ## 📁 Структура проекта
 

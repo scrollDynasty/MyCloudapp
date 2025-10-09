@@ -15,8 +15,8 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-
-const API_URL = 'http://localhost:5000';
+import { API_URL } from '../../config/api';
+import { getHeaders } from '../../config/fetch';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -71,9 +71,7 @@ export default function RegisterScreen() {
 
       const response = await fetch(`${API_URL}/api/auth/register`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getHeaders(),
         body: JSON.stringify(requestBody),
       });
 

@@ -11,8 +11,8 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-
-const API_URL = 'http://localhost:5000';
+import { API_URL } from '../../config/api';
+import { getHeaders } from '../../config/fetch';
 
 interface Order {
   order_id: number;
@@ -39,7 +39,7 @@ export default function OrdersScreen() {
     try {
       const token = await AsyncStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/orders`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getHeaders(token || undefined),
       });
 
       const data = await response.json();

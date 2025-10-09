@@ -13,9 +13,21 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { API_URL } from '../../config/api';
 import { useAuth } from '../context/AuthContext';
 
-const API_URL = 'http://localhost:5000';
+// Helper function to add required headers for ngrok
+const getHeaders = (token?: string) => {
+  const headers: Record<string, string> = {
+    'ngrok-skip-browser-warning': 'true',
+    'User-Agent': 'VPSBilling-Admin',
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+};
 
 interface AdminUser {
   user_id: number;
@@ -80,23 +92,47 @@ export default function AdminDashboardScreen() {
   const loadDashboardData = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
+      console.log('🔑 Token:', token ? 'exists' : 'missing');
+      
+      if (!token) {
+        Alert.alert('Ошибка', 'Токен авторизации не найден. Пожалуйста, войдите снова.');
+        router.replace('/auth/login');
+        return;
+      }
 
       // Загрузить пользователей
       const usersResponse = await fetch(`${API_URL}/api/auth/users`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getHeaders(token),
       });
-      const usersData = await usersResponse.json();
+      
+      console.log('👥 Users Response Status:', usersResponse.status);
+      
+      // Get the raw text first to see what we're actually getting
+      const usersText = await usersResponse.text();
+      console.log('👥 Users Raw Response (first 200 chars):', usersText.substring(0, 200));
+      
+      // Try to parse as JSON
+      let usersData;
+      try {
+        usersData = JSON.parse(usersText);
+        console.log('👥 Users Data:', usersData);
+      } catch (e) {
+        console.error('❌ Failed to parse users response as JSON:', e);
+        throw new Error('Server returned HTML instead of JSON - check backend endpoint');
+      }
 
       // Загрузить заказы
       const ordersResponse = await fetch(`${API_URL}/api/orders`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getHeaders(token),
       });
       const ordersData = await ordersResponse.json();
+      console.log('📦 Orders Data:', ordersData);
 
       // Безопасная установка пользователей
       if (usersData.success && Array.isArray(usersData.data)) {
         setUsers(usersData.data);
       } else {
+        console.error('❌ Users data invalid:', usersData);
         setUsers([]);
       }
 
@@ -129,8 +165,24 @@ export default function AdminDashboardScreen() {
           pendingOrders: 0,
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading dashboard data:', error);
+      
+      // Проверяем, не ошибка ли авторизации
+      if (error?.message?.includes('authorization') || error?.message?.includes('token')) {
+        Alert.alert(
+          'Сессия истекла',
+          'Пожалуйста, войдите снова',
+          [
+            {
+              text: 'OK',
+              onPress: () => router.replace('/auth/login'),
+            },
+          ]
+        );
+        return;
+      }
+      
       // Установить пустые данные при ошибке
       setUsers([]);
       setOrders([]);

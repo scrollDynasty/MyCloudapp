@@ -16,8 +16,20 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { API_URL } from '../../config/api';
 
-const API_URL = 'http://localhost:5000';
+// Helper function to add required headers for ngrok
+const getHeaders = (token?: string) => {
+  const headers: Record<string, string> = {
+    'ngrok-skip-browser-warning': 'true',
+    'User-Agent': 'VPSBilling-Admin',
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+};
 
 interface VPSPlan {
   id: number;
@@ -83,9 +95,7 @@ export default function AdminPlansScreen() {
     try {
       const token = await AsyncStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/vps?limit=100&_t=${Date.now()}`, {
-        headers: { 
-          Authorization: `Bearer ${token}`,
-        },
+        headers: getHeaders(token || undefined),
         cache: 'no-store',
       });
 
@@ -102,7 +112,7 @@ export default function AdminPlansScreen() {
     try {
       const token = await AsyncStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/providers`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getHeaders(token || undefined),
       });
 
       const data = await response.json();
@@ -194,10 +204,7 @@ export default function AdminPlansScreen() {
 
       const response = await fetch(url, {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers: getHeaders(token || undefined),
         body: JSON.stringify(requestBody),
       });
 
@@ -237,7 +244,7 @@ export default function AdminPlansScreen() {
       const token = await AsyncStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/vps-admin/${plan.id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getHeaders(token || undefined),
       });
 
       const data = await response.json();
@@ -271,10 +278,7 @@ export default function AdminPlansScreen() {
       const token = await AsyncStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/vps-admin/${plan.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers: getHeaders(token || undefined),
         body: JSON.stringify({
           available: !plan.available,
         }),
