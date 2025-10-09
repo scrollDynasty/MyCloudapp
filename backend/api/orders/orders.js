@@ -166,17 +166,22 @@ router.post('/', async (req, res) => {
 
     // Generate unique order number
     const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+    
+    // Calculate total amount (same as amount for now, can add taxes/fees later)
+    const amount = vpsPlan.price_monthly || vpsPlan.price_per_month;
+    const totalAmount = amount;
 
     // Create order
     const result = await db.query(`
       INSERT INTO orders 
-      (user_id, vps_plan_id, order_number, status, amount, currency, notes, created_at, updated_at)
-      VALUES (?, ?, ?, 'pending', ?, 'USD', ?, NOW(), NOW())
+      (user_id, vps_plan_id, order_number, status, amount, total_amount, currency, notes, created_at, updated_at)
+      VALUES (?, ?, ?, 'pending', ?, ?, 'USD', ?, NOW(), NOW())
     `, [
       user_id,
       vps_plan_id,
       orderNumber,
-      vpsPlan.price_monthly || vpsPlan.price_per_month,
+      amount,
+      totalAmount,
       notes || null
     ]);
 
@@ -188,11 +193,11 @@ router.post('/', async (req, res) => {
         o.*,
         u.username,
         u.email,
-        vp.plan_name,
+        vp.name as plan_name,
         vp.cpu_cores,
-        vp.memory_gb,
+        vp.ram_gb,
         vp.storage_gb,
-        vp.bandwidth_tb,
+        vp.bandwidth_gb,
         p.name as provider_name
       FROM orders o
       JOIN users u ON o.user_id = u.id
@@ -259,12 +264,12 @@ router.get('/:id', async (req, res) => {
         u.phone,
         u.first_name,
         u.last_name,
-        vp.plan_name,
+        vp.name as plan_name,
         vp.cpu_cores,
-        vp.memory_gb,
+        vp.ram_gb as memory_gb,
         vp.storage_gb,
-        vp.bandwidth_tb,
-        vp.price_per_month,
+        vp.bandwidth_gb as bandwidth_tb,
+        vp.price_monthly as price_per_month,
         p.name as provider_name,
         p.website as provider_website,
         p.country as provider_country
