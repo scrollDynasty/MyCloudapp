@@ -41,7 +41,7 @@ router.post('/payme', authenticate, async (req, res) => {
         u.email,
         u.first_name,
         u.last_name,
-        vp.plan_name,
+        vp.name as plan_name,
         p.name as provider_name
       FROM orders o
       JOIN users u ON o.user_id = u.id

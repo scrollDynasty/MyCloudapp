@@ -230,8 +230,8 @@ router.get('/providers/list', async (req, res) => {
         p.website,
         p.country,
         COUNT(vp.id) as plans_count,
-        MIN(vp.price_per_month) as min_price,
-        MAX(vp.price_per_month) as max_price
+        MIN(vp.price_monthly) as min_price,
+        MAX(vp.price_monthly) as max_price
       FROM providers p
       LEFT JOIN vps_plans vp ON p.id = vp.provider_id AND vp.available = true
       GROUP BY p.id, p.name, p.website, p.country

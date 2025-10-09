@@ -351,6 +351,8 @@ router.put('/:id/status', async (req, res) => {
       });
     }
 
+    
+
     // Check if order exists
     const orderExists = await db.query('SELECT id FROM orders WHERE id = ?', [id]);
     if (orderExists.length === 0) {
@@ -371,7 +373,7 @@ router.put('/:id/status', async (req, res) => {
       SELECT 
         o.*,
         u.username,
-        vp.plan_name,
+        vp.name as plan_name,
         p.name as provider_name
       FROM orders o
       JOIN users u ON o.user_id = u.id

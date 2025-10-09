@@ -2,9 +2,9 @@ const crypto = require('crypto');
 
 class PaymeHelper {
   constructor() {
-    this.merchantId = process.env.PAYME_MERCHANT_ID;
-    this.secretKey = process.env.PAYME_SECRET_KEY;
-    this.url = process.env.PAYME_URL || 'https://checkout.paycom.uz';
+    this.merchantId = '65b78f9f3c319dec9d89218f';
+    this.secretKey = 'n1qqWene%o6TTaorOPyk3M#wiqqRuCbTJoZD';
+    this.url = 'https://checkout.paycom.uz';
   }
 
   // Generate authorization header for Payme API
@@ -13,7 +13,7 @@ class PaymeHelper {
     return 'Basic ' + Buffer.from(credentials).toString('base64');
   }
 
-  // Create checkout URL
+  // Create checkout URL (ПРАВИЛЬНЫЙ ФОРМАТ согласно документации Payme)
   createCheckoutUrl(orderId, amount, returnUrl) {
     // amount in tiyin (1 UZS = 100 tiyin)
     const amountInTiyin = Math.round(amount * 100);
@@ -24,24 +24,21 @@ class PaymeHelper {
       throw new Error('PAYME_MERCHANT_ID is not configured');
     }
     
-    // Build params object - согласно документации Payme
-    // ac.order_id должен быть СТРОКОЙ!
-    const paramsObject = {
-      m: this.merchantId,
-      ac: {
-        order_id: orderId.toString()  // Строка согласно документации Payme
-      },
-      a: amountInTiyin
-    };
+    // Формат согласно официальной документации Payme:
+    // https://developer.help.paycom.uz/initsializatsiya-platezhey/
+    // Параметры: m=merchant_id;ac.field=value;a=amount;c=return_url
     
-    // Add return URL if provided
-    if (returnUrl && returnUrl.trim() !== '') {
-      paramsObject.c = returnUrl;
-    }
+    // Строим параметры как строку (НЕ JSON!)
+    const params = `m=${this.merchantId};ac.order_id=${orderId};a=${amountInTiyin}`;
     
-    // Encode to base64
-    const params = Buffer.from(JSON.stringify(paramsObject)).toString('base64');
-    const fullUrl = `${this.url}/${params}`;
+    // Кодируем в base64
+    const base64Params = Buffer.from(params).toString('base64');
+    const fullUrl = `${this.url}/${base64Params}`;
+
+    console.log('🔧 Payme URL Generation (ПРАВИЛЬНЫЙ ФОРМАТ):');
+    console.log('  Params String:', params);
+    console.log('  Base64:', base64Params);
+    console.log('  Full URL:', fullUrl);
 
     return fullUrl;
   }
