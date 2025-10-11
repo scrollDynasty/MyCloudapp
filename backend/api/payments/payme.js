@@ -102,10 +102,6 @@ router.post('/payme', authenticate, async (req, res) => {
       });
     }
 
-    console.log('✅ Валидация суммы:');
-    console.log('  Amount (UZS):', amountInUzs);
-    console.log('  Amount (Tiyin):', amountInTiyin);
-    console.log('  В диапазоне:', MIN_AMOUNT_TIYIN, '-', MAX_AMOUNT_TIYIN, '✅');
 
     // For development: Use a valid public URL or leave empty
     // Payme REJECTS localhost URLs
@@ -137,11 +133,6 @@ router.post('/payme', authenticate, async (req, res) => {
       });
     }
 
-    console.log('✅ Валидация параметров Payme:');
-    console.log('  Merchant ID:', merchantId);
-    console.log('  Order ID:', orderIdNum);
-    console.log('  Return URL:', validReturnUrl);
-    console.log('  All parameters valid ✅');
 
     // Generate Payme checkout URL
     const checkoutUrl = payme.createCheckoutUrl(
@@ -150,18 +141,6 @@ router.post('/payme', authenticate, async (req, res) => {
       validReturnUrl
     );
 
-    // Decode URL to show what's being sent
-    const urlParts = checkoutUrl.split('/');
-    const encodedParams = urlParts[urlParts.length - 1];
-    const decodedParams = Buffer.from(encodedParams, 'base64').toString('utf-8');
-
-    console.log('💳 Payme Payment Details:');
-    console.log('  Order ID:', order_id);
-    console.log('  Amount (UZS):', amountInUzs);
-    console.log('  Amount (Tiyin):', Math.round(amountInUzs * 100));
-    console.log('  Return URL:', validReturnUrl);
-    console.log('  Params String:', decodedParams);
-    console.log('  Checkout URL:', checkoutUrl);
 
     // Update order
     await db.query(

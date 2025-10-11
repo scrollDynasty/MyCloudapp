@@ -54,9 +54,6 @@ export default function CheckoutScreen() {
       });
 
       const data = await response.json();
-      console.log('🔍 Order data from API:', data);
-      console.log('🔍 Currency field:', data.data?.currency);
-      console.log('🔍 Currency type:', typeof data.data?.currency);
       if (data.success) {
         setOrder(data.data);
       }
@@ -86,41 +83,50 @@ export default function CheckoutScreen() {
 
       const data = await response.json();
       
-      if (data.success) {
+      if (data.success && data.data?.checkout_url) {
         setCheckoutUrl(data.data.checkout_url);
         
         // Open Payme checkout in browser
         if (Platform.OS === 'web') {
           const paymentWindow = window.open(data.data.checkout_url, '_blank');
           
-          if (paymentWindow) {
-            console.log('✅ Payment URL:', data.data.checkout_url);
-          } else {
-            // If popup blocked, show the URL
-            alert('⚠️ Разрешите всплывающие окна или используйте эту ссылку:\n\n' + data.data.checkout_url);
+          if (!paymentWindow) {
+            Alert.alert(
+              '⚠️ Всплывающее окно заблокировано',
+              'Разрешите всплывающие окна или используйте эту ссылку:\n\n' + data.data.checkout_url
+            );
           }
         } else {
           const canOpen = await Linking.canOpenURL(data.data.checkout_url);
           if (canOpen) {
             await Linking.openURL(data.data.checkout_url);
           } else {
-            alert('Не удалось открыть страницу оплаты');
+            Alert.alert('Ошибка', 'Не удалось открыть страницу оплаты');
           }
         }
       } else {
-        // Improved error message
-        const errorText = typeof data.error === 'string' 
-          ? data.error 
-          : JSON.stringify(data.error);
+        // Properly handle error messages
+        let errorMessage = 'Неизвестная ошибка при создании платежа';
         
-        let errorMsg = 'Ошибка создания платежа: ' + errorText;
-        
-        if (errorText && errorText.includes('Merchant')) {
-          errorMsg += '\n\n💡 Для разработки: настройте тестовый Merchant ID в .env файле.\nПодробности в backend/PAYME_SETUP.md';
+        if (data.error) {
+          if (typeof data.error === 'string') {
+            errorMessage = data.error;
+          } else if (data.error.message) {
+            errorMessage = data.error.message;
+          } else if (typeof data.error === 'object') {
+            errorMessage = JSON.stringify(data.error, null, 2);
+          }
         }
         
-        Alert.alert('Ошибка оплаты', errorMsg);
-        console.error('Payment error:', data);
+        if (data.message) {
+          errorMessage += '\n' + data.message;
+        }
+        
+        Alert.alert('Ошибка оплаты', errorMessage);
+        console.error('Payment error:', {
+          status: response.status,
+          data: data
+        });
       }
     } catch (error: any) {
       console.error('Payment error:', error);
