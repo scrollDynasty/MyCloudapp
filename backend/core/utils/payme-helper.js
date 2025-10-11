@@ -13,8 +13,9 @@ class PaymeHelper {
     return 'Basic ' + Buffer.from(credentials).toString('base64');
   }
 
-  // Create checkout URL (ПРАВИЛЬНЫЙ ФОРМАТ согласно документации Payme)
-  createCheckoutUrl(orderId, amount, returnUrl) {
+  // Create checkout URL according to official Payme documentation
+  // https://developer.help.paycom.uz/metody-merchant-api/
+  createCheckoutUrl(orderId, amount, returnUrl = null) {
     // amount in tiyin (1 UZS = 100 tiyin)
     const amountInTiyin = Math.round(amount * 100);
 
@@ -24,32 +25,32 @@ class PaymeHelper {
       throw new Error('PAYME_MERCHANT_ID is not configured');
     }
     
-    // Validate amount
-    if (amountInTiyin < 100) {
-      throw new Error('Amount too small: minimum 1 UZS (100 tiyin)');
-    }
-    
-    // Формат согласно официальной документации Payme:
-    // https://developer.help.paycom.uz/initsializatsiya-platezhey/
-    // Параметры: m=merchant_id;ac.field=value;a=amount;c=return_url
-    
     // Validate merchant ID format (must be 24 characters)
     if (this.merchantId.length !== 24) {
       console.error(`❌ Invalid PAYME_MERCHANT_ID length: ${this.merchantId.length} (expected 24)`);
       throw new Error(`Invalid PAYME_MERCHANT_ID: must be 24 characters, got ${this.merchantId.length}`);
     }
     
-    // Строим параметры как строку (НЕ JSON!)
-    let params = `m=${this.merchantId};ac.order_id=${orderId};a=${amountInTiyin}`;
-    
-    // Add return URL if provided (URL-кодируем, чтобы избежать конфликтов с ?, =, & и т.д.)
-    if (returnUrl) {
-      // URL-encode the return URL to avoid conflicts with special characters
-      const encodedReturnUrl = encodeURIComponent(returnUrl);
-      params += `;c=${encodedReturnUrl}`;
+    // Validate amount
+    if (amountInTiyin < 100) {
+      throw new Error('Amount too small: minimum 1 UZS (100 tiyin)');
     }
     
-    // Кодируем в base64
+    // Official Payme format: m=merchant_id;ac.field=value;a=amount_in_tiyin
+    // Build params as string (NOT JSON!)
+    // NOTE: The 'c' parameter (callback URL) is OPTIONAL and may cause issues if not configured in merchant dashboard
+    let params = `m=${this.merchantId};ac.order_id=${orderId};a=${amountInTiyin}`;
+    
+    // Add return URL ONLY if provided and valid
+    // IMPORTANT: Return URL must be configured in PayMe merchant dashboard
+    // Otherwise it will cause "[object Object]" error
+    if (returnUrl && !returnUrl.includes('localhost')) {
+      // Return URL should NOT be URL-encoded when inside base64
+      // PayMe will handle the URL directly
+      params += `;c=${returnUrl}`;
+    }
+    
+    // Encode to base64
     const base64Params = Buffer.from(params).toString('base64');
     const fullUrl = `${this.url}/${base64Params}`;
 
@@ -58,7 +59,7 @@ class PaymeHelper {
     console.log(`   Amount: ${amount} UZS (${amountInTiyin} tiyin)`);
     console.log(`   Merchant ID: ${this.merchantId} (length: ${this.merchantId.length})`);
     console.log(`   Return URL: ${returnUrl || 'not provided'}`);
-    console.log(`   Params: ${params}`);
+    console.log(`   Raw params: ${params}`);
     console.log(`   Base64: ${base64Params}`);
     console.log(`   Full URL: ${fullUrl}`);
 

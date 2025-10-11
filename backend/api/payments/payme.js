@@ -103,13 +103,25 @@ router.post('/payme', authenticate, async (req, res) => {
     }
 
 
-    // For development: Use a valid public URL or leave empty
-    // Payme REJECTS localhost URLs
-    let validReturnUrl = return_url;
+    // Return URL handling
+    // IMPORTANT: Return URL must be configured in PayMe merchant dashboard
+    // If not configured, set PAYME_USE_RETURN_URL=false in .env to avoid errors
+    let validReturnUrl = null;
     
-    // If return_url is localhost, use a placeholder or your actual domain
-    if (return_url && return_url.includes('localhost')) {
-      validReturnUrl = process.env.RETURN_URL || 'https://myapp.uz/orders';
+    // Check if return URL is enabled in environment
+    const useReturnUrl = process.env.PAYME_USE_RETURN_URL !== 'false';
+    
+    if (useReturnUrl) {
+      // Only use return URL if it's a valid production URL
+      if (return_url && !return_url.includes('localhost')) {
+        validReturnUrl = return_url;
+      } else {
+        // Use environment variable for production return URL
+        validReturnUrl = process.env.RETURN_URL || null;
+      }
+    } else {
+      console.log('⚠️  Return URL disabled via PAYME_USE_RETURN_URL=false');
+      validReturnUrl = null;
     }
 
     // Валидация Merchant ID
