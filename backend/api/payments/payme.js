@@ -7,17 +7,6 @@ const { authenticate } = require('../../core/utils/auth');
 const router = express.Router();
 const payme = new PaymeHelper();
 
-/**
- * Logger for Payme requests/responses
- */
-function logPayme(type, method, data) {
-  const timestamp = new Date().toISOString();
-  console.log(`\n${'='.repeat(80)}`);
-  console.log(`[${timestamp}] 💳 PAYME ${type.toUpperCase()}: ${method}`);
-  console.log(JSON.stringify(data, null, 2));
-  console.log('='.repeat(80));
-}
-
 // POST /api/payments/payme - Create Payme payment (Authenticated users only)
 router.post('/payme', authenticate, async (req, res) => {
   try {
@@ -120,14 +109,11 @@ router.post('/payme', authenticate, async (req, res) => {
         validReturnUrl = process.env.RETURN_URL || null;
       }
     } else {
-      console.log('⚠️  Return URL disabled via PAYME_USE_RETURN_URL=false');
       validReturnUrl = null;
     }
 
-    // Валидация Merchant ID
     const merchantId = process.env.PAYME_MERCHANT_ID;
     if (!merchantId || merchantId.length !== 24) {
-      console.error('❌ Invalid PAYME_MERCHANT_ID:', merchantId);
       return res.status(500).json({
         success: false,
         error: 'Payment system configuration error',
@@ -145,16 +131,6 @@ router.post('/payme', authenticate, async (req, res) => {
       });
     }
 
-
-    // Log payment request details
-    console.log('💳 Creating Payme payment:');
-    console.log(`   Order ID: ${order_id}`);
-    console.log(`   Amount: ${amountInUzs} UZS (${amountInTiyin} tiyin)`);
-    console.log(`   Currency: ${order.currency}`);
-    console.log(`   Return URL: ${validReturnUrl || 'not provided'}`);
-    console.log(`   Merchant ID: ${merchantId}`);
-
-    // Generate Payme checkout URL
     const checkoutUrl = payme.createCheckoutUrl(
       order_id,
       amountInUzs,
