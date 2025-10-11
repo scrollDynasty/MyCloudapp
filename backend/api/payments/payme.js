@@ -78,13 +78,8 @@ router.post('/payme', authenticate, async (req, res) => {
       });
     }
 
-    // Payme only accepts UZS - convert if needed
+    // Получаем сумму в UZS (узбекских сумах)
     let amountInUzs = order.amount;
-    if (order.currency !== 'UZS') {
-      // If currency is USD, convert to UZS (approximate rate: 1 USD = 12,500 UZS)
-      const USD_TO_UZS_RATE = 12500;
-      amountInUzs = order.amount * USD_TO_UZS_RATE;
-    }
 
     // Валидация суммы для Payme
     const amountInTiyin = Math.round(amountInUzs * 100);

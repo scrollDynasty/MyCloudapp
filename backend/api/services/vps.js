@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
       max_cpu,
       min_memory,
       max_memory,
-      currency = 'USD',
+      currency = 'UZS',
       limit = 50,
       offset = 0
     } = req.query;
@@ -120,8 +120,8 @@ router.get('/', async (req, res) => {
       bandwidth_tb: plan.bandwidth_tb,
       price: parseFloat(plan.price_per_month), // совместимость с фронтендом
       price_per_month: parseFloat(plan.price_per_month),
-      currency_code: plan.currency, // совместимость с фронтендом
-      currency: plan.currency,
+      currency_code: 'UZS', // всегда UZS
+      currency: 'UZS', // всегда UZS
       region_name: plan.region, // совместимость с фронтендом
       region: plan.region,
       available: plan.available,

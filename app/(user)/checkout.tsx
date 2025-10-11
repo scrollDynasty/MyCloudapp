@@ -3,15 +3,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Linking,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Linking,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { API_URL } from '../../config/api';
 import { getHeaders } from '../../config/fetch';
@@ -54,6 +54,9 @@ export default function CheckoutScreen() {
       });
 
       const data = await response.json();
+      console.log('🔍 Order data from API:', data);
+      console.log('🔍 Currency field:', data.data?.currency);
+      console.log('🔍 Currency type:', typeof data.data?.currency);
       if (data.success) {
         setOrder(data.data);
       }
@@ -221,14 +224,14 @@ export default function CheckoutScreen() {
         <View style={styles.priceRow}>
           <Text style={styles.priceLabel}>Подписка (ежемесячно)</Text>
           <Text style={styles.priceValue}>
-            {order.amount} {order.currency}
+            {order.amount} UZS
           </Text>
         </View>
         <View style={styles.divider} />
         <View style={styles.totalRow}>
           <Text style={styles.totalLabel}>К оплате</Text>
           <Text style={styles.totalValue}>
-            {order.amount} {order.currency}
+            {order.amount} UZS
           </Text>
         </View>
       </View>

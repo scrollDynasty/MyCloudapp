@@ -3,18 +3,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Modal,
-    Platform,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Modal,
+  Platform,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { API_URL } from '../../config/api';
 
@@ -494,7 +494,7 @@ export default function AdminPlansScreen() {
                   keyboardType="numeric"
                 />
                 <View style={styles.currencySelector}>
-                  {['UZS', 'USD'].map((curr) => (
+                  {['UZS'].map((curr) => (
                     <TouchableOpacity
                       key={curr}
                       style={[

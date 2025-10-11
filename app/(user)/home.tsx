@@ -3,14 +3,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { API_URL } from '../../config/api';
 import { getHeaders } from '../../config/fetch';
@@ -61,6 +61,10 @@ export default function UserHomeScreen() {
       });
 
       const data = await response.json();
+      console.log('📋 VPS Plans from API:', data);
+      console.log('📋 First plan:', data.data?.[0]);
+      console.log('📋 Currency code:', data.data?.[0]?.currency_code);
+      console.log('📋 Currency code type:', typeof data.data?.[0]?.currency_code);
       if (data.success) {
         setPlans(data.data);
       }

@@ -175,7 +175,7 @@ router.post('/', async (req, res) => {
     const result = await db.query(`
       INSERT INTO orders 
       (user_id, vps_plan_id, order_number, status, amount, total_amount, currency, notes, created_at, updated_at)
-      VALUES (?, ?, ?, 'pending', ?, ?, 'USD', ?, NOW(), NOW())
+      VALUES (?, ?, ?, 'pending', ?, ?, 'UZS', ?, NOW(), NOW())
     `, [
       user_id,
       vps_plan_id,
