@@ -163,6 +163,9 @@ router.post('/payme', authenticate, async (req, res) => {
 
     console.log('✅ Checkout URL created successfully');
 
+    // Генерируем также альтернативные URL для отладки
+    const alternativeUrls = payme.generateAlternativeCheckoutUrls(order_id, amountInUzs);
+
     // Update order
     await db.query(
       'UPDATE orders SET payment_method = ?, updated_at = NOW() WHERE id = ?',
@@ -174,6 +177,7 @@ router.post('/payme', authenticate, async (req, res) => {
       data: {
         order_id: order.id,
         checkout_url: checkoutUrl,
+        alternative_urls: alternativeUrls, // Альтернативные форматы для тестирования
         amount: parseFloat(order.amount),
         currency: order.currency,
         order_details: {
@@ -185,12 +189,14 @@ router.post('/payme', authenticate, async (req, res) => {
           step_1: 'Redirect user to checkout_url',
           step_2: 'User completes payment on Payme',
           step_3: 'Payme will call our callback endpoint',
-          step_4: 'Order status will be updated automatically'
+          step_4: 'Order status will be updated automatically',
+          troubleshooting: 'If you see "[object Object]" error, try alternative_urls'
         },
         debug: {
           merchant_id: merchantId,
           amount_tiyin: amountInTiyin,
-          return_url: validReturnUrl
+          return_url: validReturnUrl,
+          note: 'Если ошибка "[object Object]" - Merchant ID не активирован или account поля не настроены'
         }
       }
     });
@@ -796,6 +802,66 @@ async function handleGetStatement(params) {
     }
   };
 }
+
+// GET /api/payments/payme/test-urls/:order_id - Generate test checkout URLs (Development only)
+router.get('/payme/test-urls/:order_id', authenticate, async (req, res) => {
+  try {
+    const { order_id } = req.params;
+    
+    await db.connect();
+    
+    // Get order to get amount
+    const orders = await db.query('SELECT amount FROM orders WHERE id = ?', [order_id]);
+    
+    if (orders.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Order not found'
+      });
+    }
+    
+    const order = orders[0];
+    const amount = parseFloat(order.amount);
+    
+    // Generate all test URLs
+    const urls = {
+      standard: payme.createCheckoutUrl(order_id, amount),
+      account: payme.createCheckoutUrlAlternative(order_id, amount, 'account'),
+      id: payme.createCheckoutUrlAlternative(order_id, amount, 'id'),
+      order: payme.createCheckoutUrlAlternative(order_id, amount, 'order'),
+      orderId: payme.createCheckoutUrlAlternative(order_id, amount, 'orderId')
+    };
+    
+    res.json({
+      success: true,
+      message: 'Test URLs generated. Try each URL in browser to find working format.',
+      data: {
+        order_id: order_id,
+        amount: amount,
+        urls: urls,
+        instructions: {
+          step_1: 'Open each URL in browser',
+          step_2: 'If you see payment form - format is correct!',
+          step_3: 'If you see error "[object Object]" - try next URL',
+          step_4: 'Remember which format works and use it in code'
+        },
+        troubleshooting: {
+          merchant_id: process.env.PAYME_MERCHANT_ID,
+          issue: 'If all URLs show error, Merchant ID is not activated',
+          solution: 'Contact Payme support: @payme_support or support@paycom.uz'
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('Test URLs Error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate test URLs',
+      message: error.message
+    });
+  }
+});
 
 // GET /api/payments/payme/status/:order_id - Check payment status (Authenticated)
 router.get('/payme/status/:order_id', authenticate, async (req, res) => {

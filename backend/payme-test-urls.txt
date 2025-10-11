@@ -1,0 +1,33 @@
+
+PAYME CHECKOUT URLS - 2025-10-11T16:12:43.195Z
+=================================================================
+
+Order ID: 17
+Amount: 50000 UZS (5000000 tiyin)
+Merchant ID: 65b78f9f3c319dec9d89218f
+
+=================================================================
+
+1. STANDARD (ac.order_id):
+https://checkout.paycom.uz/bT02NWI3OGY5ZjNjMzE5ZGVjOWQ4OTIxOGY7YWMub3JkZXJfaWQ9MTc7YT01MDAwMDAw
+
+2. ACCOUNT (ac.account):
+https://checkout.paycom.uz/bT02NWI3OGY5ZjNjMzE5ZGVjOWQ4OTIxOGY7YWMuYWNjb3VudD0xNzthPTUwMDAwMDA=
+
+3. ID (ac.id):
+https://checkout.paycom.uz/bT02NWI3OGY5ZjNjMzE5ZGVjOWQ4OTIxOGY7YWMuaWQ9MTc7YT01MDAwMDAw
+
+4. MULTIPLE FIELDS:
+https://checkout.paycom.uz/bT02NWI3OGY5ZjNjMzE5ZGVjOWQ4OTIxOGY7YWMub3JkZXJfaWQ9MTc7YWMuYWNjb3VudD0xNzthPTUwMDAwMDA=
+
+=================================================================
+
+ИНСТРУКЦИИ:
+- Откройте каждый URL в браузере
+- Если видите форму оплаты ✅ - используйте этот формат
+- Если видите "[object Object]" ❌ - пробуйте следующий
+
+ВАЖНО:
+- Merchant ID должен быть активирован
+- Account поля должны быть настроены
+- Обратитесь в Payme support: +998 78 150 01 04
