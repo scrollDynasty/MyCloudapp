@@ -12,10 +12,6 @@ const router = express.Router();
 router.get('/payment-success', async (req, res) => {
   const { order_id } = req.query;
   
-  console.log('✅ Payment Success Redirect');
-  console.log('  Order ID:', order_id);
-  console.log('  Query params:', req.query);
-  
   // HTML страница с автоматическим редиректом
   const html = `
     <!DOCTYPE html>
@@ -225,9 +221,6 @@ router.get('/payment-success', async (req, res) => {
  */
 router.get('/payment-cancel', async (req, res) => {
   const { order_id } = req.query;
-  
-  console.log('❌ Payment Cancelled');
-  console.log('  Order ID:', order_id);
   
   const html = `
     <!DOCTYPE html>

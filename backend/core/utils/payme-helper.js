@@ -2,9 +2,9 @@ const crypto = require('crypto');
 
 class PaymeHelper {
   constructor() {
-    this.merchantId = '65b78f9f3c319dec9d89218f';
-    this.secretKey = 'n1qqWene%o6TTaorOPyk3M#wiqqRuCbTJoZD';
-    this.url = 'https://checkout.paycom.uz';
+    this.merchantId = process.env.PAYME_MERCHANT_ID || '65b78f9f3c319dec9d89218f';
+    this.secretKey = process.env.PAYME_SECRET_KEY || 'n1qqWene%o6TTaorOPyk3M#wiqqRuCbTJoZD';
+    this.url = process.env.PAYME_URL || 'https://checkout.paycom.uz';
   }
 
   // Generate authorization header for Payme API
@@ -35,10 +35,6 @@ class PaymeHelper {
     const base64Params = Buffer.from(params).toString('base64');
     const fullUrl = `${this.url}/${base64Params}`;
 
-    console.log('🔧 Payme URL Generation (ПРАВИЛЬНЫЙ ФОРМАТ):');
-    console.log('  Params String:', params);
-    console.log('  Base64:', base64Params);
-    console.log('  Full URL:', fullUrl);
 
     return fullUrl;
   }
