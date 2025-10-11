@@ -86,15 +86,37 @@ export default function CheckoutScreen() {
       if (data.success && data.data?.checkout_url) {
         setCheckoutUrl(data.data.checkout_url);
         
+        console.log('📊 Payme Response:', {
+          main_url: data.data.checkout_url,
+          alternative_urls: data.data.alternative_urls,
+          debug: data.data.debug
+        });
+        
         // Open Payme checkout in browser
         if (Platform.OS === 'web') {
           const paymentWindow = window.open(data.data.checkout_url, '_blank');
           
           if (!paymentWindow) {
-            Alert.alert(
-              '⚠️ Всплывающее окно заблокировано',
-              'Разрешите всплывающие окна или используйте эту ссылку:\n\n' + data.data.checkout_url
-            );
+            // Показываем альтернативные URL если есть
+            let message = 'Разрешите всплывающие окна или используйте одну из этих ссылок:\n\n';
+            message += '1. Основная ссылка:\n' + data.data.checkout_url + '\n\n';
+            
+            if (data.data.alternative_urls) {
+              message += '2. Альтернативная (ac.account):\n' + data.data.alternative_urls.account + '\n\n';
+              message += '3. Альтернативная (ac.id):\n' + data.data.alternative_urls.id + '\n\n';
+              message += '💡 Попробуйте каждую ссылку если первая не работает';
+            }
+            
+            Alert.alert('⚠️ Всплывающее окно заблокировано', message);
+          } else {
+            // Показываем уведомление об альтернативных URL для отладки
+            if (data.data.alternative_urls) {
+              console.log('🔄 Альтернативные Payme URLs доступны:');
+              console.log('   Standard:', data.data.alternative_urls.standard);
+              console.log('   Account:', data.data.alternative_urls.account);
+              console.log('   ID:', data.data.alternative_urls.id);
+              console.log('   Multiple:', data.data.alternative_urls.multiple);
+            }
           }
         } else {
           const canOpen = await Linking.canOpenURL(data.data.checkout_url);
@@ -125,8 +147,14 @@ export default function CheckoutScreen() {
         // Add troubleshooting hints
         errorMessage += '\n\n💡 Возможные причины:\n';
         errorMessage += '• Merchant ID не активирован в системе Payme\n';
-        errorMessage += '• Неверная конфигурация аккаунта\n';
+        errorMessage += '• Account поля не настроены в личном кабинете\n';
+        errorMessage += '• Неверная конфигурация кассы\n';
         errorMessage += '• Проверьте логи сервера для деталей';
+        
+        // Add debug info if available
+        if (data.data?.debug?.note) {
+          errorMessage += '\n\n⚠️ ' + data.data.debug.note;
+        }
         
         Alert.alert('Ошибка оплаты Payme', errorMessage);
         console.error('Payment error:', {

@@ -14,8 +14,8 @@ class PaymeHelper {
   }
 
   // Create checkout URL according to official Payme documentation
-  // https://developer.help.paycom.uz/metody-merchant-api/
-  createCheckoutUrl(orderId, amount, returnUrl = null) {
+  // https://developer.help.paycom.uz/initsializatsiya-platezhey/
+  createCheckoutUrl(orderId, amount, returnUrl = null, accountFields = null) {
     // amount in tiyin (1 UZS = 100 tiyin)
     const amountInTiyin = Math.round(amount * 100);
 
@@ -38,12 +38,30 @@ class PaymeHelper {
     
     // Official Payme format: m=merchant_id;ac.field=value;a=amount_in_tiyin
     // Build params as string (NOT JSON!)
-    // NOTE: The 'c' parameter (callback URL) is OPTIONAL and may cause issues if not configured in merchant dashboard
-    let params = `m=${this.merchantId};ac.order_id=${orderId};a=${amountInTiyin}`;
     
-    // Add return URL ONLY if provided and valid
-    // IMPORTANT: Return URL must be configured in PayMe merchant dashboard
-    // Otherwise it will cause "[object Object]" error
+    // Build account parameters
+    let accountParams;
+    if (accountFields && typeof accountFields === 'object') {
+      // Support multiple account fields
+      accountParams = Object.keys(accountFields)
+        .map(key => `ac.${key}=${accountFields[key]}`)
+        .join(';');
+    } else {
+      // Default: use order_id as primary account field
+      // Also try 'account' field as fallback (some merchants use this)
+      accountParams = `ac.order_id=${orderId}`;
+    }
+    
+    let params = `m=${this.merchantId};${accountParams};a=${amountInTiyin}`;
+    
+    // ВАЖНО: Параметр 'c' (callback/return URL) ОПЦИОНАЛЬНЫЙ
+    // Он может вызывать ошибку "[object Object]" если:
+    // 1. URL не добавлен в белый список в личном кабинете Payme
+    // 2. Merchant не настроен для использования return URL
+    // 3. URL содержит localhost или некорректный домен
+    //
+    // РЕКОМЕНДАЦИЯ: НЕ использовать return URL если не уверены в настройках
+    // Payme будет использовать callback API для уведомлений о платеже
     if (returnUrl && !returnUrl.includes('localhost')) {
       // Return URL should NOT be URL-encoded when inside base64
       // PayMe will handle the URL directly
@@ -58,10 +76,16 @@ class PaymeHelper {
     console.log(`   Order ID: ${orderId}`);
     console.log(`   Amount: ${amount} UZS (${amountInTiyin} tiyin)`);
     console.log(`   Merchant ID: ${this.merchantId} (length: ${this.merchantId.length})`);
-    console.log(`   Return URL: ${returnUrl || 'not provided'}`);
+    console.log(`   Return URL: ${returnUrl || 'not provided (recommended)'}`);
     console.log(`   Raw params: ${params}`);
     console.log(`   Base64: ${base64Params}`);
     console.log(`   Full URL: ${fullUrl}`);
+    console.log('');
+    console.log('   ⚠️  ВАЖНО: Если видите ошибку "[object Object]" на странице Payme:');
+    console.log('   1. Проверьте что Merchant ID активирован в личном кабинете');
+    console.log('   2. Убедитесь что account поля настроены правильно');
+    console.log('   3. Если используете return URL - он должен быть в белом списке');
+    console.log('   4. Попробуйте БЕЗ return URL (уберите параметр c)');
 
     return fullUrl;
   }
@@ -105,6 +129,106 @@ class PaymeHelper {
   // Format amount from tiyin
   fromTiyin(amountInTiyin) {
     return amountInTiyin / 100;
+  }
+
+  /**
+   * Generate alternative checkout URLs with different account field formats
+   * Use this for debugging if standard checkout URL causes "[object Object]" error
+   * @param {number} orderId - Order ID
+   * @param {number} amount - Amount in UZS
+   * @returns {Object} - Object with different URL variations
+   */
+  generateAlternativeCheckoutUrls(orderId, amount) {
+    const amountInTiyin = Math.round(amount * 100);
+    const urls = {};
+
+    // Variation 1: ac.order_id (стандартный)
+    const params1 = `m=${this.merchantId};ac.order_id=${orderId};a=${amountInTiyin}`;
+    urls.standard = `${this.url}/${Buffer.from(params1).toString('base64')}`;
+
+    // Variation 2: ac.account (альтернативный)
+    const params2 = `m=${this.merchantId};ac.account=${orderId};a=${amountInTiyin}`;
+    urls.account = `${this.url}/${Buffer.from(params2).toString('base64')}`;
+
+    // Variation 3: ac.id (простой ID)
+    const params3 = `m=${this.merchantId};ac.id=${orderId};a=${amountInTiyin}`;
+    urls.id = `${this.url}/${Buffer.from(params3).toString('base64')}`;
+
+    // Variation 4: несколько полей (order_id + account)
+    const params4 = `m=${this.merchantId};ac.order_id=${orderId};ac.account=${orderId};a=${amountInTiyin}`;
+    urls.multiple = `${this.url}/${Buffer.from(params4).toString('base64')}`;
+
+    console.log('\n🔄 Альтернативные форматы Payme Checkout URL:');
+    console.log('\n1. Стандартный (ac.order_id):');
+    console.log(`   ${urls.standard}`);
+    console.log('\n2. Account (ac.account):');
+    console.log(`   ${urls.account}`);
+    console.log('\n3. ID (ac.id):');
+    console.log(`   ${urls.id}`);
+    console.log('\n4. Множественные поля:');
+    console.log(`   ${urls.multiple}`);
+    console.log('\n💡 Попробуйте каждый URL если первый не работает');
+    console.log('   Правильный формат зависит от настроек в личном кабинете Payme\n');
+
+    return urls;
+  }
+
+  /**
+   * Создает альтернативный checkout URL с разными форматами account полей
+   * Используйте этот метод если стандартный createCheckoutUrl дает ошибку
+   * 
+   * @param {string|number} orderId - ID заказа
+   * @param {number} amount - Сумма в UZS
+   * @param {string} accountFieldName - Название account поля ('order_id', 'account', 'id', etc.)
+   * @returns {string} Checkout URL
+   */
+  createCheckoutUrlAlternative(orderId, amount, accountFieldName = 'account') {
+    const amountInTiyin = Math.round(amount * 100);
+    
+    if (!this.merchantId || this.merchantId.length !== 24) {
+      throw new Error('Invalid MERCHANT_ID');
+    }
+    
+    // Используем альтернативное название поля
+    // Некоторые кассы Payme используют 'account' вместо 'order_id'
+    const params = `m=${this.merchantId};ac.${accountFieldName}=${orderId};a=${amountInTiyin}`;
+    const base64Params = Buffer.from(params).toString('base64');
+    const fullUrl = `${this.url}/${base64Params}`;
+    
+    console.log(`🔄 Альтернативный Payme URL (account field: ${accountFieldName}):`);
+    console.log(`   Raw params: ${params}`);
+    console.log(`   URL: ${fullUrl}`);
+    
+    return fullUrl;
+  }
+
+  /**
+   * Генерирует несколько вариантов checkout URL для тестирования
+   * Используйте для отладки если основной метод не работает
+   */
+  generateTestUrls(orderId, amount) {
+    const variants = [
+      { name: 'Стандартный (order_id)', field: 'order_id' },
+      { name: 'Альтернативный (account)', field: 'account' },
+      { name: 'Простой (id)', field: 'id' },
+      { name: 'Полный (order)', field: 'order' }
+    ];
+    
+    console.log('\n=== ТЕСТОВЫЕ ВАРИАНТЫ PAYME URL ===');
+    console.log(`Order ID: ${orderId}, Amount: ${amount} UZS\n`);
+    
+    const urls = {};
+    variants.forEach(variant => {
+      try {
+        const url = this.createCheckoutUrlAlternative(orderId, amount, variant.field);
+        urls[variant.field] = url;
+        console.log(`✅ ${variant.name}: ${url}\n`);
+      } catch (error) {
+        console.log(`❌ ${variant.name}: ${error.message}\n`);
+      }
+    });
+    
+    return urls;
   }
 
   // Error codes according to Payme documentation
