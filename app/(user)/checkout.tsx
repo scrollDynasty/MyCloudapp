@@ -83,14 +83,13 @@ export default function CheckoutScreen() {
 
       const data = await response.json();
       
+      console.log('📊 Payme API Full Response:', JSON.stringify(data, null, 2));
+      
       if (data.success && data.data?.checkout_url) {
         setCheckoutUrl(data.data.checkout_url);
         
-        console.log('📊 Payme Response:', {
-          main_url: data.data.checkout_url,
-          alternative_urls: data.data.alternative_urls,
-          debug: data.data.debug
-        });
+        console.log('✅ Checkout URL:', data.data.checkout_url);
+        console.log('🔄 Alternative URLs:', JSON.stringify(data.data.alternative_urls, null, 2));
         
         // Open Payme checkout in browser
         if (Platform.OS === 'web') {
