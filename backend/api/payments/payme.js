@@ -134,6 +134,14 @@ router.post('/payme', authenticate, async (req, res) => {
     }
 
 
+    // Log payment request details
+    console.log('💳 Creating Payme payment:');
+    console.log(`   Order ID: ${order_id}`);
+    console.log(`   Amount: ${amountInUzs} UZS (${amountInTiyin} tiyin)`);
+    console.log(`   Currency: ${order.currency}`);
+    console.log(`   Return URL: ${validReturnUrl || 'not provided'}`);
+    console.log(`   Merchant ID: ${merchantId}`);
+
     // Generate Payme checkout URL
     const checkoutUrl = payme.createCheckoutUrl(
       order_id,
@@ -141,6 +149,7 @@ router.post('/payme', authenticate, async (req, res) => {
       validReturnUrl
     );
 
+    console.log('✅ Checkout URL created successfully');
 
     // Update order
     await db.query(
@@ -165,6 +174,11 @@ router.post('/payme', authenticate, async (req, res) => {
           step_2: 'User completes payment on Payme',
           step_3: 'Payme will call our callback endpoint',
           step_4: 'Order status will be updated automatically'
+        },
+        debug: {
+          merchant_id: merchantId,
+          amount_tiyin: amountInTiyin,
+          return_url: validReturnUrl
         }
       }
     });

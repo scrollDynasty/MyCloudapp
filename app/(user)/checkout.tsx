@@ -119,10 +119,16 @@ export default function CheckoutScreen() {
         }
         
         if (data.message) {
-          errorMessage += '\n' + data.message;
+          errorMessage += '\n\nДетали: ' + data.message;
         }
         
-        Alert.alert('Ошибка оплаты', errorMessage);
+        // Add troubleshooting hints
+        errorMessage += '\n\n💡 Возможные причины:\n';
+        errorMessage += '• Merchant ID не активирован в системе Payme\n';
+        errorMessage += '• Неверная конфигурация аккаунта\n';
+        errorMessage += '• Проверьте логи сервера для деталей';
+        
+        Alert.alert('Ошибка оплаты Payme', errorMessage);
         console.error('Payment error:', {
           status: response.status,
           data: data

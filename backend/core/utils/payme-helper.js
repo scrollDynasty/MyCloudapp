@@ -24,17 +24,41 @@ class PaymeHelper {
       throw new Error('PAYME_MERCHANT_ID is not configured');
     }
     
+    // Validate amount
+    if (amountInTiyin < 100) {
+      throw new Error('Amount too small: minimum 1 UZS (100 tiyin)');
+    }
+    
     // Формат согласно официальной документации Payme:
     // https://developer.help.paycom.uz/initsializatsiya-platezhey/
     // Параметры: m=merchant_id;ac.field=value;a=amount;c=return_url
     
+    // Validate merchant ID format (must be 24 characters)
+    if (this.merchantId.length !== 24) {
+      console.error(`❌ Invalid PAYME_MERCHANT_ID length: ${this.merchantId.length} (expected 24)`);
+      throw new Error(`Invalid PAYME_MERCHANT_ID: must be 24 characters, got ${this.merchantId.length}`);
+    }
+    
     // Строим параметры как строку (НЕ JSON!)
-    const params = `m=${this.merchantId};ac.order_id=${orderId};a=${amountInTiyin}`;
+    let params = `m=${this.merchantId};ac.order_id=${orderId};a=${amountInTiyin}`;
+    
+    // Add return URL if provided (не кодируем, т.к. вся строка будет в base64)
+    if (returnUrl) {
+      params += `;c=${returnUrl}`;
+    }
     
     // Кодируем в base64
     const base64Params = Buffer.from(params).toString('base64');
     const fullUrl = `${this.url}/${base64Params}`;
 
+    console.log('🔗 Payme Checkout URL Generated:');
+    console.log(`   Order ID: ${orderId}`);
+    console.log(`   Amount: ${amount} UZS (${amountInTiyin} tiyin)`);
+    console.log(`   Merchant ID: ${this.merchantId} (length: ${this.merchantId.length})`);
+    console.log(`   Return URL: ${returnUrl || 'not provided'}`);
+    console.log(`   Params: ${params}`);
+    console.log(`   Base64: ${base64Params}`);
+    console.log(`   Full URL: ${fullUrl}`);
 
     return fullUrl;
   }
