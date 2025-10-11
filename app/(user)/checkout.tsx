@@ -69,7 +69,7 @@ export default function CheckoutScreen() {
       setProcessing(true);
       const token = await AsyncStorage.getItem('token');
       
-      // Используем ngrok URL для всех платформ
+      // Return URL для redirect после оплаты
       const returnUrl = `${API_URL}/payment-success?order_id=${orderId}`;
       
       const response = await fetch(`${API_URL}/api/payments/payme`, {
