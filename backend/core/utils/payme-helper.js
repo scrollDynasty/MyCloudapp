@@ -42,9 +42,11 @@ class PaymeHelper {
     // Строим параметры как строку (НЕ JSON!)
     let params = `m=${this.merchantId};ac.order_id=${orderId};a=${amountInTiyin}`;
     
-    // Add return URL if provided (не кодируем, т.к. вся строка будет в base64)
+    // Add return URL if provided (URL-кодируем, чтобы избежать конфликтов с ?, =, & и т.д.)
     if (returnUrl) {
-      params += `;c=${returnUrl}`;
+      // URL-encode the return URL to avoid conflicts with special characters
+      const encodedReturnUrl = encodeURIComponent(returnUrl);
+      params += `;c=${encodedReturnUrl}`;
     }
     
     // Кодируем в base64
