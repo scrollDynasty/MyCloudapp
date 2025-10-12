@@ -207,7 +207,11 @@ const ForgotPasswordScreen: React.FC = () => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-    router.back();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/auth/login');
+    }
   }, [router]);
 
   // Обработчик повторной отправки
