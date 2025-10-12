@@ -210,9 +210,6 @@ router.get('/google', (req, res, next) => {
   passport.authenticate('google', { 
     scope: ['profile', 'email', 'openid'],
     session: false,
-    // Всегда показывать выбор аккаунта
-    prompt: 'select_account',
-    accessType: 'offline',
     state: state || 'mycloud://auth/callback'
   })(req, res, next);
 });
@@ -221,8 +218,7 @@ router.get('/google', (req, res, next) => {
 router.get('/google/callback',
   passport.authenticate('google', { 
     session: false,
-    failureRedirect: '/auth/login',
-    prompt: 'select_account'
+    failureRedirect: '/auth/login'
   }),
   async (req, res) => {
     try {

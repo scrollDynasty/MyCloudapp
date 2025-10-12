@@ -5,12 +5,10 @@ const db = require('../db/connection');
 function setupGoogleOAuth() {
   const callbackURL = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/auth/google/callback';
   
-  passport.use(new GoogleStrategy({
+  const strategy = new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: callbackURL,
-    // Всегда показывать выбор аккаунта Google
-    prompt: 'select_account'
+    callbackURL: callbackURL
   },
   async (accessToken, refreshToken, profile, done) => {
     try {
@@ -124,7 +122,17 @@ function setupGoogleOAuth() {
       console.error('Google OAuth error:', error);
       return done(error, null);
     }
-  }));
+  });
+  
+  // Переопределяем authorizationParams чтобы всегда показывать выбор аккаунта
+  strategy.authorizationParams = function(options) {
+    return {
+      access_type: 'offline',
+      prompt: 'select_account'
+    };
+  };
+  
+  passport.use(strategy);
   
   // Serialize user for session
   passport.serializeUser((user, done) => {
