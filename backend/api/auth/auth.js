@@ -203,15 +203,19 @@ router.post('/login', async (req, res) => {
 });
 
 // Google OAuth - Initiate
-router.get('/google',
+router.get('/google', (req, res, next) => {
+  // Сохраняем state для передачи в callback
+  const state = req.query.state;
+  
   passport.authenticate('google', { 
     scope: ['profile', 'email', 'openid'],
     session: false,
     // Всегда показывать выбор аккаунта
     prompt: 'select_account',
-    accessType: 'offline'
-  })
-);
+    accessType: 'offline',
+    state: state || 'mycloud://auth/callback'
+  })(req, res, next);
+});
 
 // Google OAuth - Callback
 router.get('/google/callback',
