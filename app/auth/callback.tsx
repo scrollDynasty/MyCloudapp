@@ -1,12 +1,13 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { useAuth } from '../context/AuthContext';
 
 
 export default function CallbackScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { signIn } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -15,11 +16,22 @@ export default function CallbackScreen() {
 
   const handleCallback = async () => {
     try {
+      console.log('🔄 Callback params:', params);
+      
+      // Проверить на ошибку
+      if (params.error) {
+        console.error('❌ Auth error from server:', params.error);
+        setError('Ошибка авторизации через Google');
+        setTimeout(() => router.replace('/auth/login'), 2000);
+        return;
+      }
+      
       // Получить токен из URL параметров
       const token = params.token as string;
       const userStr = params.user as string;
 
       if (!token || !userStr) {
+        console.error('❌ Missing token or user data');
         setError('Ошибка авторизации: отсутствуют данные');
         setTimeout(() => router.replace('/auth/login'), 2000);
         return;
@@ -27,19 +39,22 @@ export default function CallbackScreen() {
 
       // Декодировать данные пользователя
       const user = JSON.parse(decodeURIComponent(userStr));
+      console.log('✅ User data received:', user);
 
-      // Сохранить токен и данные пользователя
-      await AsyncStorage.setItem('token', token);
-      await AsyncStorage.setItem('user', JSON.stringify(user));
+      // Использовать signIn из AuthContext
+      await signIn(token, user);
+      console.log('✅ SignIn completed via Google OAuth');
 
       // Перенаправить в зависимости от роли
       if (user.role === 'admin') {
+        console.log('🔄 Redirecting to admin dashboard');
         router.replace('/(admin)/dashboard');
       } else {
+        console.log('🔄 Redirecting to user home');
         router.replace('/(user)/home');
       }
     } catch (err) {
-      console.error('Callback error:', err);
+      console.error('❌ Callback error:', err);
       setError('Ошибка при обработке данных авторизации');
       setTimeout(() => router.replace('/auth/login'), 2000);
     }

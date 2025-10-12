@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google OAuth Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .google-btn {
+            background: #DB4437;
+            color: white;
+        }
+        .google-btn:hover {
+            background: #c23321;
+        }
+        .info {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .info h3 {
+            margin-top: 0;
+        }
+        .success {
+            background: #4CAF50;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .error {
+            background: #f44336;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Google OAuth Тест</h1>
+        
+        <button class="btn google-btn" onclick="loginWithGoogle()">
+            Войти через Google
+        </button>
+        
+        <div class="info">
+            <h3>ℹ️ Информация</h3>
+            <p>Эта страница тестирует Google OAuth авторизацию.</p>
+            <p>При нажатии на кнопку откроется страница выбора Google аккаунта.</p>
+            <p><strong>Параметры:</strong></p>
+            <ul>
+                <li><code>prompt=select_account</code> - всегда показывать выбор аккаунта</li>
+                <li><code>access_type=offline</code> - получить refresh token</li>
+            </ul>
+        </div>
+        
+        <div id="result"></div>
+    </div>
+    
+    <script>
+        // Проверяем URL параметры при загрузке страницы
+        window.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            const user = urlParams.get('user');
+            const error = urlParams.get('error');
+            
+            if (error) {
+                document.getElementById('result').innerHTML = 
+                    '<div class="error">❌ Ошибка авторизации: ' + error + '</div>';
+            } else if (token && user) {
+                try {
+                    const userData = JSON.parse(decodeURIComponent(user));
+                    document.getElementById('result').innerHTML = 
+                        '<div class="success">✅ Успешная авторизация!</div>' +
+                        '<div class="info">' +
+                        '<h3>Данные пользователя:</h3>' +
+                        '<p><strong>Email:</strong> ' + userData.email + '</p>' +
+                        '<p><strong>Имя:</strong> ' + userData.full_name + '</p>' +
+                        '<p><strong>Роль:</strong> ' + userData.role + '</p>' +
+                        '<p><strong>Token:</strong> <code>' + token.substring(0, 20) + '...</code></p>' +
+                        '</div>';
+                } catch (e) {
+                    document.getElementById('result').innerHTML = 
+                        '<div class="error">❌ Ошибка обработки данных: ' + e.message + '</div>';
+                }
+            }
+        });
+        
+        function loginWithGoogle() {
+            // Для веб-версии используем callback на эту же страницу
+            const redirectUri = window.location.origin + '/test-google-auth.html';
+            const authUrl = '/api/auth/google?state=' + encodeURIComponent(redirectUri);
+            window.location.href = authUrl;
+        }
+    </script>
+</body>
+</html>
