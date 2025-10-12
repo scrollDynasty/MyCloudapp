@@ -1,10 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as AuthSession from 'expo-auth-session';
-import * as WebBrowser from 'expo-web-browser';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import * as WebBrowser from 'expo-web-browser';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -364,8 +363,9 @@ const LoginScreen: React.FC = () => {
     inputHeight: isSmallScreen ? 48 : 52,
     buttonHeight: isSmallScreen ? 48 : 52,
     padding: isSmallScreen ? 20 : 24,
-    maxWidth: isMediumScreen ? '100%' : 440,
-  }), []);
+    // для совместимости с Animated тип должен быть number | `${number}%`
+    maxWidth: isMediumScreen ? ('100%' as `${number}%`) : 440,
+  }), [isSmallScreen, isMediumScreen]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
@@ -382,148 +382,163 @@ const LoginScreen: React.FC = () => {
           >
             <Animated.View
               style={[
-                styles.content,
-                {
-                  opacity: fadeAnim,
-                  transform: [{ translateY: slideAnim }],
-                  paddingHorizontal: adaptiveStyles.padding,
-                  maxWidth: adaptiveStyles.maxWidth,
-                  alignSelf: 'center',
-                  width: '100%',
-                },
+              styles.content,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+                paddingHorizontal: adaptiveStyles.padding,
+                maxWidth: adaptiveStyles.maxWidth,
+                alignSelf: 'center',
+                width: '100%',
+              },
               ]}
             >
               {/* Форма входа */}
               <Animated.View
-                style={[
-                  styles.formContainer,
-                  { transform: [{ translateX: shakeAnim }] },
-                ]}
+              style={[
+                styles.formContainer,
+                { transform: [{ translateX: shakeAnim }] },
+              ]}
               >
-                {/* Поле Email */}
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.inputLabel}>Email</Text>
-                  <View style={[styles.inputContainer, errors.email && touched.email && styles.inputError, { height: adaptiveStyles.inputHeight }]}>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="your@email.com"
-                      placeholderTextColor={COLORS.gray}
-                      value={email}
-                      onChangeText={handleEmailChange}
-                      onBlur={() => handleBlur('email')}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      editable={!loading}
-                      returnKeyType="next"
-                      accessibilityLabel="Поле ввода email"
-                    />
-                  </View>
-                  {errors.email && touched.email && (
-                    <Text style={styles.errorText}>{errors.email}</Text>
-                  )}
+              {/* Поле Email */}
+              <View style={styles.inputWrapper}>
+                <Text style={styles.inputLabel}>Email</Text>
+                <View style={[
+                styles.inputContainer,
+                errors.email && touched.email ? styles.inputError : null,
+                { height: adaptiveStyles.inputHeight }
+                ]}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="your@email.com"
+                  placeholderTextColor={COLORS.gray}
+                  value={email}
+                  onChangeText={handleEmailChange}
+                  onBlur={() => handleBlur('email')}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!loading}
+                  returnKeyType="next"
+                  accessibilityLabel="Поле ввода email"
+                />
                 </View>
+                {errors.email && touched.email && (
+                <Text style={styles.errorText}>{errors.email}</Text>
+                )}
+              </View>
 
-                {/* Поле Пароль */}
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.inputLabel}>Пароль</Text>
-                  <View style={[styles.inputContainer, errors.password && touched.password && styles.inputError, { height: adaptiveStyles.inputHeight }]}>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Введите пароль"
-                      placeholderTextColor={COLORS.gray}
-                      value={password}
-                      onChangeText={handlePasswordChange}
-                      onBlur={() => handleBlur('password')}
-                      secureTextEntry={!showPassword}
-                      editable={!loading}
-                      returnKeyType="done"
-                      onSubmitEditing={handleLogin}
-                      accessibilityLabel="Поле ввода пароля"
-                    />
-                    <TouchableOpacity
-                      onPress={handleTogglePassword}
-                      style={styles.eyeIcon}
-                      accessibilityLabel={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
-                    >
-                      <Ionicons
-                        name={showPassword ? 'eye-outline' : 'eye-off-outline'}
-                        size={20}
-                        color={COLORS.gray}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                  {errors.password && touched.password && (
-                    <Text style={styles.errorText}>{errors.password}</Text>
-                  )}
-                </View>
-
-                {/* Запомнить меня и Забыли пароль */}
-                <View style={styles.optionsContainer}>
-                  <TouchableOpacity
-                    style={styles.rememberMeContainer}
-                    onPress={handleToggleRememberMe}
-                    accessibilityLabel="Запомнить меня"
-                  >
-                    <View style={[styles.checkbox, rememberMe && styles.checkboxActive]}>
-                      {rememberMe && (
-                        <Ionicons name="checkmark" size={16} color={COLORS.white} />
-                      )}
-                    </View>
-                    <Text style={styles.rememberMeText}>Запомнить меня</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity onPress={handleForgotPassword} accessibilityLabel="Забыли пароль?">
-                    <Text style={styles.forgotPasswordText}>Забыли пароль?</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* Кнопка входа */}
+              {/* Поле Пароль */}
+              <View style={styles.inputWrapper}>
+                <Text style={styles.inputLabel}>Пароль</Text>
+                <View style={[
+                styles.inputContainer,
+                errors.password && touched.password ? styles.inputError : null,
+                { height: adaptiveStyles.inputHeight }
+                ]}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Введите пароль"
+                  placeholderTextColor={COLORS.gray}
+                  value={password}
+                  onChangeText={handlePasswordChange}
+                  onBlur={() => handleBlur('password')}
+                  secureTextEntry={!showPassword}
+                  editable={!loading}
+                  returnKeyType="done"
+                  onSubmitEditing={handleLogin}
+                  accessibilityLabel="Поле ввода пароля"
+                />
                 <TouchableOpacity
-                  style={[styles.loginButton, loading && styles.loginButtonDisabled, { height: adaptiveStyles.buttonHeight }]}
-                  onPress={handleLogin}
-                  disabled={loading}
-                  accessibilityLabel="Войти в систему"
+                  onPress={handleTogglePassword}
+                  style={styles.eyeIcon}
+                  accessibilityLabel={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
                 >
-                  {loading ? (
-                    <ActivityIndicator color={COLORS.white} size="small" />
-                  ) : (
-                    <Text style={styles.loginButtonText}>Войти</Text>
+                  <Ionicons
+                  name={showPassword ? 'eye-outline' : 'eye-off-outline'}
+                  size={20}
+                  color={COLORS.gray}
+                  />
+                </TouchableOpacity>
+                </View>
+                {errors.password && touched.password && (
+                <Text style={styles.errorText}>{errors.password}</Text>
+                )}
+              </View>
+
+              {/* Запомнить меня и Забыли пароль */}
+              <View style={styles.optionsContainer}>
+                <TouchableOpacity
+                style={styles.rememberMeContainer}
+                onPress={handleToggleRememberMe}
+                accessibilityLabel="Запомнить меня"
+                >
+                <View style={[
+                  styles.checkbox,
+                  rememberMe ? styles.checkboxActive : null
+                ]}>
+                  {rememberMe && (
+                  <Ionicons name="checkmark" size={16} color={COLORS.white} />
                   )}
+                </View>
+                <Text style={styles.rememberMeText}>Запомнить меня</Text>
                 </TouchableOpacity>
 
-                {/* Разделитель */}
-                <View style={styles.divider}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.dividerText}>или</Text>
-                  <View style={styles.dividerLine} />
-                </View>
-
-                {/* Кнопка входа через Google */}
-                <TouchableOpacity
-                  style={[styles.googleButton, { height: adaptiveStyles.buttonHeight }]}
-                  onPress={handleGoogleLogin}
-                  disabled={loading}
-                  accessibilityLabel="Войти через Google"
-                >
-                  <Ionicons name="logo-google" size={20} color={COLORS.googleBg} style={styles.googleIcon} />
-                  <Text style={styles.googleButtonText}>Продолжить с Google</Text>
+                <TouchableOpacity onPress={handleForgotPassword} accessibilityLabel="Забыли пароль?">
+                <Text style={styles.forgotPasswordText}>Забыли пароль?</Text>
                 </TouchableOpacity>
+              </View>
 
-                {/* Ссылка на регистрацию */}
-                <View style={styles.registerContainer}>
-                  <Text style={styles.registerText}>Нет аккаунта? </Text>
-                  <TouchableOpacity onPress={handleGoToRegister} accessibilityLabel="Перейти к регистрации">
-                    <Text style={styles.registerLink}>Зарегистрироваться</Text>
-                  </TouchableOpacity>
-                </View>
+              {/* Кнопка входа */}
+              <TouchableOpacity
+                style={[
+                styles.loginButton,
+                loading ? styles.loginButtonDisabled : null,
+                { height: adaptiveStyles.buttonHeight }
+                ]}
+                onPress={handleLogin}
+                disabled={loading}
+                accessibilityLabel="Войти в систему"
+              >
+                {loading ? (
+                <ActivityIndicator color={COLORS.white} size="small" />
+                ) : (
+                <Text style={styles.loginButtonText}>Войти</Text>
+                )}
+              </TouchableOpacity>
+
+              {/* Разделитель */}
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>или</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              {/* Кнопка входа через Google */}
+              <TouchableOpacity
+                style={[styles.googleButton, { height: adaptiveStyles.buttonHeight }]}
+                onPress={handleGoogleLogin}
+                disabled={loading}
+                accessibilityLabel="Войти через Google"
+              >
+                <Ionicons name="logo-google" size={20} color={COLORS.googleBg} style={styles.googleIcon} />
+                <Text style={styles.googleButtonText}>Продолжить с Google</Text>
+              </TouchableOpacity>
+
+              {/* Ссылка на регистрацию */}
+              <View style={styles.registerContainer}>
+                <Text style={styles.registerText}>Нет аккаунта? </Text>
+                <TouchableOpacity onPress={handleGoToRegister} accessibilityLabel="Перейти к регистрации">
+                <Text style={styles.registerLink}>Зарегистрироваться</Text>
+                </TouchableOpacity>
+              </View>
               </Animated.View>
 
               {/* Тестовые данные */}
               <View style={styles.testCredentials}>
-                <Text style={styles.testTitle}>Тестовые данные:</Text>
-                <Text style={styles.testText}>Админ: admin@vps-billing.com / admin123</Text>
-                <Text style={styles.testText}>Пользователь: john@individual.com / user123</Text>
+              <Text style={styles.testTitle}>Тестовые данные:</Text>
+              <Text style={styles.testText}>Админ: admin@vps-billing.com / admin123</Text>
+              <Text style={styles.testText}>Пользователь: john@individual.com / user123</Text>
               </View>
             </Animated.View>
           </ScrollView>
