@@ -7,7 +7,7 @@ const router = express.Router();
 // GET /api/orders - Get all orders
 router.get('/', async (req, res) => {
   try {
-    await db.connect();
+    // Database is already initialized at startup
     
     const {
       user_id,
@@ -120,7 +120,7 @@ router.get('/', async (req, res) => {
 // POST /api/orders - Create new order
 router.post('/', async (req, res) => {
   try {
-    await db.connect();
+    // Database is already initialized at startup
     
     const {
       user_id,
@@ -252,7 +252,7 @@ router.post('/', async (req, res) => {
 // GET /api/orders/:id - Get specific order
 router.get('/:id', async (req, res) => {
   try {
-    await db.connect();
+    // Database is already initialized at startup
     
     const { id } = req.params;
 
@@ -331,7 +331,7 @@ router.get('/:id', async (req, res) => {
 // PUT /api/orders/:id/status - Update order status
 router.put('/:id/status', async (req, res) => {
   try {
-    await db.connect();
+    // Database is already initialized at startup
     
     const { id } = req.params;
     const { status, notes } = req.body;

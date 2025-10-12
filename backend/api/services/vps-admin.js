@@ -7,7 +7,7 @@ const router = express.Router();
 // POST /api/vps-admin - Create new VPS plan (Admin only)
 router.post('/', authenticate, adminOnly, async (req, res) => {
   try {
-    await db.connect();
+    // Database is already initialized at startup
     
     const {
       plan_name,
@@ -77,7 +77,7 @@ router.post('/', authenticate, adminOnly, async (req, res) => {
 // PUT /api/vps-admin/:id - Update VPS plan (Admin only)
 router.put('/:id', authenticate, adminOnly, async (req, res) => {
   try {
-    await db.connect();
+    // Database is already initialized at startup
     
     const { id } = req.params;
     const {
@@ -171,7 +171,7 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
 // DELETE /api/vps-admin/:id - Delete VPS plan (Admin only)
 router.delete('/:id', authenticate, adminOnly, async (req, res) => {
   try {
-    await db.connect();
+    // Database is already initialized at startup
     
     const { id } = req.params;
 

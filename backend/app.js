@@ -8,6 +8,14 @@ const passport = require('passport');
 const session = require('express-session');
 require('dotenv').config();
 
+// Import core utilities
+const db = require('./core/db/connection');
+const { initializeDatabase } = require('./core/middleware/db-init');
+const { rateLimiters } = require('./core/middleware/rate-limiter');
+const requestTimeout = require('./core/middleware/request-timeout');
+const { monitor } = require('./core/utils/monitoring');
+const { logger } = require('./core/utils/logger');
+
 // Import routes
 const vpsRoutes = require('./api/services/vps');
 const vpsAdminRoutes = require('./api/services/vps-admin');
@@ -25,10 +33,16 @@ setupGoogleOAuth();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
+// Performance monitoring
+app.use(monitor.trackRequest());
+
+// Security and optimization middleware
 app.use(helmet()); // Security headers
 app.use(compression()); // Compress responses
 app.use(morgan('dev')); // Logging - only HTTP status codes
+
+// Request timeout to prevent hanging requests
+app.use(requestTimeout(30000)); // 30 second timeout
 
 // CORS configuration - allow multiple origins for development
 const allowedOrigins = [
@@ -60,44 +74,62 @@ app.use(cors({
   ]
 }));
 
-app.use(bodyParser.json({ limit: '10mb' }));
-app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
+// Reduced payload size limits to prevent memory issues
+app.use(bodyParser.json({ limit: '2mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '2mb' }));
 
 // Static files (для HTML страниц)
 app.use(express.static('public'));
 
-// Session middleware (for OAuth)
+// Session middleware (for OAuth only, not for API endpoints)
+// Note: For production, use Redis or other external session store to prevent memory leaks
 app.use(session({
   secret: process.env.JWT_SECRET || 'secret',
   resave: false,
   saveUninitialized: false,
   cookie: {
     secure: process.env.NODE_ENV === 'production',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    httpOnly: true,
+    sameSite: 'lax'
+  },
+  // TODO: Add external session store for production (e.g., connect-redis)
+  // store: new RedisStore({ client: redisClient })
 }));
 
 // Initialize Passport
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Health check endpoint
-app.get('/health', (req, res) => {
+// Health check endpoint with detailed metrics
+app.get('/health', async (req, res) => {
+  const metrics = monitor.getMetrics();
+  const dbStats = db.getPoolStats();
+  
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     version: require('./package.json').version,
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    uptime: process.uptime(),
+    memory: metrics.memory,
+    database: dbStats
   });
 });
 
-// API Routes
-app.use('/api/vps', vpsRoutes);
-app.use('/api/vps-admin', vpsAdminRoutes);
-app.use('/api/providers', providersRoutes);
-app.use('/api/payments', paymentsRoutes);
-app.use('/api/orders', ordersRoutes);
-app.use('/api/auth', authRoutes);
+// Metrics endpoint (for monitoring tools)
+app.get('/metrics', (req, res) => {
+  const metrics = monitor.getMetrics();
+  res.json(metrics);
+});
+
+// API Routes with rate limiting
+app.use('/api/auth', rateLimiters.auth.middleware(), authRoutes);
+app.use('/api/vps', rateLimiters.api.middleware(), vpsRoutes);
+app.use('/api/vps-admin', rateLimiters.api.middleware(), vpsAdminRoutes);
+app.use('/api/providers', rateLimiters.api.middleware(), providersRoutes);
+app.use('/api/payments', rateLimiters.api.middleware(), paymentsRoutes);
+app.use('/api/orders', rateLimiters.api.middleware(), ordersRoutes);
 
 // Payment redirect routes (без /api префикса)
 app.use('/', paymentRedirectRoutes);
@@ -135,11 +167,94 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 VPS Billing API Server running on port ${PORT}`);
-  console.log(`📖 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 API Base URL: http://localhost:${PORT}`);
+// Initialize database and start server
+let server;
+
+async function startServer() {
+  try {
+    // Initialize database connection
+    logger.info('Initializing database connection...');
+    await initializeDatabase();
+    logger.success('Database connected successfully');
+
+    // Start HTTP server
+    server = app.listen(PORT, () => {
+      logger.success(`VPS Billing API Server running on port ${PORT}`);
+      logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      logger.info(`API Base URL: http://localhost:${PORT}`);
+      logger.info(`Health check: http://localhost:${PORT}/health`);
+      logger.info(`Metrics: http://localhost:${PORT}/metrics`);
+      
+      // Log initial memory usage
+      monitor.logMemorySnapshot();
+    });
+
+    // Handle server errors
+    server.on('error', (error) => {
+      logger.error('Server error:', error);
+      process.exit(1);
+    });
+
+  } catch (error) {
+    logger.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+// Graceful shutdown handler
+async function gracefulShutdown(signal) {
+  logger.info(`${signal} received, starting graceful shutdown...`);
+  
+  if (server) {
+    // Stop accepting new connections
+    server.close(async () => {
+      logger.info('HTTP server closed');
+      
+      try {
+        // Close database connections
+        await db.close();
+        logger.success('Database connections closed');
+        
+        // Clean up monitoring
+        monitor.destroy();
+        
+        // Clean up rate limiters
+        Object.values(rateLimiters).forEach(limiter => limiter.destroy());
+        
+        logger.success('Graceful shutdown completed');
+        process.exit(0);
+      } catch (error) {
+        logger.error('Error during shutdown:', error);
+        process.exit(1);
+      }
+    });
+
+    // Force shutdown after 10 seconds
+    setTimeout(() => {
+      logger.error('Forced shutdown after timeout');
+      process.exit(1);
+    }, 10000);
+  } else {
+    process.exit(0);
+  }
+}
+
+// Handle shutdown signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle uncaught errors
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception:', error);
+  gracefulShutdown('uncaughtException');
 });
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Rejection at:', { promise, reason });
+  // Don't exit on unhandled rejections, just log them
+});
+
+// Start the server
+startServer();
 
 module.exports = app;

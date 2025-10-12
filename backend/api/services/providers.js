@@ -6,7 +6,7 @@ const router = express.Router();
 // GET /api/providers - Get all providers
 router.get('/', async (req, res) => {
   try {
-    await db.connect();
+    // Database is already initialized at startup
     
     const query = `
       SELECT 

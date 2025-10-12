@@ -10,7 +10,7 @@ const router = express.Router();
 // Register new user
 router.post('/register', async (req, res) => {
   try {
-    await db.connect();
+    // Database is already initialized at startup
     
     const {
       email,
@@ -123,7 +123,7 @@ router.post('/register', async (req, res) => {
 // Login with email and password
 router.post('/login', async (req, res) => {
   try {
-    await db.connect();
+    // Database is already initialized at startup
     
     const { email, password } = req.body;
 
@@ -273,7 +273,7 @@ router.get('/me', authenticate, async (req, res) => {
 // GET /api/auth/users - Get all users (Admin only)
 router.get('/users', authenticate, adminOnly, async (req, res) => {
   try {
-    await db.connect();
+    // Database is already initialized at startup
     
     const { limit = 50, offset = 0, role, status } = req.query;
 
@@ -366,7 +366,7 @@ router.get('/users', authenticate, adminOnly, async (req, res) => {
 // GET /api/auth/users/:id - Get specific user (Admin or self)
 router.get('/users/:id', authenticate, adminOrSelf, async (req, res) => {
   try {
-    await db.connect();
+    // Database is already initialized at startup
     
     const { id } = req.params;
 
@@ -423,7 +423,7 @@ router.get('/users/:id', authenticate, adminOrSelf, async (req, res) => {
 // PUT /api/auth/users/:id - Update user (Admin or self)
 router.put('/users/:id', authenticate, adminOrSelf, async (req, res) => {
   try {
-    await db.connect();
+    // Database is already initialized at startup
     
     const { id } = req.params;
     const {

@@ -7,7 +7,7 @@ const router = express.Router();
 // GET /api/vps - Get all VPS plans
 router.get('/', async (req, res) => {
   try {
-    await db.connect();
+    // Database is already initialized at startup
     
     const {
       provider,
@@ -166,7 +166,7 @@ router.get('/', async (req, res) => {
 // GET /api/vps/:id - Get specific VPS plan
 router.get('/:id', async (req, res) => {
   try {
-    await db.connect();
+    // Database is already initialized at startup
     
     const { id } = req.params;
 
@@ -221,7 +221,7 @@ router.get('/:id', async (req, res) => {
 // GET /api/vps/providers - Get all providers
 router.get('/providers/list', async (req, res) => {
   try {
-    await db.connect();
+    // Database is already initialized at startup
     
     const query = `
       SELECT DISTINCT
@@ -268,7 +268,7 @@ router.get('/providers/list', async (req, res) => {
 // GET /api/vps/regions - Get all regions
 router.get('/regions/list', async (req, res) => {
   try {
-    await db.connect();
+    // Database is already initialized at startup
     
     const query = `
       SELECT DISTINCT
