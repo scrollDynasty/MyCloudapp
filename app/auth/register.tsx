@@ -364,7 +364,7 @@ const RegisterScreen: React.FC = () => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-    router.push('/auth/login');
+    router.replace('/auth/login');
   }, [router]);
 
   // Мемоизированные адаптивные стили

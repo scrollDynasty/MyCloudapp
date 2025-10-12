@@ -207,7 +207,7 @@ const ForgotPasswordScreen: React.FC = () => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-    router.push('/auth/login');
+    router.back();
   }, [router]);
 
   // Обработчик повторной отправки
@@ -421,10 +421,12 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     marginBottom: 12,
     letterSpacing: -0.5,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   subtitle: {
     color: COLORS.textLight,
     lineHeight: 22,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   formContainer: {
     backgroundColor: COLORS.white,
@@ -439,6 +441,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.text,
     marginBottom: 8,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   inputContainer: {
     flexDirection: 'row',
@@ -457,6 +460,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     color: COLORS.text,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   errorText: {
     color: COLORS.error,
@@ -482,6 +486,7 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: 16,
     fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   loginContainer: {
     alignItems: 'center',
@@ -491,6 +496,7 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontSize: 15,
     fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   // Стили для экрана успеха
   successContainer: {
@@ -512,6 +518,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     marginBottom: 12,
     textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   successText: {
     fontSize: 15,
@@ -519,6 +526,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 12,
     lineHeight: 22,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   emailText: {
     fontSize: 16,
@@ -526,6 +534,7 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     marginBottom: 24,
     textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   successInfoBox: {
     flexDirection: 'row',
@@ -546,6 +555,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: COLORS.textLight,
     lineHeight: 20,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   actionButton: {
     width: '100%',
@@ -564,6 +574,7 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: 16,
     fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   resendButton: {
     paddingVertical: 12,
@@ -572,5 +583,6 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontSize: 14,
     fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
 });

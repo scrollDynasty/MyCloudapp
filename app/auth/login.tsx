@@ -346,7 +346,7 @@ const LoginScreen: React.FC = () => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-    router.push('/auth/forgot-password');
+    router.replace('/auth/forgot-password');
   }, [router]);
 
   // Обработчик перехода на регистрацию
@@ -393,14 +393,6 @@ const LoginScreen: React.FC = () => {
                 },
               ]}
             >
-              {/* Заголовок */}
-              <View style={styles.header}>
-                <Text style={[styles.title, { fontSize: adaptiveStyles.titleSize }]}>Вход</Text>
-                <Text style={[styles.subtitle, { fontSize: adaptiveStyles.subtitleSize }]}>
-                  Войдите в свой аккаунт, чтобы продолжить
-                </Text>
-              </View>
-
               {/* Форма входа */}
               <Animated.View
                 style={[
@@ -565,19 +557,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: SCREEN_HEIGHT - 80,
   },
-  header: {
-    marginBottom: 40,
-  },
-  title: {
-    fontWeight: '700',
-    color: COLORS.text,
-    marginBottom: 8,
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    color: COLORS.textLight,
-    lineHeight: 22,
-  },
   formContainer: {
     backgroundColor: COLORS.white,
     borderRadius: 16,
@@ -591,6 +570,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.text,
     marginBottom: 8,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   inputContainer: {
     flexDirection: 'row',
@@ -609,6 +589,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     color: COLORS.text,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   eyeIcon: {
     padding: 8,
@@ -646,11 +627,13 @@ const styles = StyleSheet.create({
   rememberMeText: {
     color: COLORS.textLight,
     fontSize: 14,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   forgotPasswordText: {
     color: COLORS.primary,
     fontSize: 14,
     fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   loginButton: {
     backgroundColor: COLORS.primary,
@@ -671,6 +654,7 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: 16,
     fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   divider: {
     flexDirection: 'row',
@@ -686,6 +670,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     color: COLORS.gray,
     fontSize: 14,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   googleButton: {
     backgroundColor: COLORS.white,
@@ -703,6 +688,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontSize: 15,
     fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   registerContainer: {
     flexDirection: 'row',
@@ -712,11 +698,13 @@ const styles = StyleSheet.create({
   registerText: {
     color: COLORS.textLight,
     fontSize: 15,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   registerLink: {
     color: COLORS.primary,
     fontSize: 15,
     fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   testCredentials: {
     marginTop: 32,
@@ -731,6 +719,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.text,
     marginBottom: 10,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   testText: {
     fontSize: 12,
