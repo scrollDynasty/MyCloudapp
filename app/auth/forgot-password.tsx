@@ -26,15 +26,19 @@ interface ValidationErrors {
   email?: string;
 }
 
-// Константы цветовой палитры (сине-белая)
+// Современная цветовая палитра
 const COLORS = {
-  primary: '#2563EB',
-  secondary: '#3B82F6',
-  accent: '#60A5FA',
-  background: '#F8FAFC',
+  primary: '#6366F1',
+  primaryDark: '#4F46E5',
+  secondary: '#8B5CF6',
+  background: '#FFFFFF',
+  cardBg: '#FAFAFA',
+  inputBg: '#F8F9FA',
   white: '#FFFFFF',
+  text: '#0F172A',
+  textLight: '#64748B',
   gray: '#94A3B8',
-  darkGray: '#64748B',
+  border: '#E2E8F0',
   error: '#EF4444',
   success: '#10B981',
 } as const;
@@ -220,12 +224,12 @@ const ForgotPasswordScreen: React.FC = () => {
 
   // Мемоизированные адаптивные стили
   const adaptiveStyles = useMemo(() => ({
-    logoSize: isSmallScreen ? 50 : isMediumScreen ? 60 : 70,
-    titleSize: isSmallScreen ? 26 : isMediumScreen ? 32 : 36,
-    subtitleSize: isSmallScreen ? 14 : 16,
-    inputHeight: isSmallScreen ? 52 : 56,
-    buttonHeight: isSmallScreen ? 52 : 56,
-    padding: isSmallScreen ? 16 : 20,
+    titleSize: isSmallScreen ? 28 : isMediumScreen ? 32 : 36,
+    subtitleSize: isSmallScreen ? 14 : 15,
+    inputHeight: isSmallScreen ? 48 : 52,
+    buttonHeight: isSmallScreen ? 48 : 52,
+    padding: isSmallScreen ? 20 : 24,
+    maxWidth: isMediumScreen ? '100%' : 440,
   }), []);
 
   return (
@@ -234,12 +238,7 @@ const ForgotPasswordScreen: React.FC = () => {
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <LinearGradient
-          colors={[COLORS.primary, COLORS.secondary, COLORS.accent]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.gradient}
-        >
+        <View style={styles.background}>
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
@@ -252,21 +251,21 @@ const ForgotPasswordScreen: React.FC = () => {
                   opacity: fadeAnim,
                   transform: [{ translateY: slideAnim }],
                   paddingHorizontal: adaptiveStyles.padding,
+                  maxWidth: adaptiveStyles.maxWidth,
+                  alignSelf: 'center',
+                  width: '100%',
                 },
               ]}
             >
               {!emailSent ? (
-                <>
+                <>  
                   {/* Заголовок */}
                   <View style={styles.header}>
-                    <View style={[styles.logoContainer, { width: adaptiveStyles.logoSize + 40, height: adaptiveStyles.logoSize + 40, borderRadius: (adaptiveStyles.logoSize + 40) / 2 }]}>
-                      <Ionicons name="key" size={adaptiveStyles.logoSize} color={COLORS.white} />
-                    </View>
                     <Text style={[styles.title, { fontSize: adaptiveStyles.titleSize }]}>
                       Забыли пароль?
                     </Text>
                     <Text style={[styles.subtitle, { fontSize: adaptiveStyles.subtitleSize }]}>
-                      Введите email для восстановления
+                      Введите ваш email, и мы отправим инструкции по восстановлению
                     </Text>
                   </View>
 
@@ -277,26 +276,13 @@ const ForgotPasswordScreen: React.FC = () => {
                       { transform: [{ translateX: shakeAnim }] },
                     ]}
                   >
-                    {/* Инструкция */}
-                    <View style={styles.instructionContainer}>
-                      <Ionicons name="information-circle" size={20} color={COLORS.primary} />
-                      <Text style={styles.instructionText}>
-                        Мы отправим вам ссылку для сброса пароля на указанный email
-                      </Text>
-                    </View>
-
                     {/* Поле Email */}
                     <View style={styles.inputWrapper}>
+                      <Text style={styles.inputLabel}>Email</Text>
                       <View style={[styles.inputContainer, errors.email && touched.email && styles.inputError, { height: adaptiveStyles.inputHeight }]}>
-                        <Ionicons 
-                          name="mail-outline" 
-                          size={20} 
-                          color={errors.email && touched.email ? COLORS.error : COLORS.primary} 
-                          style={styles.inputIcon} 
-                        />
                         <TextInput
                           style={styles.input}
-                          placeholder="Email"
+                          placeholder="your@email.com"
                           placeholderTextColor={COLORS.gray}
                           value={email}
                           onChangeText={handleEmailChange}
@@ -323,30 +309,17 @@ const ForgotPasswordScreen: React.FC = () => {
                       disabled={loading}
                       accessibilityLabel="Отправить ссылку для восстановления"
                     >
-                      <LinearGradient
-                        colors={[COLORS.primary, COLORS.secondary]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={styles.gradientButton}
-                      >
-                        {loading ? (
-                          <ActivityIndicator color={COLORS.white} size="small" />
-                        ) : (
-                          <>
-                            <Ionicons name="paper-plane" size={20} color={COLORS.white} style={styles.buttonIcon} />
-                            <Text style={styles.resetButtonText}>Отправить</Text>
-                          </>
-                        )}
-                      </LinearGradient>
+                      {loading ? (
+                        <ActivityIndicator color={COLORS.white} size="small" />
+                      ) : (
+                        <Text style={styles.resetButtonText}>Отправить ссылку</Text>
+                      )}
                     </TouchableOpacity>
 
                     {/* Ссылка на вход */}
                     <View style={styles.loginContainer}>
                       <TouchableOpacity onPress={handleGoToLogin} accessibilityLabel="Вернуться ко входу">
-                        <View style={styles.backToLoginButton}>
-                          <Ionicons name="arrow-back" size={18} color={COLORS.primary} />
-                          <Text style={styles.backToLoginText}>Вернуться ко входу</Text>
-                        </View>
+                        <Text style={styles.backToLoginText}>← Вернуться ко входу</Text>
                       </TouchableOpacity>
                     </View>
                   </Animated.View>
@@ -395,14 +368,7 @@ const ForgotPasswordScreen: React.FC = () => {
                       onPress={handleGoToLogin}
                       accessibilityLabel="Вернуться ко входу"
                     >
-                      <LinearGradient
-                        colors={[COLORS.primary, COLORS.secondary]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={styles.gradientButton}
-                      >
-                        <Text style={styles.actionButtonText}>Вернуться ко входу</Text>
-                      </LinearGradient>
+                      <Text style={styles.actionButtonText}>Вернуться ко входу</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -417,7 +383,7 @@ const ForgotPasswordScreen: React.FC = () => {
               )}
             </Animated.View>
           </ScrollView>
-        </LinearGradient>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -429,97 +395,68 @@ export default React.memo(ForgotPasswordScreen);
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.background,
   },
   container: {
     flex: 1,
   },
-  gradient: {
+  background: {
     flex: 1,
+    backgroundColor: COLORS.background,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingVertical: 20,
+    paddingVertical: 40,
   },
   content: {
     flex: 1,
     justifyContent: 'center',
-    minHeight: SCREEN_HEIGHT - 40,
+    minHeight: SCREEN_HEIGHT - 80,
   },
   header: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  logoContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
+    marginBottom: 40,
   },
   title: {
-    fontWeight: 'bold',
-    color: COLORS.white,
-    marginBottom: 8,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 12,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    color: 'rgba(255, 255, 255, 0.9)',
-    textAlign: 'center',
+    color: COLORS.textLight,
+    lineHeight: 22,
   },
   formContainer: {
     backgroundColor: COLORS.white,
-    borderRadius: 24,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 10,
-  },
-  instructionContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: COLORS.background,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 20,
-    gap: 10,
-  },
-  instructionText: {
-    flex: 1,
-    fontSize: 14,
-    color: COLORS.darkGray,
-    lineHeight: 20,
+    borderRadius: 16,
+    padding: 0,
   },
   inputWrapper: {
-    marginBottom: 20,
+    marginBottom: 24,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 8,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.background,
-    borderRadius: 12,
+    backgroundColor: COLORS.inputBg,
+    borderRadius: 10,
     paddingHorizontal: 16,
-    borderWidth: 2,
-    borderColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
   },
   inputError: {
     borderColor: COLORS.error,
-  },
-  inputIcon: {
-    marginRight: 12,
+    backgroundColor: '#FEF2F2',
   },
   input: {
     flex: 1,
-    fontSize: 16,
-    color: '#1E293B',
+    fontSize: 15,
+    color: COLORS.text,
   },
   errorText: {
     color: COLORS.error,
@@ -528,38 +465,31 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   resetButton: {
-    borderRadius: 12,
-    overflow: 'hidden',
+    backgroundColor: COLORS.primary,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   resetButtonDisabled: {
     opacity: 0.6,
   },
-  gradientButton: {
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexDirection: 'row',
-  },
-  buttonIcon: {
-    marginRight: 8,
-  },
   resetButtonText: {
     color: COLORS.white,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
   },
   loginContainer: {
     alignItems: 'center',
-    marginTop: 24,
-  },
-  backToLoginButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+    marginTop: 20,
   },
   backToLoginText: {
     color: COLORS.primary,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
   // Стили для экрана успеха
@@ -569,31 +499,26 @@ const styles = StyleSheet.create({
   },
   successContent: {
     backgroundColor: COLORS.white,
-    borderRadius: 24,
+    borderRadius: 16,
     padding: 32,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 10,
   },
   successIconContainer: {
     marginBottom: 24,
   },
   successTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1E293B',
+    fontSize: 26,
+    fontWeight: '700',
+    color: COLORS.text,
     marginBottom: 12,
     textAlign: 'center',
   },
   successText: {
-    fontSize: 16,
-    color: COLORS.darkGray,
+    fontSize: 15,
+    color: COLORS.textLight,
     textAlign: 'center',
     marginBottom: 12,
-    lineHeight: 24,
+    lineHeight: 22,
   },
   emailText: {
     fontSize: 16,
@@ -605,10 +530,12 @@ const styles = StyleSheet.create({
   successInfoBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.cardBg,
     padding: 16,
-    borderRadius: 12,
-    marginBottom: 32,
+    borderRadius: 10,
+    marginBottom: 28,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   infoIcon: {
     marginRight: 10,
@@ -617,18 +544,25 @@ const styles = StyleSheet.create({
   successInfoText: {
     flex: 1,
     fontSize: 13,
-    color: COLORS.darkGray,
+    color: COLORS.textLight,
     lineHeight: 20,
   },
   actionButton: {
     width: '100%',
-    borderRadius: 12,
-    overflow: 'hidden',
+    backgroundColor: COLORS.primary,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 12,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   actionButtonText: {
     color: COLORS.white,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
   },
   resendButton: {
