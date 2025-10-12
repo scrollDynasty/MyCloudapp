@@ -38,18 +38,23 @@ interface ValidationErrors {
   password?: string;
 }
 
-// Константы цветовой палитры (сине-белая)
+// Современная цветовая палитра
 const COLORS = {
-  primary: '#2563EB',
-  secondary: '#3B82F6',
-  accent: '#60A5FA',
-  background: '#F8FAFC',
+  primary: '#6366F1',
+  primaryDark: '#4F46E5',
+  secondary: '#8B5CF6',
+  background: '#FFFFFF',
+  cardBg: '#FAFAFA',
+  inputBg: '#F8F9FA',
   white: '#FFFFFF',
+  text: '#0F172A',
+  textLight: '#64748B',
   gray: '#94A3B8',
-  darkGray: '#64748B',
+  border: '#E2E8F0',
   error: '#EF4444',
   success: '#10B981',
-  googleRed: '#DB4437',
+  focus: '#6366F1',
+  googleBg: '#4285F4',
 } as const;
 
 // Получение размеров экрана для адаптивности
@@ -354,12 +359,12 @@ const LoginScreen: React.FC = () => {
 
   // Мемоизированные адаптивные стили
   const adaptiveStyles = useMemo(() => ({
-    logoSize: isSmallScreen ? 50 : isMediumScreen ? 60 : 70,
-    titleSize: isSmallScreen ? 26 : isMediumScreen ? 32 : 36,
-    subtitleSize: isSmallScreen ? 14 : 16,
-    inputHeight: isSmallScreen ? 52 : 56,
-    buttonHeight: isSmallScreen ? 52 : 56,
-    padding: isSmallScreen ? 16 : 20,
+    titleSize: isSmallScreen ? 28 : isMediumScreen ? 32 : 36,
+    subtitleSize: isSmallScreen ? 14 : 15,
+    inputHeight: isSmallScreen ? 48 : 52,
+    buttonHeight: isSmallScreen ? 48 : 52,
+    padding: isSmallScreen ? 20 : 24,
+    maxWidth: isMediumScreen ? '100%' : 440,
   }), []);
 
   return (
@@ -369,12 +374,7 @@ const LoginScreen: React.FC = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
-        <LinearGradient
-          colors={[COLORS.primary, COLORS.secondary, COLORS.accent]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.gradient}
-        >
+        <View style={styles.background}>
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
@@ -387,17 +387,17 @@ const LoginScreen: React.FC = () => {
                   opacity: fadeAnim,
                   transform: [{ translateY: slideAnim }],
                   paddingHorizontal: adaptiveStyles.padding,
+                  maxWidth: adaptiveStyles.maxWidth,
+                  alignSelf: 'center',
+                  width: '100%',
                 },
               ]}
             >
-              {/* Заголовок с логотипом */}
+              {/* Заголовок */}
               <View style={styles.header}>
-                <View style={[styles.logoContainer, { width: adaptiveStyles.logoSize + 40, height: adaptiveStyles.logoSize + 40, borderRadius: (adaptiveStyles.logoSize + 40) / 2 }]}>
-                  <Ionicons name="cloud" size={adaptiveStyles.logoSize} color={COLORS.white} />
-                </View>
-                <Text style={[styles.title, { fontSize: adaptiveStyles.titleSize }]}>VPS Billing</Text>
+                <Text style={[styles.title, { fontSize: adaptiveStyles.titleSize }]}>Вход</Text>
                 <Text style={[styles.subtitle, { fontSize: adaptiveStyles.subtitleSize }]}>
-                  Войдите в свой аккаунт
+                  Войдите в свой аккаунт, чтобы продолжить
                 </Text>
               </View>
 
@@ -410,11 +410,11 @@ const LoginScreen: React.FC = () => {
               >
                 {/* Поле Email */}
                 <View style={styles.inputWrapper}>
+                  <Text style={styles.inputLabel}>Email</Text>
                   <View style={[styles.inputContainer, errors.email && touched.email && styles.inputError, { height: adaptiveStyles.inputHeight }]}>
-                    <Ionicons name="mail-outline" size={20} color={errors.email && touched.email ? COLORS.error : COLORS.primary} style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
-                      placeholder="Email"
+                      placeholder="your@email.com"
                       placeholderTextColor={COLORS.gray}
                       value={email}
                       onChangeText={handleEmailChange}
@@ -434,11 +434,11 @@ const LoginScreen: React.FC = () => {
 
                 {/* Поле Пароль */}
                 <View style={styles.inputWrapper}>
+                  <Text style={styles.inputLabel}>Пароль</Text>
                   <View style={[styles.inputContainer, errors.password && touched.password && styles.inputError, { height: adaptiveStyles.inputHeight }]}>
-                    <Ionicons name="lock-closed-outline" size={20} color={errors.password && touched.password ? COLORS.error : COLORS.primary} style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
-                      placeholder="Пароль"
+                      placeholder="Введите пароль"
                       placeholderTextColor={COLORS.gray}
                       value={password}
                       onChangeText={handlePasswordChange}
@@ -493,18 +493,11 @@ const LoginScreen: React.FC = () => {
                   disabled={loading}
                   accessibilityLabel="Войти в систему"
                 >
-                  <LinearGradient
-                    colors={[COLORS.primary, COLORS.secondary]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.gradientButton}
-                  >
-                    {loading ? (
-                      <ActivityIndicator color={COLORS.white} size="small" />
-                    ) : (
-                      <Text style={styles.loginButtonText}>Войти</Text>
-                    )}
-                  </LinearGradient>
+                  {loading ? (
+                    <ActivityIndicator color={COLORS.white} size="small" />
+                  ) : (
+                    <Text style={styles.loginButtonText}>Войти</Text>
+                  )}
                 </TouchableOpacity>
 
                 {/* Разделитель */}
@@ -521,8 +514,8 @@ const LoginScreen: React.FC = () => {
                   disabled={loading}
                   accessibilityLabel="Войти через Google"
                 >
-                  <Ionicons name="logo-google" size={20} color={COLORS.white} style={styles.googleIcon} />
-                  <Text style={styles.googleButtonText}>Войти через Google</Text>
+                  <Ionicons name="logo-google" size={20} color={COLORS.googleBg} style={styles.googleIcon} />
+                  <Text style={styles.googleButtonText}>Продолжить с Google</Text>
                 </TouchableOpacity>
 
                 {/* Ссылка на регистрацию */}
@@ -542,7 +535,7 @@ const LoginScreen: React.FC = () => {
               </View>
             </Animated.View>
           </ScrollView>
-        </LinearGradient>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -554,81 +547,68 @@ export default React.memo(LoginScreen);
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.background,
   },
   container: {
     flex: 1,
   },
-  gradient: {
+  background: {
     flex: 1,
+    backgroundColor: COLORS.background,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingVertical: 20,
+    paddingVertical: 40,
   },
   content: {
     flex: 1,
     justifyContent: 'center',
-    minHeight: SCREEN_HEIGHT - 40,
+    minHeight: SCREEN_HEIGHT - 80,
   },
   header: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  logoContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
+    marginBottom: 40,
   },
   title: {
-    fontWeight: 'bold',
-    color: COLORS.white,
+    fontWeight: '700',
+    color: COLORS.text,
     marginBottom: 8,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: COLORS.textLight,
+    lineHeight: 22,
   },
   formContainer: {
     backgroundColor: COLORS.white,
-    borderRadius: 24,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 10,
+    borderRadius: 16,
+    padding: 0,
   },
   inputWrapper: {
-    marginBottom: 16,
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 8,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.background,
-    borderRadius: 12,
+    backgroundColor: COLORS.inputBg,
+    borderRadius: 10,
     paddingHorizontal: 16,
-    borderWidth: 2,
-    borderColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
   },
   inputError: {
     borderColor: COLORS.error,
-  },
-  inputIcon: {
-    marginRight: 12,
+    backgroundColor: '#FEF2F2',
   },
   input: {
     flex: 1,
-    fontSize: 16,
-    color: '#1E293B',
+    fontSize: 15,
+    color: COLORS.text,
   },
   eyeIcon: {
     padding: 8,
@@ -652,18 +632,19 @@ const styles = StyleSheet.create({
   checkbox: {
     width: 20,
     height: 20,
-    borderRadius: 6,
+    borderRadius: 5,
     borderWidth: 2,
-    borderColor: COLORS.primary,
+    borderColor: COLORS.border,
     marginRight: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkboxActive: {
     backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
   rememberMeText: {
-    color: COLORS.darkGray,
+    color: COLORS.textLight,
     fontSize: 14,
   },
   forgotPasswordText: {
@@ -672,21 +653,23 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   loginButton: {
-    borderRadius: 12,
-    overflow: 'hidden',
+    backgroundColor: COLORS.primary,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginTop: 4,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   loginButtonDisabled: {
     opacity: 0.6,
   },
-  gradientButton: {
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   loginButtonText: {
     color: COLORS.white,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
   },
   divider: {
@@ -705,23 +688,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   googleButton: {
-    backgroundColor: COLORS.googleRed,
-    borderRadius: 12,
+    backgroundColor: COLORS.white,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
     flexDirection: 'row',
-    shadowColor: COLORS.googleRed,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
   },
   googleIcon: {
-    marginRight: 12,
+    marginRight: 10,
   },
   googleButtonText: {
-    color: COLORS.white,
-    fontSize: 16,
+    color: COLORS.text,
+    fontSize: 15,
     fontWeight: '600',
   },
   registerContainer: {
@@ -730,34 +710,32 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   registerText: {
-    color: COLORS.darkGray,
-    fontSize: 14,
+    color: COLORS.textLight,
+    fontSize: 15,
   },
   registerLink: {
     color: COLORS.primary,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
   testCredentials: {
-    marginTop: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 16,
+    marginTop: 32,
+    backgroundColor: COLORS.cardBg,
+    borderRadius: 12,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   testTitle: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
-    color: COLORS.primary,
-    marginBottom: 8,
+    color: COLORS.text,
+    marginBottom: 10,
   },
   testText: {
-    fontSize: 11,
-    color: COLORS.darkGray,
+    fontSize: 12,
+    color: COLORS.textLight,
     marginBottom: 4,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
 });

@@ -50,19 +50,22 @@ interface PasswordStrength {
   color: string;
 }
 
-// Константы цветовой палитры (сине-белая)
+// Современная цветовая палитра
 const COLORS = {
-  primary: '#2563EB',
-  secondary: '#3B82F6',
-  accent: '#60A5FA',
-  background: '#F8FAFC',
+  primary: '#6366F1',
+  primaryDark: '#4F46E5',
+  secondary: '#8B5CF6',
+  background: '#FFFFFF',
+  cardBg: '#FAFAFA',
+  inputBg: '#F8F9FA',
   white: '#FFFFFF',
+  text: '#0F172A',
+  textLight: '#64748B',
   gray: '#94A3B8',
-  darkGray: '#64748B',
+  border: '#E2E8F0',
   error: '#EF4444',
   success: '#10B981',
   warning: '#F59E0B',
-  googleRed: '#DB4437',
 } as const;
 
 // Получение размеров экрана для адаптивности
@@ -366,12 +369,12 @@ const RegisterScreen: React.FC = () => {
 
   // Мемоизированные адаптивные стили
   const adaptiveStyles = useMemo(() => ({
-    logoSize: isSmallScreen ? 40 : isMediumScreen ? 50 : 55,
-    titleSize: isSmallScreen ? 24 : isMediumScreen ? 28 : 32,
-    subtitleSize: isSmallScreen ? 13 : 15,
-    inputHeight: isSmallScreen ? 50 : 52,
-    buttonHeight: isSmallScreen ? 50 : 52,
-    padding: isSmallScreen ? 16 : 20,
+    titleSize: isSmallScreen ? 28 : isMediumScreen ? 32 : 36,
+    subtitleSize: isSmallScreen ? 14 : 15,
+    inputHeight: isSmallScreen ? 48 : 52,
+    buttonHeight: isSmallScreen ? 48 : 52,
+    padding: isSmallScreen ? 20 : 24,
+    maxWidth: isMediumScreen ? '100%' : 440,
   }), []);
 
   return (
@@ -380,12 +383,7 @@ const RegisterScreen: React.FC = () => {
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <LinearGradient
-          colors={[COLORS.primary, COLORS.secondary, COLORS.accent]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.gradient}
-        >
+        <View style={styles.background}>
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
@@ -398,17 +396,17 @@ const RegisterScreen: React.FC = () => {
                   opacity: fadeAnim,
                   transform: [{ translateY: slideAnim }],
                   paddingHorizontal: adaptiveStyles.padding,
+                  maxWidth: adaptiveStyles.maxWidth,
+                  alignSelf: 'center',
+                  width: '100%',
                 },
               ]}
             >
               {/* Заголовок */}
               <View style={styles.header}>
-                <View style={[styles.logoContainer, { width: adaptiveStyles.logoSize + 40, height: adaptiveStyles.logoSize + 40, borderRadius: (adaptiveStyles.logoSize + 40) / 2 }]}>
-                  <Ionicons name="person-add" size={adaptiveStyles.logoSize} color={COLORS.white} />
-                </View>
                 <Text style={[styles.title, { fontSize: adaptiveStyles.titleSize }]}>Регистрация</Text>
                 <Text style={[styles.subtitle, { fontSize: adaptiveStyles.subtitleSize }]}>
-                  Создайте новый аккаунт
+                  Создайте аккаунт, чтобы начать работу
                 </Text>
               </View>
 
@@ -456,11 +454,11 @@ const RegisterScreen: React.FC = () => {
 
                 {/* Полное имя */}
                 <View style={styles.inputWrapper}>
+                  <Text style={styles.inputLabel}>Полное имя *</Text>
                   <View style={[styles.inputContainer, errors.fullName && touched.fullName && styles.inputError, { height: adaptiveStyles.inputHeight }]}>
-                    <Ionicons name="person-outline" size={20} color={errors.fullName && touched.fullName ? COLORS.error : COLORS.primary} style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
-                      placeholder="Полное имя *"
+                      placeholder="Иван Иванов"
                       placeholderTextColor={COLORS.gray}
                       value={fullName}
                       onChangeText={(text) => handleFieldChange('fullName', text)}
@@ -477,11 +475,11 @@ const RegisterScreen: React.FC = () => {
 
                 {/* Email */}
                 <View style={styles.inputWrapper}>
+                  <Text style={styles.inputLabel}>Email *</Text>
                   <View style={[styles.inputContainer, errors.email && touched.email && styles.inputError, { height: adaptiveStyles.inputHeight }]}>
-                    <Ionicons name="mail-outline" size={20} color={errors.email && touched.email ? COLORS.error : COLORS.primary} style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
-                      placeholder="Email *"
+                      placeholder="your@email.com"
                       placeholderTextColor={COLORS.gray}
                       value={email}
                       onChangeText={(text) => handleFieldChange('email', text)}
@@ -501,11 +499,11 @@ const RegisterScreen: React.FC = () => {
 
                 {/* Телефон */}
                 <View style={styles.inputWrapper}>
+                  <Text style={styles.inputLabel}>Телефон (опционально)</Text>
                   <View style={[styles.inputContainer, errors.phone && touched.phone && styles.inputError, { height: adaptiveStyles.inputHeight }]}>
-                    <Ionicons name="call-outline" size={20} color={errors.phone && touched.phone ? COLORS.error : COLORS.primary} style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
-                      placeholder="Телефон (опционально)"
+                      placeholder="+998 90 123 45 67"
                       placeholderTextColor={COLORS.gray}
                       value={phone}
                       onChangeText={(text) => handleFieldChange('phone', text)}
@@ -525,11 +523,11 @@ const RegisterScreen: React.FC = () => {
                 {role === 'legal_entity' && (
                   <>
                     <View style={styles.inputWrapper}>
+                      <Text style={styles.inputLabel}>Название компании *</Text>
                       <View style={[styles.inputContainer, errors.companyName && touched.companyName && styles.inputError, { height: adaptiveStyles.inputHeight }]}>
-                        <Ionicons name="business-outline" size={20} color={errors.companyName && touched.companyName ? COLORS.error : COLORS.primary} style={styles.inputIcon} />
                         <TextInput
                           style={styles.input}
-                          placeholder="Название компании *"
+                          placeholder="ООО Компания"
                           placeholderTextColor={COLORS.gray}
                           value={companyName}
                           onChangeText={(text) => handleFieldChange('companyName', text)}
@@ -545,11 +543,11 @@ const RegisterScreen: React.FC = () => {
                     </View>
 
                     <View style={styles.inputWrapper}>
+                      <Text style={styles.inputLabel}>ИНН *</Text>
                       <View style={[styles.inputContainer, errors.taxId && touched.taxId && styles.inputError, { height: adaptiveStyles.inputHeight }]}>
-                        <Ionicons name="document-text-outline" size={20} color={errors.taxId && touched.taxId ? COLORS.error : COLORS.primary} style={styles.inputIcon} />
                         <TextInput
                           style={styles.input}
-                          placeholder="ИНН *"
+                          placeholder="123456789"
                           placeholderTextColor={COLORS.gray}
                           value={taxId}
                           onChangeText={(text) => handleFieldChange('taxId', text)}
@@ -569,11 +567,11 @@ const RegisterScreen: React.FC = () => {
 
                 {/* Пароль */}
                 <View style={styles.inputWrapper}>
+                  <Text style={styles.inputLabel}>Пароль *</Text>
                   <View style={[styles.inputContainer, errors.password && touched.password && styles.inputError, { height: adaptiveStyles.inputHeight }]}>
-                    <Ionicons name="lock-closed-outline" size={20} color={errors.password && touched.password ? COLORS.error : COLORS.primary} style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
-                      placeholder="Пароль *"
+                      placeholder="Минимум 6 символов"
                       placeholderTextColor={COLORS.gray}
                       value={password}
                       onChangeText={(text) => handleFieldChange('password', text)}
@@ -624,11 +622,11 @@ const RegisterScreen: React.FC = () => {
 
                 {/* Подтверждение пароля */}
                 <View style={styles.inputWrapper}>
+                  <Text style={styles.inputLabel}>Подтвердите пароль *</Text>
                   <View style={[styles.inputContainer, errors.confirmPassword && touched.confirmPassword && styles.inputError, { height: adaptiveStyles.inputHeight }]}>
-                    <Ionicons name="lock-closed-outline" size={20} color={errors.confirmPassword && touched.confirmPassword ? COLORS.error : COLORS.primary} style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
-                      placeholder="Подтвердите пароль *"
+                      placeholder="Повторите пароль"
                       placeholderTextColor={COLORS.gray}
                       value={confirmPassword}
                       onChangeText={(text) => handleFieldChange('confirmPassword', text)}
@@ -663,18 +661,11 @@ const RegisterScreen: React.FC = () => {
                   disabled={loading}
                   accessibilityLabel="Зарегистрироваться"
                 >
-                  <LinearGradient
-                    colors={[COLORS.primary, COLORS.secondary]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.gradientButton}
-                  >
-                    {loading ? (
-                      <ActivityIndicator color={COLORS.white} size="small" />
-                    ) : (
-                      <Text style={styles.registerButtonText}>Зарегистрироваться</Text>
-                    )}
-                  </LinearGradient>
+                  {loading ? (
+                    <ActivityIndicator color={COLORS.white} size="small" />
+                  ) : (
+                    <Text style={styles.registerButtonText}>Создать аккаунт</Text>
+                  )}
                 </TouchableOpacity>
 
                 {/* Ссылка на логин */}
@@ -687,7 +678,7 @@ const RegisterScreen: React.FC = () => {
               </Animated.View>
             </Animated.View>
           </ScrollView>
-        </LinearGradient>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -699,58 +690,41 @@ export default React.memo(RegisterScreen);
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.background,
   },
   container: {
     flex: 1,
   },
-  gradient: {
+  background: {
     flex: 1,
+    backgroundColor: COLORS.background,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingVertical: 20,
+    paddingVertical: 40,
   },
   content: {
     flex: 1,
     justifyContent: 'center',
-    minHeight: SCREEN_HEIGHT - 40,
+    minHeight: SCREEN_HEIGHT - 80,
   },
   header: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  logoContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
+    marginBottom: 32,
   },
   title: {
-    fontWeight: 'bold',
-    color: COLORS.white,
-    marginBottom: 6,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 8,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: COLORS.textLight,
+    lineHeight: 22,
   },
   formContainer: {
     backgroundColor: COLORS.white,
-    borderRadius: 24,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 10,
+    borderRadius: 16,
+    padding: 0,
   },
   roleContainer: {
     flexDirection: 'row',
@@ -782,27 +756,31 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
   inputWrapper: {
-    marginBottom: 14,
+    marginBottom: 18,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 8,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.background,
-    borderRadius: 12,
+    backgroundColor: COLORS.inputBg,
+    borderRadius: 10,
     paddingHorizontal: 16,
-    borderWidth: 2,
-    borderColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
   },
   inputError: {
     borderColor: COLORS.error,
-  },
-  inputIcon: {
-    marginRight: 12,
+    backgroundColor: '#FEF2F2',
   },
   input: {
     flex: 1,
     fontSize: 15,
-    color: '#1E293B',
+    color: COLORS.text,
   },
   eyeIcon: {
     padding: 8,
@@ -832,21 +810,23 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   registerButton: {
-    borderRadius: 12,
-    overflow: 'hidden',
+    backgroundColor: COLORS.primary,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginTop: 8,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   registerButtonDisabled: {
     opacity: 0.6,
   },
-  gradientButton: {
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   registerButtonText: {
     color: COLORS.white,
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '600',
   },
   loginContainer: {
@@ -855,12 +835,12 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   loginText: {
-    color: COLORS.darkGray,
-    fontSize: 14,
+    color: COLORS.textLight,
+    fontSize: 15,
   },
   loginLink: {
     color: COLORS.primary,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
 });
