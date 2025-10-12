@@ -94,3 +94,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     </AuthContext.Provider>
   );
 }
+
+// Export as default to satisfy Expo Router requirements
+export default AuthProvider;

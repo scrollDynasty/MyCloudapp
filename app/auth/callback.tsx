@@ -21,88 +21,46 @@ export default function CallbackScreen() {
       // Проверить на ошибку
       if (params.error) {
         console.error('❌ Auth error from server:', params.error);
-        
-        // Если это popup окно, отправляем сообщение родителю
-        if (Platform.OS === 'web' && typeof window !== 'undefined' && window.opener) {
-          window.opener.postMessage({
-            type: 'GOOGLE_AUTH_ERROR',
-            error: params.error
-          }, window.location.origin);
-          window.close();
-        } else {
-          setError('Ошибка авторизации через Google');
-          setTimeout(() => router.replace('/auth/login'), 2000);
-        }
+        setError('Ошибка авторизации через Google');
+        setTimeout(() => router.replace('/auth/login'), 2000);
         return;
       }
       
       // Получить токен из URL параметров
       const token = params.token as string;
-      const userStr = params.user as string;
+      let userStr = params.user as string;
 
       if (!token || !userStr) {
         console.error('❌ Missing token or user data');
-        
-        // Если это popup окно, отправляем сообщение родителю
-        if (Platform.OS === 'web' && typeof window !== 'undefined' && window.opener) {
-          window.opener.postMessage({
-            type: 'GOOGLE_AUTH_ERROR',
-            error: 'Missing token or user data'
-          }, window.location.origin);
-          window.close();
-        } else {
-          setError('Ошибка авторизации: отсутствуют данные');
-          setTimeout(() => router.replace('/auth/login'), 2000);
-        }
+        setError('Ошибка авторизации: отсутствуют данные');
+        setTimeout(() => router.replace('/auth/login'), 2000);
         return;
       }
 
-      // Декодировать данные пользователя
-      const user = JSON.parse(decodeURIComponent(userStr));
+      // Декодировать данные пользователя и убрать символ #
+      userStr = decodeURIComponent(userStr);
+      // Удаляем все после символа # (hash fragment)
+      userStr = userStr.replace(/#.*$/, '');
+      
+      const user = JSON.parse(userStr);
       console.log('✅ User data received:', user);
 
-      // Если это popup окно (открыто из другого окна)
-      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.opener) {
-        console.log('📤 Sending auth data to parent window');
-        
-        // Отправляем данные родительскому окну
-        window.opener.postMessage({
-          type: 'GOOGLE_AUTH_SUCCESS',
-          token,
-          user
-        }, window.location.origin);
-        
-        // Закрываем popup
-        window.close();
-      } else {
-        // Обычный callback для мобильных приложений
-        // Использовать signIn из AuthContext
-        await signIn(token, user);
-        console.log('✅ SignIn completed via Google OAuth');
+      // Использовать signIn из AuthContext
+      await signIn(token, user);
+      console.log('✅ SignIn completed via Google OAuth');
 
-        // Перенаправить в зависимости от роли
-        if (user.role === 'admin') {
-          console.log('🔄 Redirecting to admin dashboard');
-          router.replace('/(admin)/dashboard');
-        } else {
-          console.log('🔄 Redirecting to user home');
-          router.replace('/(user)/home');
-        }
+      // Перенаправить в зависимости от роли
+      if (user.role === 'admin') {
+        console.log('🔄 Redirecting to admin dashboard');
+        router.replace('/(admin)/dashboard');
+      } else {
+        console.log('🔄 Redirecting to user home');
+        router.replace('/(user)/home');
       }
     } catch (err) {
       console.error('❌ Callback error:', err);
-      
-      // Если это popup окно, отправляем сообщение родителю
-      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.opener) {
-        window.opener.postMessage({
-          type: 'GOOGLE_AUTH_ERROR',
-          error: 'Failed to process auth data'
-        }, window.location.origin);
-        window.close();
-      } else {
-        setError('Ошибка при обработке данных авторизации');
-        setTimeout(() => router.replace('/auth/login'), 2000);
-      }
+      setError('Ошибка при обработке данных авторизации');
+      setTimeout(() => router.replace('/auth/login'), 2000);
     }
   };
 
