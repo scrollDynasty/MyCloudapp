@@ -374,7 +374,7 @@ const RegisterScreen: React.FC = () => {
     inputHeight: isSmallScreen ? 48 : 52,
     buttonHeight: isSmallScreen ? 48 : 52,
     padding: isSmallScreen ? 20 : 24,
-    maxWidth: isMediumScreen ? '100%' : 440,
+    maxWidth: isMediumScreen ? ('100%' as `${number}%`) : 440,
   }), []);
 
   return (
