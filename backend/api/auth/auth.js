@@ -214,7 +214,7 @@ router.get('/google',
 router.get('/google/callback',
   passport.authenticate('google', { 
     session: false,
-    failureRedirect: '/login' 
+    failureRedirect: '/auth/login' 
   }),
   async (req, res) => {
     try {
@@ -231,15 +231,15 @@ router.get('/google/callback',
         company_name: req.user.company_name
       };
       
-      // Redirect to auth callback HTML page (static page that handles deep linking)
-      const apiDomain = process.env.API_DOMAIN || 'http://localhost:5000';
+      // Redirect to mobile app deep link or web callback
       const userParam = encodeURIComponent(JSON.stringify(userData));
-      res.redirect(`${apiDomain}/auth-callback.html?token=${token}&user=${userParam}`);
+      const callbackUrl = `mycloud://auth/callback?token=${token}&user=${userParam}`;
+      
+      res.redirect(callbackUrl);
       
     } catch (error) {
       console.error('Google callback error:', error);
-      const apiDomain = process.env.API_DOMAIN || 'http://localhost:5000';
-      res.redirect(`${apiDomain}/auth-callback.html?error=auth_failed`);
+      res.redirect('mycloud://auth/callback?error=auth_failed');
     }
   }
 );
