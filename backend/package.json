@@ -11,7 +11,11 @@
     "import-data": "node scripts/import-excel-data.js",
     "add-test-data": "node scripts/add-test-data.js",
     "init-system": "node scripts/initialize-system.js",
-    "validate": "node scripts/validate-database.js"
+    "validate": "node scripts/validate-database.js",
+    "test:performance": "node scripts/performance-test.js",
+    "test:memory": "node scripts/memory-leak-detector.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "keywords": [
     "vps",
@@ -40,6 +44,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "eslint": "^8.55.0",
     "nodemon": "^3.0.2"
   },
   "engines": {

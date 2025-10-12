@@ -4,33 +4,85 @@ const dbConfig = require('../config/database');
 class Database {
   constructor() {
     this.pool = null;
+    this.poolPromise = null;
     this.connected = false;
+    this.connectionAttempts = 0;
+    this.maxRetries = 3;
+    this.isInitializing = false;
   }
 
   async connect() {
-    try {
-      // Create connection pool
-      this.pool = mysql.createPool({
-        ...dbConfig,
-        waitForConnections: true,
-        queueLimit: 0
-      });
+    // Return existing pool if already connected
+    if (this.connected && this.poolPromise) {
+      return this.poolPromise;
+    }
 
-      // Get promise-based pool
-      this.poolPromise = this.pool.promise();
+    // Prevent multiple simultaneous connection attempts
+    if (this.isInitializing) {
+      // Wait for existing connection attempt to complete
+      while (this.isInitializing) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      return this.poolPromise;
+    }
+
+    this.isInitializing = true;
+
+    try {
+      // Create connection pool only once
+      if (!this.pool) {
+        this.pool = mysql.createPool(dbConfig);
+
+        // Get promise-based pool
+        this.poolPromise = this.pool.promise();
+
+        // Set up pool event handlers for monitoring
+        this.setupPoolMonitoring();
+      }
 
       // Test connection
       await this.testConnection();
       
       this.connected = true;
+      this.connectionAttempts = 0;
       console.log('✅ MariaDB connected successfully');
       console.log(`📍 Database: ${dbConfig.database} on ${dbConfig.host}:${dbConfig.port}`);
+      console.log(`📊 Pool config: ${dbConfig.connectionLimit} connections, ${dbConfig.queueLimit} queue limit`);
       
       return this.poolPromise;
     } catch (error) {
-      console.error('❌ MariaDB connection failed:', error.message);
+      this.connectionAttempts++;
+      console.error(`❌ MariaDB connection failed (attempt ${this.connectionAttempts}/${this.maxRetries}):`, error.message);
+      
+      if (this.connectionAttempts >= this.maxRetries) {
+        throw new Error(`Failed to connect to database after ${this.maxRetries} attempts`);
+      }
+      
       throw error;
+    } finally {
+      this.isInitializing = false;
     }
+  }
+
+  setupPoolMonitoring() {
+    // Monitor pool for connection events
+    this.pool.on('acquire', (connection) => {
+      // Connection acquired from pool - can add metrics here
+    });
+
+    this.pool.on('connection', (connection) => {
+      // New connection created
+      console.log('🔗 New database connection established');
+    });
+
+    this.pool.on('enqueue', () => {
+      // Waiting for available connection - may indicate need for more connections
+      console.warn('⏳ Query queued - waiting for available connection');
+    });
+
+    this.pool.on('release', (connection) => {
+      // Connection released back to pool
+    });
   }
 
   async testConnection() {
@@ -90,10 +142,36 @@ class Database {
 
   async close() {
     if (this.pool) {
-      await this.pool.end();
-      this.connected = false;
-      console.log('🔐 Database connection closed');
+      try {
+        // Gracefully close all connections in pool
+        await this.pool.end();
+        this.connected = false;
+        this.pool = null;
+        this.poolPromise = null;
+        console.log('🔐 Database connection pool closed gracefully');
+      } catch (error) {
+        console.error('Error closing database pool:', error);
+        throw error;
+      }
     }
+  }
+
+  // Get pool statistics for monitoring
+  getPoolStats() {
+    if (!this.pool) {
+      return null;
+    }
+
+    return {
+      connected: this.connected,
+      totalConnections: this.pool._allConnections?.length || 0,
+      freeConnections: this.pool._freeConnections?.length || 0,
+      queuedRequests: this.pool._connectionQueue?.length || 0,
+      config: {
+        connectionLimit: dbConfig.connectionLimit,
+        queueLimit: dbConfig.queueLimit
+      }
+    };
   }
 
   // Utility methods

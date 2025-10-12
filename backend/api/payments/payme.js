@@ -3,6 +3,7 @@ const db = require('../../core/db/connection');
 const SQL = require('../../core/db/queries');
 const PaymeHelper = require('../../core/utils/payme-helper');
 const { authenticate } = require('../../core/utils/auth');
+const { logPayme } = require('../../core/utils/logger');
 
 const router = express.Router();
 const payme = new PaymeHelper();
@@ -10,7 +11,7 @@ const payme = new PaymeHelper();
 // POST /api/payments/payme - Create Payme payment (Authenticated users only)
 router.post('/payme', authenticate, async (req, res) => {
   try {
-    await db.connect();
+    // Database is already initialized at startup
     
     const { order_id, return_url } = req.body;
 
@@ -208,7 +209,7 @@ router.post('/payme/callback', async (req, res) => {
       return res.json(errorResponse);
     }
 
-    await db.connect();
+    // Database is already initialized at startup
     
     const { method, params, id: requestId } = req.body;
     let response;
@@ -784,7 +785,7 @@ router.get('/payme/test-urls/:order_id', authenticate, async (req, res) => {
   try {
     const { order_id } = req.params;
     
-    await db.connect();
+    // Database is already initialized at startup
     
     // Get order to get amount
     const orders = await db.query('SELECT amount FROM orders WHERE id = ?', [order_id]);
@@ -842,7 +843,7 @@ router.get('/payme/test-urls/:order_id', authenticate, async (req, res) => {
 // GET /api/payments/payme/status/:order_id - Check payment status (Authenticated)
 router.get('/payme/status/:order_id', authenticate, async (req, res) => {
   try {
-    await db.connect();
+    // Database is already initialized at startup
     
     const { order_id } = req.params;
 
