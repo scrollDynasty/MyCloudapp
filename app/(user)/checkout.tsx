@@ -83,13 +83,8 @@ export default function CheckoutScreen() {
 
       const data = await response.json();
       
-      console.log('📊 Payme API Full Response:', JSON.stringify(data, null, 2));
-      
       if (data.success && data.data?.checkout_url) {
         setCheckoutUrl(data.data.checkout_url);
-        
-        console.log('✅ Checkout URL:', data.data.checkout_url);
-        console.log('🔄 Alternative URLs:', JSON.stringify(data.data.alternative_urls, null, 2));
         
         // Open Payme checkout in browser
         if (Platform.OS === 'web') {
@@ -107,15 +102,6 @@ export default function CheckoutScreen() {
             }
             
             Alert.alert('⚠️ Всплывающее окно заблокировано', message);
-          } else {
-            // Показываем уведомление об альтернативных URL для отладки
-            if (data.data.alternative_urls) {
-              console.log('🔄 Альтернативные Payme URLs доступны:');
-              console.log('   Standard:', data.data.alternative_urls.standard);
-              console.log('   Account:', data.data.alternative_urls.account);
-              console.log('   ID:', data.data.alternative_urls.id);
-              console.log('   Multiple:', data.data.alternative_urls.multiple);
-            }
           }
         } else {
           const canOpen = await Linking.canOpenURL(data.data.checkout_url);

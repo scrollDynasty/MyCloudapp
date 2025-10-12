@@ -196,7 +196,6 @@ const LoginScreen: React.FC = () => {
     }
 
     setLoading(true);
-    console.log('🔑 Попытка входа с:', email);
 
     try {
       const response = await fetch(`${API_URL}/api/auth/login`, {
@@ -206,11 +205,8 @@ const LoginScreen: React.FC = () => {
       });
 
       const data = await response.json();
-      console.log('📦 Ответ сервера:', data);
 
       if (data.success) {
-        console.log('✅ Вход успешен, пользователь:', data.data.user);
-        
         // Haptic feedback на успех
         if (Platform.OS !== 'web') {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -218,18 +214,14 @@ const LoginScreen: React.FC = () => {
 
         // Используем signIn из AuthContext
         await signIn(data.data.token, data.data.user);
-        console.log('✅ SignIn завершен');
 
         // Перенаправить в зависимости от роли
         if (data.data.user.role === 'admin') {
-          console.log('🔄 Перенаправление на панель администратора');
           router.replace('/(admin)/dashboard');
         } else {
-          console.log('🔄 Перенаправление на домашнюю страницу');
           router.replace('/(user)/home');
         }
       } else {
-        console.error('❌ Вход не удался:', data.error);
         shakeAnimation();
         if (Platform.OS !== 'web') {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -237,7 +229,7 @@ const LoginScreen: React.FC = () => {
         Alert.alert('Ошибка', data.error || 'Неверный email или пароль');
       }
     } catch (error) {
-      console.error('❌ Ошибка входа:', error);
+      console.error('Login error:', error);
       shakeAnimation();
       if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -265,8 +257,6 @@ const LoginScreen: React.FC = () => {
             path: 'auth/callback'
           });
       
-      console.log('🔑 Начало Google OAuth с redirect:', redirectUri);
-      
       // Формируем URL для авторизации Google
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` + 
         `client_id=${encodeURIComponent('735617581412-e8ceb269bj7qqrv9sl066q63g5dr5sne.apps.googleusercontent.com')}&` +
@@ -276,8 +266,6 @@ const LoginScreen: React.FC = () => {
         `access_type=offline&` +
         `prompt=select_account&` +
         `state=${encodeURIComponent(redirectUri)}`;
-      
-      console.log('🌐 Открытие Google auth URL');
       
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         // Для веб - перенаправляем в той же вкладке
@@ -289,11 +277,8 @@ const LoginScreen: React.FC = () => {
           redirectUri
         );
         
-        console.log('📦 Результат авторизации:', result);
-        
         if (result.type === 'success') {
           const url = result.url;
-          console.log('✅ URL успеха:', url);
           
           if (url.includes('token=')) {
             const tokenMatch = url.match(/token=([^&]+)/);
@@ -304,8 +289,6 @@ const LoginScreen: React.FC = () => {
               let userStr = decodeURIComponent(userMatch[1]);
               userStr = userStr.replace(/#.*$/, '');
               const user = JSON.parse(userStr);
-              
-              console.log('✅ Вход через Google успешен, пользователь:', user);
               
               if (Platform.OS !== 'web') {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -321,14 +304,13 @@ const LoginScreen: React.FC = () => {
             }
           }
         } else if (result.type === 'cancel') {
-          console.log('❌ Пользователь отменил вход через Google');
           Alert.alert('Отменено', 'Вход через Google был отменен');
         }
         
         setLoading(false);
       }
     } catch (error) {
-      console.error('❌ Ошибка входа через Google:', error);
+      console.error('Google login error:', error);
       if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }

@@ -92,7 +92,6 @@ export default function AdminDashboardScreen() {
   const loadDashboardData = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
-      console.log('🔑 Token:', token ? 'exists' : 'missing');
       
       if (!token) {
         Alert.alert('Ошибка', 'Токен авторизации не найден. Пожалуйста, войдите снова.');
@@ -105,19 +104,15 @@ export default function AdminDashboardScreen() {
         headers: getHeaders(token),
       });
       
-      console.log('👥 Users Response Status:', usersResponse.status);
-      
       // Get the raw text first to see what we're actually getting
       const usersText = await usersResponse.text();
-      console.log('👥 Users Raw Response (first 200 chars):', usersText.substring(0, 200));
       
       // Try to parse as JSON
       let usersData;
       try {
         usersData = JSON.parse(usersText);
-        console.log('👥 Users Data:', usersData);
       } catch (e) {
-        console.error('❌ Failed to parse users response as JSON:', e);
+        console.error('Failed to parse users response as JSON:', e);
         throw new Error('Server returned HTML instead of JSON - check backend endpoint');
       }
 
@@ -126,13 +121,11 @@ export default function AdminDashboardScreen() {
         headers: getHeaders(token),
       });
       const ordersData = await ordersResponse.json();
-      console.log('📦 Orders Data:', ordersData);
 
       // Безопасная установка пользователей
       if (usersData.success && Array.isArray(usersData.data)) {
         setUsers(usersData.data);
       } else {
-        console.error('❌ Users data invalid:', usersData);
         setUsers([]);
       }
 
@@ -206,19 +199,10 @@ export default function AdminDashboardScreen() {
 
   const handleLogout = async () => {
     try {
-      console.log('🔘 Admin logout button clicked!');
-      console.log('🔓 Starting admin logout process...');
-      
-      // Используем signOut из AuthContext
       await signOut();
-      console.log('✅ Admin signOut completed');
-      
-      // Перенаправляем на логин
-      console.log('🔄 Navigating to login...');
       router.replace('/auth/login');
-      console.log('✅ Navigation completed');
     } catch (error) {
-      console.error('❌ Logout error:', error);
+      console.error('Logout error:', error);
     }
   };
 

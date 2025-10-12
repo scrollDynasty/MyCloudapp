@@ -154,7 +154,6 @@ const ForgotPasswordScreen: React.FC = () => {
     }
 
     setLoading(true);
-    console.log('🔑 Запрос на восстановление пароля для:', email);
 
     try {
       const response = await fetch(`${API_URL}/api/auth/forgot-password`, {
@@ -164,10 +163,8 @@ const ForgotPasswordScreen: React.FC = () => {
       });
 
       const data = await response.json();
-      console.log('📦 Ответ сервера:', data);
 
       if (data.success || response.ok) {
-        console.log('✅ Письмо для восстановления отправлено');
         
         // Haptic feedback на успех
         if (Platform.OS !== 'web') {
@@ -176,7 +173,6 @@ const ForgotPasswordScreen: React.FC = () => {
 
         setEmailSent(true);
       } else {
-        console.error('❌ Не удалось отправить письмо:', data.error);
         shakeAnimation();
         if (Platform.OS !== 'web') {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -187,11 +183,8 @@ const ForgotPasswordScreen: React.FC = () => {
         );
       }
     } catch (error) {
-      console.error('❌ Ошибка запроса:', error);
-      
       // В случае ошибки сети всё равно показываем успех для безопасности
       // (чтобы злоумышленники не могли узнать, существует ли email)
-      console.log('⚠️ Ошибка сети, но показываем успех для безопасности');
       setEmailSent(true);
       
       if (Platform.OS !== 'web') {

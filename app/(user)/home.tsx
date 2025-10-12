@@ -61,10 +61,6 @@ export default function UserHomeScreen() {
       });
 
       const data = await response.json();
-      console.log('📋 VPS Plans from API:', data);
-      console.log('📋 First plan:', data.data?.[0]);
-      console.log('📋 Currency code:', data.data?.[0]?.currency_code);
-      console.log('📋 Currency code type:', typeof data.data?.[0]?.currency_code);
       if (data.success) {
         setPlans(data.data);
       }
@@ -83,18 +79,9 @@ export default function UserHomeScreen() {
   };
 
   const handleLogout = async () => {
-    console.log('🔘 Logout button clicked!');
-    
     try {
-      console.log('🔓 Starting logout process...');
-      // Используем signOut из AuthContext
       await signOut();
-      console.log('✅ SignOut completed');
-      
-      // Перенаправляем на логин
-      console.log('🔄 Navigating to login...');
       router.replace('/auth/login');
-      console.log('✅ Navigation completed');
     } catch (error) {
       console.error('❌ Logout error:', error);
       Alert.alert('Ошибка', 'Не удалось выйти. Попробуйте еще раз.');
@@ -108,9 +95,6 @@ export default function UserHomeScreen() {
       
       // Получаем ID пользователя
       const userId = authUser?.user_id;
-      console.log('👤 Current user:', authUser);
-      console.log('🆔 User ID:', userId);
-      console.log('📦 Plan:', plan);
       
       if (!userId) {
         Alert.alert('Ошибка', 'Не удалось определить пользователя');
@@ -122,8 +106,6 @@ export default function UserHomeScreen() {
         vps_plan_id: plan.plan_id,
         notes: `Заказ VPS плана: ${plan.plan_name}`,
       };
-      
-      console.log('📤 Sending order request:', requestBody);
 
       const response = await fetch(`${API_URL}/api/orders`, {
         method: 'POST',
@@ -132,7 +114,6 @@ export default function UserHomeScreen() {
       });
 
       const data = await response.json();
-      console.log('📥 Order response:', data);
       
       if (data.success) {
         // Перенаправляем на страницу оформления заказа
@@ -141,11 +122,10 @@ export default function UserHomeScreen() {
           params: { orderId: data.data.id },
         });
       } else {
-        console.error('❌ Order creation failed:', data);
         Alert.alert('Ошибка', data.error || 'Не удалось создать заказ');
       }
     } catch (error) {
-      console.error('❌ Order error:', error);
+      console.error('Error creating order:', error);
       Alert.alert('Ошибка', 'Не удалось создать заказ');
     } finally {
       setLoading(false);

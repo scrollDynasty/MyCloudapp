@@ -63,9 +63,9 @@ router.post('/', authenticate, adminOnly, async (req, res) => {
         message: 'VPS plan created successfully'
       }
     });
-
+    
   } catch (error) {
-    console.error('❌ Create VPS Plan Error:', error);
+    console.error('Create VPS Plan Error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to create VPS plan',
@@ -157,9 +157,9 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
         message: 'VPS plan updated successfully'
       }
     });
-
+    
   } catch (error) {
-    console.error('❌ Update VPS Plan Error:', error);
+    console.error('Update VPS Plan Error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to update VPS plan',
@@ -174,8 +174,6 @@ router.delete('/:id', authenticate, adminOnly, async (req, res) => {
     // Database is already initialized at startup
     
     const { id } = req.params;
-
-    console.log('🗑️ Delete VPS Plan:', id);
 
     // Check if plan exists
     const planExists = await db.query('SELECT id FROM vps_plans WHERE id = ?', [id]);
@@ -208,9 +206,9 @@ router.delete('/:id', authenticate, adminOnly, async (req, res) => {
         message: 'VPS plan deleted successfully'
       }
     });
-
+    
   } catch (error) {
-    console.error('❌ Delete VPS Plan Error:', error);
+    console.error('Delete VPS Plan Error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to delete VPS plan',

@@ -158,7 +158,6 @@ router.post('/login', async (req, res) => {
 
     // Check user status
     if (user.status !== 'active') {
-      console.log('❌ User status not active:', user.status);
       return res.status(401).json({
         success: false,
         error: 'Account is not active',
@@ -226,9 +225,6 @@ router.get('/google/callback',
   }),
   async (req, res) => {
     try {
-      console.log('✅ Google OAuth callback received');
-      console.log('📦 User from Google:', req.user);
-      
       // Generate JWT token
       const token = generateToken(req.user);
       
@@ -242,8 +238,6 @@ router.get('/google/callback',
         company_name: req.user.company_name
       };
       
-      console.log('🔑 Generated token for user:', userData.email);
-      
       // Get redirect URI from state parameter (sent by mobile app)
       const redirectUri = req.query.state || 'mycloud://auth/callback';
       
@@ -251,11 +245,10 @@ router.get('/google/callback',
       const userParam = encodeURIComponent(JSON.stringify(userData));
       const callbackUrl = `${redirectUri}?token=${token}&user=${userParam}`;
       
-      console.log('🔄 Redirecting to:', callbackUrl);
       res.redirect(callbackUrl);
       
     } catch (error) {
-      console.error('❌ Google callback error:', error);
+      console.error('Google callback error:', error);
       const redirectUri = req.query.state || 'mycloud://auth/callback';
       res.redirect(`${redirectUri}?error=auth_failed`);
     }
