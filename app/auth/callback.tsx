@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 
 
@@ -21,8 +21,18 @@ export default function CallbackScreen() {
       // Проверить на ошибку
       if (params.error) {
         console.error('❌ Auth error from server:', params.error);
-        setError('Ошибка авторизации через Google');
-        setTimeout(() => router.replace('/auth/login'), 2000);
+        
+        // Если это popup окно, отправляем сообщение родителю
+        if (Platform.OS === 'web' && typeof window !== 'undefined' && window.opener) {
+          window.opener.postMessage({
+            type: 'GOOGLE_AUTH_ERROR',
+            error: params.error
+          }, window.location.origin);
+          window.close();
+        } else {
+          setError('Ошибка авторизации через Google');
+          setTimeout(() => router.replace('/auth/login'), 2000);
+        }
         return;
       }
       
@@ -32,8 +42,18 @@ export default function CallbackScreen() {
 
       if (!token || !userStr) {
         console.error('❌ Missing token or user data');
-        setError('Ошибка авторизации: отсутствуют данные');
-        setTimeout(() => router.replace('/auth/login'), 2000);
+        
+        // Если это popup окно, отправляем сообщение родителю
+        if (Platform.OS === 'web' && typeof window !== 'undefined' && window.opener) {
+          window.opener.postMessage({
+            type: 'GOOGLE_AUTH_ERROR',
+            error: 'Missing token or user data'
+          }, window.location.origin);
+          window.close();
+        } else {
+          setError('Ошибка авторизации: отсутствуют данные');
+          setTimeout(() => router.replace('/auth/login'), 2000);
+        }
         return;
       }
 
@@ -41,22 +61,48 @@ export default function CallbackScreen() {
       const user = JSON.parse(decodeURIComponent(userStr));
       console.log('✅ User data received:', user);
 
-      // Использовать signIn из AuthContext
-      await signIn(token, user);
-      console.log('✅ SignIn completed via Google OAuth');
-
-      // Перенаправить в зависимости от роли
-      if (user.role === 'admin') {
-        console.log('🔄 Redirecting to admin dashboard');
-        router.replace('/(admin)/dashboard');
+      // Если это popup окно (открыто из другого окна)
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.opener) {
+        console.log('📤 Sending auth data to parent window');
+        
+        // Отправляем данные родительскому окну
+        window.opener.postMessage({
+          type: 'GOOGLE_AUTH_SUCCESS',
+          token,
+          user
+        }, window.location.origin);
+        
+        // Закрываем popup
+        window.close();
       } else {
-        console.log('🔄 Redirecting to user home');
-        router.replace('/(user)/home');
+        // Обычный callback для мобильных приложений
+        // Использовать signIn из AuthContext
+        await signIn(token, user);
+        console.log('✅ SignIn completed via Google OAuth');
+
+        // Перенаправить в зависимости от роли
+        if (user.role === 'admin') {
+          console.log('🔄 Redirecting to admin dashboard');
+          router.replace('/(admin)/dashboard');
+        } else {
+          console.log('🔄 Redirecting to user home');
+          router.replace('/(user)/home');
+        }
       }
     } catch (err) {
       console.error('❌ Callback error:', err);
-      setError('Ошибка при обработке данных авторизации');
-      setTimeout(() => router.replace('/auth/login'), 2000);
+      
+      // Если это popup окно, отправляем сообщение родителю
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.opener) {
+        window.opener.postMessage({
+          type: 'GOOGLE_AUTH_ERROR',
+          error: 'Failed to process auth data'
+        }, window.location.origin);
+        window.close();
+      } else {
+        setError('Ошибка при обработке данных авторизации');
+        setTimeout(() => router.replace('/auth/login'), 2000);
+      }
     }
   };
 
