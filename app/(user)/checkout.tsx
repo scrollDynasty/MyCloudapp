@@ -171,7 +171,11 @@ export default function CheckoutScreen() {
   };
 
   const handleCancel = () => {
-    router.back();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(user)/home');
+    }
   };
 
   if (loading) {
