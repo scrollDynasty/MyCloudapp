@@ -80,99 +80,33 @@ export default function LoginScreen() {
     try {
       setLoading(true);
       
-      // Проверяем платформу
+      // Определяем redirect URI для текущей платформы
+      const redirectUri = Platform.OS === 'web' && typeof window !== 'undefined'
+        ? `${window.location.origin}/auth/callback`
+        : AuthSession.makeRedirectUri({
+            scheme: 'mycloud',
+            path: 'auth/callback'
+          });
+      
+      console.log('🔑 Starting Google OAuth with redirect:', redirectUri);
+      
+      // Формируем URL для авторизации Google
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` + 
+        `client_id=${encodeURIComponent('735617581412-e8ceb269bj7qqrv9sl066q63g5dr5sne.apps.googleusercontent.com')}&` +
+        `redirect_uri=${encodeURIComponent(`${API_URL}/api/auth/google/callback`)}&` +
+        `response_type=code&` +
+        `scope=${encodeURIComponent('openid profile email')}&` +
+        `access_type=offline&` +
+        `prompt=select_account&` +
+        `state=${encodeURIComponent(redirectUri)}`;
+      
+      console.log('🌐 Opening Google auth URL');
+      
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        // Для веб используем popup окно
-        console.log('🔑 Starting Google OAuth in popup');
-        
-        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` + 
-          `client_id=${encodeURIComponent('735617581412-e8ceb269bj7qqrv9sl066q63g5dr5sne.apps.googleusercontent.com')}&` +
-          `redirect_uri=${encodeURIComponent(`${API_URL}/api/auth/google/callback`)}&` +
-          `response_type=code&` +
-          `scope=${encodeURIComponent('openid profile email')}&` +
-          `access_type=offline&` +
-          `prompt=select_account&` +
-          `state=${encodeURIComponent(`${window.location.origin}/auth/callback`)}`;
-        
-        // Открываем popup окно
-        const width = 500;
-        const height = 600;
-        const left = window.screenX + (window.outerWidth - width) / 2;
-        const top = window.screenY + (window.outerHeight - height) / 2;
-        
-        const popup = window.open(
-          authUrl,
-          'Google OAuth',
-          `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
-        );
-        
-        if (!popup) {
-          Alert.alert('Ошибка', 'Не удалось открыть окно авторизации. Проверьте настройки блокировки всплывающих окон.');
-          setLoading(false);
-          return;
-        }
-        
-        // Слушаем сообщения от popup окна
-        const handleMessage = async (event: MessageEvent) => {
-          // Проверяем origin для безопасности
-          if (event.origin !== window.location.origin) {
-            return;
-          }
-          
-          if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
-            console.log('✅ Google login successful:', event.data);
-            
-            const { token, user } = event.data;
-            
-            await signIn(token, user);
-            
-            if (user.role === 'admin') {
-              router.replace('/(admin)/dashboard');
-            } else {
-              router.replace('/(user)/home');
-            }
-            
-            window.removeEventListener('message', handleMessage);
-            setLoading(false);
-          } else if (event.data.type === 'GOOGLE_AUTH_ERROR') {
-            console.error('❌ Google auth error:', event.data.error);
-            Alert.alert('Ошибка', 'Ошибка авторизации через Google');
-            window.removeEventListener('message', handleMessage);
-            setLoading(false);
-          }
-        };
-        
-        window.addEventListener('message', handleMessage);
-        
-        // Проверяем, закрыто ли popup окно
-        const checkPopupClosed = setInterval(() => {
-          if (popup.closed) {
-            clearInterval(checkPopupClosed);
-            window.removeEventListener('message', handleMessage);
-            setLoading(false);
-          }
-        }, 500);
-        
+        // Для веб - перенаправляем в той же вкладке
+        window.location.href = authUrl;
       } else {
-        // Для мобильных используем стандартный способ
-        const redirectUri = AuthSession.makeRedirectUri({
-          scheme: 'mycloud',
-          path: 'auth/callback'
-        });
-        
-        console.log('🔑 Starting Google OAuth with redirect:', redirectUri);
-        
-        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` + 
-          `client_id=${encodeURIComponent('735617581412-e8ceb269bj7qqrv9sl066q63g5dr5sne.apps.googleusercontent.com')}&` +
-          `redirect_uri=${encodeURIComponent(`${API_URL}/api/auth/google/callback`)}&` +
-          `response_type=code&` +
-          `scope=${encodeURIComponent('openid profile email')}&` +
-          `access_type=offline&` +
-          `prompt=select_account&` +
-          `state=${encodeURIComponent(redirectUri)}`;
-        
-        console.log('🌐 Opening Google auth URL');
-        
+        // Для мобильных - используем WebBrowser
         const result = await WebBrowser.openAuthSessionAsync(
           authUrl,
           redirectUri
@@ -186,11 +120,14 @@ export default function LoginScreen() {
           
           if (url.includes('token=')) {
             const tokenMatch = url.match(/token=([^&]+)/);
-            const userMatch = url.match(/user=([^&]+)/);
+            const userMatch = url.match(/user=([^&#]+)/);
             
             if (tokenMatch && userMatch) {
               const token = tokenMatch[1];
-              const userStr = decodeURIComponent(userMatch[1]);
+              // Remove hash fragment and decode the user data
+              let userStr = decodeURIComponent(userMatch[1]);
+              // Remove any trailing hash character
+              userStr = userStr.replace(/#.*$/, '');
               const user = JSON.parse(userStr);
               
               console.log('✅ Google login successful, user:', user);
