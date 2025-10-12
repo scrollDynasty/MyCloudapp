@@ -203,21 +203,32 @@ router.post('/login', async (req, res) => {
 });
 
 // Google OAuth - Initiate
-router.get('/google',
+router.get('/google', (req, res, next) => {
+  // Сохраняем state для передачи в callback
+  const state = req.query.state;
+  
   passport.authenticate('google', { 
-    scope: ['profile', 'email'],
-    session: false 
-  })
-);
+    scope: ['profile', 'email', 'openid'],
+    session: false,
+    // Всегда показывать выбор аккаунта
+    prompt: 'select_account',
+    accessType: 'offline',
+    state: state || 'mycloud://auth/callback'
+  })(req, res, next);
+});
 
 // Google OAuth - Callback
 router.get('/google/callback',
   passport.authenticate('google', { 
     session: false,
-    failureRedirect: '/auth/login' 
+    failureRedirect: '/auth/login',
+    prompt: 'select_account'
   }),
   async (req, res) => {
     try {
+      console.log('✅ Google OAuth callback received');
+      console.log('📦 User from Google:', req.user);
+      
       // Generate JWT token
       const token = generateToken(req.user);
       
@@ -231,15 +242,22 @@ router.get('/google/callback',
         company_name: req.user.company_name
       };
       
+      console.log('🔑 Generated token for user:', userData.email);
+      
+      // Get redirect URI from state parameter (sent by mobile app)
+      const redirectUri = req.query.state || 'mycloud://auth/callback';
+      
       // Redirect to mobile app deep link or web callback
       const userParam = encodeURIComponent(JSON.stringify(userData));
-      const callbackUrl = `mycloud://auth/callback?token=${token}&user=${userParam}`;
+      const callbackUrl = `${redirectUri}?token=${token}&user=${userParam}`;
       
+      console.log('🔄 Redirecting to:', callbackUrl);
       res.redirect(callbackUrl);
       
     } catch (error) {
-      console.error('Google callback error:', error);
-      res.redirect('mycloud://auth/callback?error=auth_failed');
+      console.error('❌ Google callback error:', error);
+      const redirectUri = req.query.state || 'mycloud://auth/callback';
+      res.redirect(`${redirectUri}?error=auth_failed`);
     }
   }
 );

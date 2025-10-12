@@ -1,4 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as AuthSession from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -6,7 +8,6 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
-  Linking,
   Platform,
   StyleSheet,
   Text,
@@ -17,6 +18,9 @@ import {
 import { API_URL } from '../../config/api';
 import { getHeaders } from '../../config/fetch';
 import { useAuth } from '../context/AuthContext';
+
+// Завершать браузер после успешной авторизации
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -74,32 +78,74 @@ export default function LoginScreen() {
 
   const handleGoogleLogin = async () => {
     try {
-      const googleAuthUrl = `${API_URL}/api/auth/google`;
+      setLoading(true);
       
-      // Для веба используем обычный переход, для мобильных - Linking
-      if (Platform.OS === 'web') {
-        // На вебе просто переходим по ссылке в том же окне
-        window.location.href = googleAuthUrl;
-      } else {
-        // На мобильных используем Linking API
-        const canOpen = await Linking.canOpenURL(googleAuthUrl);
+      // Создаем redirect URI для OAuth
+      const redirectUri = AuthSession.makeRedirectUri({
+        scheme: 'mycloud',
+        path: 'auth/callback'
+      });
+      
+      console.log('🔑 Starting Google OAuth with redirect:', redirectUri);
+      
+      // Параметры для Google OAuth с принудительным выбором аккаунта
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` + 
+        `client_id=${encodeURIComponent('735617581412-e8ceb269bj7qqrv9sl066q63g5dr5sne.apps.googleusercontent.com')}&` +
+        `redirect_uri=${encodeURIComponent(`${API_URL}/api/auth/google/callback`)}&` +
+        `response_type=code&` +
+        `scope=${encodeURIComponent('openid profile email')}&` +
+        `access_type=offline&` +
+        `prompt=select_account&` + // Всегда показывать выбор аккаунта
+        `state=${encodeURIComponent(redirectUri)}`;
+      
+      console.log('🌐 Opening Google auth URL');
+      
+      // Открываем браузер для авторизации
+      const result = await WebBrowser.openAuthSessionAsync(
+        authUrl,
+        redirectUri
+      );
+      
+      console.log('📦 Auth result:', result);
+      
+      if (result.type === 'success') {
+        // URL содержит параметры callback
+        const url = result.url;
+        console.log('✅ Success URL:', url);
         
-        if (canOpen) {
-          await Linking.openURL(googleAuthUrl);
-        } else {
-          Alert.alert(
-            'Ошибка',
-            'Не удалось открыть браузер для Google входа'
-          );
+        // Обработаем URL напрямую
+        if (url.includes('token=')) {
+          const tokenMatch = url.match(/token=([^&]+)/);
+          const userMatch = url.match(/user=([^&]+)/);
+          
+          if (tokenMatch && userMatch) {
+            const token = tokenMatch[1];
+            const userStr = decodeURIComponent(userMatch[1]);
+            const user = JSON.parse(userStr);
+            
+            console.log('✅ Google login successful, user:', user);
+            
+            await signIn(token, user);
+            
+            if (user.role === 'admin') {
+              router.replace('/(admin)/dashboard');
+            } else {
+              router.replace('/(user)/home');
+            }
+          }
         }
+      } else if (result.type === 'cancel') {
+        console.log('❌ User cancelled Google login');
+        Alert.alert('Отменено', 'Вход через Google был отменен');
       }
     } catch (error) {
-      console.error('Google login error:', error);
+      console.error('❌ Google login error:', error);
       Alert.alert(
-        'Google вход',
-        'Произошла ошибка при входе через Google. Попробуйте позже.',
-        [{ text: 'OK' }]
+        'Ошибка',
+        'Произошла ошибка при входе через Google. Попробуйте позже.'
       );
+    } finally {
+      setLoading(false);
     }
   };
 
