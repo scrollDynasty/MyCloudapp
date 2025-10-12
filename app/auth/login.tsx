@@ -363,7 +363,6 @@ const LoginScreen: React.FC = () => {
     inputHeight: isSmallScreen ? 48 : 52,
     buttonHeight: isSmallScreen ? 48 : 52,
     padding: isSmallScreen ? 20 : 24,
-    // для совместимости с Animated тип должен быть number | `${number}%`
     maxWidth: isMediumScreen ? ('100%' as `${number}%`) : 440,
   }), [isSmallScreen, isMediumScreen]);
 
