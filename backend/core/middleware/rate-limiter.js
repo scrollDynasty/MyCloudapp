@@ -85,10 +85,6 @@ class RateLimiter {
 
     // Delete expired entries to prevent memory leaks
     keysToDelete.forEach(key => this.clients.delete(key));
-
-    if (keysToDelete.length > 0) {
-      console.log(`🧹 Rate limiter cleaned up ${keysToDelete.length} expired entries`);
-    }
   }
 
   // Get current stats for monitoring

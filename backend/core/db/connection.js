@@ -45,14 +45,13 @@ class Database {
       
       this.connected = true;
       this.connectionAttempts = 0;
-      console.log('✅ MariaDB connected successfully');
-      console.log(`📍 Database: ${dbConfig.database} on ${dbConfig.host}:${dbConfig.port}`);
-      console.log(`📊 Pool config: ${dbConfig.connectionLimit} connections, ${dbConfig.queueLimit} queue limit`);
+      console.log('MariaDB connected successfully');
+      console.log(`Database: ${dbConfig.database} on ${dbConfig.host}:${dbConfig.port}`);
       
       return this.poolPromise;
     } catch (error) {
       this.connectionAttempts++;
-      console.error(`❌ MariaDB connection failed (attempt ${this.connectionAttempts}/${this.maxRetries}):`, error.message);
+      console.error(`MariaDB connection failed (attempt ${this.connectionAttempts}/${this.maxRetries}):`, error.message);
       
       if (this.connectionAttempts >= this.maxRetries) {
         throw new Error(`Failed to connect to database after ${this.maxRetries} attempts`);
@@ -72,12 +71,10 @@ class Database {
 
     this.pool.on('connection', (connection) => {
       // New connection created
-      console.log('🔗 New database connection established');
     });
 
     this.pool.on('enqueue', () => {
       // Waiting for available connection - may indicate need for more connections
-      console.warn('⏳ Query queued - waiting for available connection');
     });
 
     this.pool.on('release', (connection) => {

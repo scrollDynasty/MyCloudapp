@@ -20,10 +20,9 @@ async function initializeDatabase() {
   initializationPromise = db.connect()
     .then(() => {
       isInitialized = true;
-      console.log('✅ Database initialized successfully');
     })
     .catch((error) => {
-      console.error('❌ Database initialization failed:', error);
+      console.error('Database initialization failed:', error);
       throw error;
     });
 

@@ -177,7 +177,6 @@ export default function AdminPlansScreen() {
       if (!formData.price_per_month) missingFields.push('price_per_month');
       
       if (missingFields.length > 0) {
-        console.error('❌ Validation failed. Missing fields:', missingFields);
         alert(`Пожалуйста, заполните обязательные поля: ${missingFields.join(', ')}`);
         return;
       }

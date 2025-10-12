@@ -293,7 +293,6 @@ const RegisterScreen: React.FC = () => {
     }
 
     setLoading(true);
-    console.log('📝 Попытка регистрации:', email);
 
     try {
       const requestBody: any = {
@@ -318,7 +317,6 @@ const RegisterScreen: React.FC = () => {
       const data = await response.json();
 
       if (data.success) {
-        console.log('✅ Регистрация успешна');
         
         if (Platform.OS !== 'web') {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -340,7 +338,6 @@ const RegisterScreen: React.FC = () => {
           },
         ]);
       } else {
-        console.error('❌ Регистрация не удалась:', data.error);
         shakeAnimation();
         if (Platform.OS !== 'web') {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -348,7 +345,7 @@ const RegisterScreen: React.FC = () => {
         Alert.alert('Ошибка', data.error || 'Не удалось зарегистрироваться');
       }
     } catch (error) {
-      console.error('❌ Ошибка регистрации:', error);
+      console.error('Registration error:', error);
       shakeAnimation();
       if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

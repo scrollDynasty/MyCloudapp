@@ -73,17 +73,16 @@ class PerformanceMonitor {
 
     // Warn if heap usage is above 80%
     if (heapUsedPercent > 80) {
-      console.warn(`⚠️  High heap usage: ${heapUsedPercent.toFixed(2)}% (${this.metrics.memory.heapUsed}MB/${this.metrics.memory.heapTotal}MB)`);
+      console.warn(`High heap usage: ${heapUsedPercent.toFixed(2)}% (${this.metrics.memory.heapUsed}MB/${this.metrics.memory.heapTotal}MB)`);
     }
 
     // Warn if system memory is above 90%
     if (systemMemUsedPercent > 90) {
-      console.warn(`⚠️  High system memory usage: ${systemMemUsedPercent.toFixed(2)}%`);
+      console.warn(`High system memory usage: ${systemMemUsedPercent.toFixed(2)}%`);
     }
 
     // Suggest garbage collection if memory is high
     if (heapUsedPercent > 85 && global.gc) {
-      console.log('🧹 Running manual garbage collection...');
       global.gc();
     }
   }
@@ -119,7 +118,7 @@ class PerformanceMonitor {
 
         // Log slow requests
         if (duration > 5000) {
-          console.warn(`🐌 Slow request: ${req.method} ${req.originalUrl} took ${duration}ms`);
+          console.warn(`Slow request: ${req.method} ${req.originalUrl} took ${duration}ms`);
         }
       });
 
@@ -183,7 +182,7 @@ class PerformanceMonitor {
   // Log memory snapshot
   logMemorySnapshot() {
     const mem = this.metrics.memory;
-    console.log('📊 Memory Snapshot:');
+    console.log('Memory Snapshot:');
     console.log(`   Heap: ${mem.heapUsed}MB / ${mem.heapTotal}MB (${((mem.heapUsed / mem.heapTotal) * 100).toFixed(2)}%)`);
     console.log(`   RSS: ${mem.rss}MB`);
     console.log(`   External: ${mem.external}MB`);

@@ -16,11 +16,8 @@ export default function CallbackScreen() {
 
   const handleCallback = async () => {
     try {
-      console.log('🔄 Callback params:', params);
-      
       // Проверить на ошибку
       if (params.error) {
-        console.error('❌ Auth error from server:', params.error);
         setError('Ошибка авторизации через Google');
         setTimeout(() => router.replace('/auth/login'), 2000);
         return;
@@ -31,7 +28,6 @@ export default function CallbackScreen() {
       let userStr = params.user as string;
 
       if (!token || !userStr) {
-        console.error('❌ Missing token or user data');
         setError('Ошибка авторизации: отсутствуют данные');
         setTimeout(() => router.replace('/auth/login'), 2000);
         return;
@@ -43,22 +39,18 @@ export default function CallbackScreen() {
       userStr = userStr.replace(/#.*$/, '');
       
       const user = JSON.parse(userStr);
-      console.log('✅ User data received:', user);
 
       // Использовать signIn из AuthContext
       await signIn(token, user);
-      console.log('✅ SignIn completed via Google OAuth');
 
       // Перенаправить в зависимости от роли
       if (user.role === 'admin') {
-        console.log('🔄 Redirecting to admin dashboard');
         router.replace('/(admin)/dashboard');
       } else {
-        console.log('🔄 Redirecting to user home');
         router.replace('/(user)/home');
       }
     } catch (err) {
-      console.error('❌ Callback error:', err);
+      console.error('Callback error:', err);
       setError('Ошибка при обработке данных авторизации');
       setTimeout(() => router.replace('/auth/login'), 2000);
     }

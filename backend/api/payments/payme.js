@@ -138,8 +138,6 @@ router.post('/payme', authenticate, async (req, res) => {
       validReturnUrl
     );
 
-    console.log('✅ Checkout URL created successfully');
-
     // Генерируем также альтернативные URL для отладки
     const alternativeUrls = payme.generateAlternativeCheckoutUrls(order_id, amountInUzs);
 
