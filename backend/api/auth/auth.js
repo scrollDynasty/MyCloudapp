@@ -231,15 +231,15 @@ router.get('/google/callback',
         company_name: req.user.company_name
       };
       
-      // Redirect to frontend with token and user data
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      // Redirect to auth callback HTML page (static page that handles deep linking)
+      const apiDomain = process.env.API_DOMAIN || 'http://localhost:5000';
       const userParam = encodeURIComponent(JSON.stringify(userData));
-      res.redirect(`${frontendUrl}/auth/callback?token=${token}&user=${userParam}`);
+      res.redirect(`${apiDomain}/auth-callback.html?token=${token}&user=${userParam}`);
       
     } catch (error) {
       console.error('Google callback error:', error);
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-      res.redirect(`${frontendUrl}/login?error=auth_failed`);
+      const apiDomain = process.env.API_DOMAIN || 'http://localhost:5000';
+      res.redirect(`${apiDomain}/auth-callback.html?error=auth_failed`);
     }
   }
 );
