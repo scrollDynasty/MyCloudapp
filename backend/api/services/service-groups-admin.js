@@ -11,7 +11,7 @@ router.get('/', authenticate, adminOnly, async (req, res) => {
     
     let whereClause = '';
     if (!include_inactive) {
-      whereClause = 'WHERE is_active = true';
+      whereClause = 'WHERE sg.is_active = true';
     }
 
     const query = `
