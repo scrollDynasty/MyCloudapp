@@ -348,6 +348,14 @@ router.get('/:id', async (req, res) => {
       `, [id]);
 
       orderDetails = orders[0];
+
+      // Get plan fields (characteristics)
+      const fields = await db.query(`
+        SELECT *
+        FROM plan_fields
+        WHERE plan_id = ?
+        ORDER BY display_order ASC
+      `, [orderDetails.service_plan_id]);
       
       return res.json({
         success: true,
@@ -362,6 +370,7 @@ router.get('/:id', async (req, res) => {
           plan_name: orderDetails.plan_name,
           group_name: orderDetails.group_name,
           billing_period: orderDetails.billing_period,
+          fields: fields,
           status: orderDetails.status,
           amount: parseFloat(orderDetails.amount),
           currency: orderDetails.currency,

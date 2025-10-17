@@ -16,14 +16,30 @@ import {
 import { API_URL } from '../../config/api';
 import { getHeaders } from '../../config/fetch';
 
+interface PlanField {
+  id: number;
+  plan_id: number;
+  field_key: string;
+  field_label_uz: string;
+  field_label_ru: string;
+  field_value_uz: string;
+  field_value_ru: string;
+  field_type: string;
+  display_order: number;
+}
+
 interface OrderDetails {
   order_id: number;
+  order_type: 'vps' | 'service';
   plan_name: string;
-  provider_name: string;
-  cpu_cores: number;
-  memory_gb: number;
-  storage_gb: number;
-  bandwidth_tb: number;
+  provider_name?: string;
+  group_name?: string;
+  billing_period?: string;
+  cpu_cores?: number;
+  memory_gb?: number;
+  storage_gb?: number;
+  bandwidth_tb?: number;
+  fields?: PlanField[];
   amount: number;
   currency: string;
   full_name: string;
@@ -200,36 +216,63 @@ export default function CheckoutScreen() {
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <Ionicons name="server" size={32} color="#667eea" />
-          <Text style={styles.cardTitle}>Детали VPS</Text>
+          <Text style={styles.cardTitle}>
+            {order.order_type === 'vps' ? 'Детали VPS' : 'Детали тарифа'}
+          </Text>
         </View>
 
         <View style={styles.orderInfo}>
-          <Text style={styles.providerName}>{order.provider_name}</Text>
+          {order.provider_name && (
+            <Text style={styles.providerName}>{order.provider_name}</Text>
+          )}
+          {order.group_name && (
+            <Text style={styles.providerName}>{order.group_name}</Text>
+          )}
           <Text style={styles.planName}>{order.plan_name}</Text>
         </View>
 
-        <View style={styles.specsGrid}>
-          <View style={styles.specBox}>
-            <Ionicons name="hardware-chip" size={24} color="#667eea" />
-            <Text style={styles.specValue}>{order.cpu_cores}</Text>
-            <Text style={styles.specLabel}>CPU Cores</Text>
+        {/* VPS Specs Grid */}
+        {order.order_type === 'vps' && order.cpu_cores !== undefined && (
+          <View style={styles.specsGrid}>
+            <View style={styles.specBox}>
+              <Ionicons name="hardware-chip" size={24} color="#667eea" />
+              <Text style={styles.specValue}>{order.cpu_cores}</Text>
+              <Text style={styles.specLabel}>CPU Cores</Text>
+            </View>
+            <View style={styles.specBox}>
+              <Ionicons name="server" size={24} color="#667eea" />
+              <Text style={styles.specValue}>{order.memory_gb} GB</Text>
+              <Text style={styles.specLabel}>RAM</Text>
+            </View>
+            <View style={styles.specBox}>
+              <Ionicons name="save" size={24} color="#667eea" />
+              <Text style={styles.specValue}>{order.storage_gb} GB</Text>
+              <Text style={styles.specLabel}>Storage</Text>
+            </View>
+            <View style={styles.specBox}>
+              <Ionicons name="swap-horizontal" size={24} color="#667eea" />
+              <Text style={styles.specValue}>{order.bandwidth_tb} TB</Text>
+              <Text style={styles.specLabel}>Bandwidth</Text>
+            </View>
           </View>
-          <View style={styles.specBox}>
-            <Ionicons name="server" size={24} color="#667eea" />
-            <Text style={styles.specValue}>{order.memory_gb} GB</Text>
-            <Text style={styles.specLabel}>RAM</Text>
+        )}
+
+        {/* Service Plan Fields */}
+        {order.order_type === 'service' && order.fields && order.fields.length > 0 && (
+          <View style={styles.fieldsContainer}>
+            {order.fields.map((field, index) => (
+              <View key={index} style={styles.fieldRow}>
+                <Ionicons name="checkmark-circle" size={20} color="#667eea" />
+                <View style={styles.fieldContent}>
+                  <Text style={styles.fieldLabel}>{field.field_label_ru}</Text>
+                  {field.field_value_ru && (
+                    <Text style={styles.fieldValue}>{field.field_value_ru}</Text>
+                  )}
+                </View>
+              </View>
+            ))}
           </View>
-          <View style={styles.specBox}>
-            <Ionicons name="save" size={24} color="#667eea" />
-            <Text style={styles.specValue}>{order.storage_gb} GB</Text>
-            <Text style={styles.specLabel}>Storage</Text>
-          </View>
-          <View style={styles.specBox}>
-            <Ionicons name="swap-horizontal" size={24} color="#667eea" />
-            <Text style={styles.specValue}>{order.bandwidth_tb} TB</Text>
-            <Text style={styles.specLabel}>Bandwidth</Text>
-          </View>
-        </View>
+        )}
       </View>
 
       {/* Customer Info */}
@@ -251,16 +294,23 @@ export default function CheckoutScreen() {
       {/* Price Summary */}
       <View style={styles.priceCard}>
         <View style={styles.priceRow}>
-          <Text style={styles.priceLabel}>Подписка (ежемесячно)</Text>
+          <Text style={styles.priceLabel}>
+            {order.billing_period === 'monthly' ? 'Подписка (ежемесячно)' :
+             order.billing_period === 'yearly' ? 'Подписка (ежегодно)' :
+             order.billing_period === 'quarterly' ? 'Подписка (ежеквартально)' :
+             order.billing_period === 'weekly' ? 'Подписка (еженедельно)' :
+             order.billing_period === 'one_time' ? 'Единоразовый платеж' :
+             'Подписка'}
+          </Text>
           <Text style={styles.priceValue}>
-            {order.amount} UZS
+            {order.amount} {order.currency}
           </Text>
         </View>
         <View style={styles.divider} />
         <View style={styles.totalRow}>
           <Text style={styles.totalLabel}>К оплате</Text>
           <Text style={styles.totalValue}>
-            {order.amount} UZS
+            {order.amount} {order.currency}
           </Text>
         </View>
       </View>
@@ -401,6 +451,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginTop: 4,
+  },
+  fieldsContainer: {
+    gap: 12,
+  },
+  fieldRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  fieldContent: {
+    flex: 1,
+  },
+  fieldLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 2,
+  },
+  fieldValue: {
+    fontSize: 14,
+    color: '#666',
   },
   infoRow: {
     flexDirection: 'row',
