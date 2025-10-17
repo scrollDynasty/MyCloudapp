@@ -20,6 +20,8 @@ const { logger } = require('./core/utils/logger');
 const vpsRoutes = require('./api/services/vps');
 const vpsAdminRoutes = require('./api/services/vps-admin');
 const providersRoutes = require('./api/services/providers');
+const serviceGroupsAdminRoutes = require('./api/services/service-groups-admin');
+const servicePlansAdminRoutes = require('./api/services/service-plans-admin');
 const paymentsRoutes = require('./api/payments/payme');
 const paymentRedirectRoutes = require('./api/payments/redirect');
 const ordersRoutes = require('./api/orders/orders');
@@ -128,6 +130,8 @@ app.use('/api/auth', rateLimiters.auth.middleware(), authRoutes);
 app.use('/api/vps', rateLimiters.api.middleware(), vpsRoutes);
 app.use('/api/vps-admin', rateLimiters.api.middleware(), vpsAdminRoutes);
 app.use('/api/providers', rateLimiters.api.middleware(), providersRoutes);
+app.use('/api/service-groups-admin', rateLimiters.api.middleware(), serviceGroupsAdminRoutes);
+app.use('/api/service-plans-admin', rateLimiters.api.middleware(), servicePlansAdminRoutes);
 app.use('/api/payments', rateLimiters.api.middleware(), paymentsRoutes);
 app.use('/api/orders', rateLimiters.api.middleware(), ordersRoutes);
 

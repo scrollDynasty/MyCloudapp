@@ -75,7 +75,7 @@ export default function AdminDashboardScreen() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'users' | 'orders' | 'stats' | 'plans'>('stats');
+  const [activeTab, setActiveTab] = useState<'users' | 'orders' | 'stats' | 'plans' | 'services'>('stats');
 
   useEffect(() => {
     if (authUser) {
@@ -394,7 +394,24 @@ export default function AdminDashboardScreen() {
             color={activeTab === 'plans' ? '#667eea' : '#999'} 
           />
           <Text style={[styles.tabText, activeTab === 'plans' && styles.tabTextActive]}>
-            Планы VPS
+            VPS
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'services' && styles.tabActive]}
+          onPress={() => {
+            setActiveTab('services');
+            router.push('/(admin)/service-groups');
+          }}
+        >
+          <Ionicons 
+            name="grid" 
+            size={20} 
+            color={activeTab === 'services' ? '#667eea' : '#999'} 
+          />
+          <Text style={[styles.tabText, activeTab === 'services' && styles.tabTextActive]}>
+            Сервисы
           </Text>
         </TouchableOpacity>
       </View>
