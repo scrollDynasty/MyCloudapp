@@ -83,9 +83,22 @@ export default function ServiceGroupFormScreen() {
   };
 
   const generateSlug = (text: string) => {
+    // Транслитерация русских букв
+    const translitMap: { [key: string]: string } = {
+      'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
+      'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+      'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+      'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch',
+      'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+      ' ': '-', '_': '-'
+    };
+
     return text
       .toLowerCase()
       .trim()
+      .split('')
+      .map(char => translitMap[char] || char)
+      .join('')
       .replace(/[^\w\s-]/g, '')
       .replace(/[\s_-]+/g, '-')
       .replace(/^-+|-+$/g, '');
@@ -93,9 +106,10 @@ export default function ServiceGroupFormScreen() {
 
   const handleNameRuChange = (text: string) => {
     setFormData({ ...formData, name_ru: text });
-    // Auto-generate slug from Russian name if not in edit mode
-    if (!isEditMode && !formData.slug) {
-      setFormData(prev => ({ ...prev, name_ru: text, slug: generateSlug(text) }));
+    // Auto-generate slug from Russian name if not in edit mode or if slug is empty
+    if (!isEditMode || !formData.slug) {
+      const newSlug = generateSlug(text);
+      setFormData(prev => ({ ...prev, name_ru: text, slug: newSlug }));
     }
   };
 
@@ -221,14 +235,19 @@ export default function ServiceGroupFormScreen() {
         <View style={styles.fieldGroup}>
           <Text style={styles.label}>Slug (URL) *</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: '#f9f9f9' }]}
             value={formData.slug}
             onChangeText={(text) => setFormData({ ...formData, slug: generateSlug(text) })}
             placeholder="mc-video"
             placeholderTextColor="#999"
             autoCapitalize="none"
+            editable={isEditMode}
           />
-          <Text style={styles.hint}>Используется в URL. Только латиница, цифры и дефис</Text>
+          <Text style={styles.hint}>
+            {isEditMode 
+              ? 'Slug можно редактировать только при создании новой группы'
+              : 'Генерируется автоматически из названия на русском'}
+          </Text>
         </View>
 
         {/* Description Russian */}

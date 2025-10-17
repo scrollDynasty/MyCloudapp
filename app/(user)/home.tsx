@@ -29,6 +29,19 @@ interface VPSPlan {
   region_name: string;
 }
 
+interface ServiceGroup {
+  id: number;
+  name_uz: string;
+  name_ru: string;
+  description_uz?: string;
+  description_ru?: string;
+  slug: string;
+  icon?: string;
+  display_order: number;
+  is_active: boolean;
+  plans_count: number;
+}
+
 interface User {
   user_id: number;
   full_name: string;
@@ -41,32 +54,44 @@ export default function UserHomeScreen() {
   const router = useRouter();
   const { user: authUser, signOut } = useAuth();
   const [user, setUser] = useState<User | null>(null);
-  const [plans, setPlans] = useState<VPSPlan[]>([]);
+  const [vpsPlans, setVpsPlans] = useState<VPSPlan[]>([]);
+  const [serviceGroups, setServiceGroups] = useState<ServiceGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState<'vps' | 'services'>('services');
 
   useEffect(() => {
     // Используем данные из AuthContext
     if (authUser) {
       setUser(authUser);
     }
-    loadPlans();
+    loadData();
   }, [authUser]);
 
-  const loadPlans = async () => {
+  const loadData = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/vps`, {
+      
+      // Load VPS plans
+      const vpsResponse = await fetch(`${API_URL}/api/vps`, {
         headers: getHeaders(token || undefined),
       });
+      const vpsData = await vpsResponse.json();
+      if (vpsData.success) {
+        setVpsPlans(vpsData.data);
+      }
 
-      const data = await response.json();
-      if (data.success) {
-        setPlans(data.data);
+      // Load service groups
+      const groupsResponse = await fetch(`${API_URL}/api/service-groups`, {
+        headers: getHeaders(token || undefined),
+      });
+      const groupsData = await groupsResponse.json();
+      if (groupsData.success) {
+        setServiceGroups(groupsData.data);
       }
     } catch (error) {
-      console.error('Error loading plans:', error);
-      Alert.alert('Ошибка', 'Не удалось загрузить список VPS');
+      console.error('Error loading data:', error);
+      Alert.alert('Ошибка', 'Не удалось загрузить данные');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -75,7 +100,7 @@ export default function UserHomeScreen() {
 
   const handleRefresh = () => {
     setRefreshing(true);
-    loadPlans();
+    loadData();
   };
 
   const handleLogout = async () => {
@@ -88,12 +113,11 @@ export default function UserHomeScreen() {
     }
   };
 
-  const handleOrderPlan = async (plan: VPSPlan) => {
+  const handleOrderVPS = async (plan: VPSPlan) => {
     try {
       setLoading(true);
       const token = await AsyncStorage.getItem('token');
       
-      // Получаем ID пользователя
       const userId = authUser?.user_id;
       
       if (!userId) {
@@ -116,7 +140,6 @@ export default function UserHomeScreen() {
       const data = await response.json();
       
       if (data.success) {
-        // Перенаправляем на страницу оформления заказа
         router.push({
           pathname: '/(user)/checkout',
           params: { orderId: data.data.id },
@@ -132,10 +155,17 @@ export default function UserHomeScreen() {
     }
   };
 
-  const renderPlanCard = ({ item }: { item: VPSPlan }) => (
+  const handleOpenServiceGroup = (group: ServiceGroup) => {
+    router.push({
+      pathname: '/(user)/service-group-details',
+      params: { groupId: group.id, groupName: group.name_ru },
+    });
+  };
+
+  const renderVPSPlanCard = ({ item }: { item: VPSPlan }) => (
     <TouchableOpacity
       style={styles.planCard}
-      onPress={() => handleOrderPlan(item)}
+      onPress={() => handleOrderVPS(item)}
       activeOpacity={0.7}
     >
       <View style={styles.planHeader}>
@@ -177,6 +207,33 @@ export default function UserHomeScreen() {
     </TouchableOpacity>
   );
 
+  const renderServiceGroupCard = ({ item }: { item: ServiceGroup }) => (
+    <TouchableOpacity
+      style={styles.groupCard}
+      onPress={() => handleOpenServiceGroup(item)}
+      activeOpacity={0.7}
+    >
+      <View style={styles.groupHeader}>
+        <View style={styles.groupIconContainer}>
+          <Text style={styles.groupIcon}>{item.icon || '📦'}</Text>
+        </View>
+        <View style={styles.groupInfo}>
+          <Text style={styles.groupName}>{item.name_ru}</Text>
+          <Text style={styles.groupDescription} numberOfLines={2}>
+            {item.description_ru || item.name_uz}
+          </Text>
+          <View style={styles.plansCountBadge}>
+            <Ionicons name="apps" size={14} color="#667eea" />
+            <Text style={styles.plansCountText}>
+              {item.plans_count} {item.plans_count === 1 ? 'тариф' : 'тарифов'}
+            </Text>
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={24} color="#ccc" />
+      </View>
+    </TouchableOpacity>
+  );
+
   if (loading) {
     return (
       <View style={styles.centerContainer}>
@@ -201,19 +258,79 @@ export default function UserHomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Plans List */}
-      <View style={styles.plansSection}>
-        <Text style={styles.sectionTitle}>Доступные VPS планы</Text>
-        <FlatList
-          data={plans}
-          renderItem={renderPlanCard}
-          keyExtractor={(item, index) => item?.plan_id?.toString() || `plan-${index}`}
-          contentContainerStyle={styles.plansList}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#667eea']} />
-          }
-        />
+      {/* Tabs */}
+      <View style={styles.tabsContainer}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'services' && styles.tabActive]}
+          onPress={() => setActiveTab('services')}
+        >
+          <Ionicons 
+            name="grid" 
+            size={20} 
+            color={activeTab === 'services' ? '#667eea' : '#999'} 
+          />
+          <Text style={[styles.tabText, activeTab === 'services' && styles.tabTextActive]}>
+            Сервисы
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'vps' && styles.tabActive]}
+          onPress={() => setActiveTab('vps')}
+        >
+          <Ionicons 
+            name="server" 
+            size={20} 
+            color={activeTab === 'vps' ? '#667eea' : '#999'} 
+          />
+          <Text style={[styles.tabText, activeTab === 'vps' && styles.tabTextActive]}>
+            VPS
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Content */}
+      <View style={styles.contentSection}>
+        {activeTab === 'services' ? (
+          <>
+            <Text style={styles.sectionTitle}>Группы сервисов</Text>
+            <FlatList
+              data={serviceGroups}
+              renderItem={renderServiceGroupCard}
+              keyExtractor={(item) => item.id.toString()}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#667eea']} />
+              }
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="apps-outline" size={64} color="#ccc" />
+                  <Text style={styles.emptyText}>Нет доступных сервисов</Text>
+                </View>
+              }
+            />
+          </>
+        ) : (
+          <>
+            <Text style={styles.sectionTitle}>Доступные VPS планы</Text>
+            <FlatList
+              data={vpsPlans}
+              renderItem={renderVPSPlanCard}
+              keyExtractor={(item, index) => item?.plan_id?.toString() || `plan-${index}`}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#667eea']} />
+              }
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="server-outline" size={64} color="#ccc" />
+                  <Text style={styles.emptyText}>Нет доступных VPS планов</Text>
+                </View>
+              }
+            />
+          </>
+        )}
       </View>
     </View>
   );
@@ -261,7 +378,38 @@ const styles = StyleSheet.create({
   logoutButton: {
     padding: 8,
   },
-  plansSection: {
+  tabsContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    gap: 8,
+  },
+  tabActive: {
+    backgroundColor: '#e3f2fd',
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#999',
+  },
+  tabTextActive: {
+    color: '#667eea',
+  },
+  contentSection: {
     flex: 1,
     padding: 16,
   },
@@ -271,9 +419,10 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 12,
   },
-  plansList: {
+  listContent: {
     paddingBottom: 16,
   },
+  // VPS Plan Card Styles
   planCard: {
     backgroundColor: '#fff',
     borderRadius: 16,
@@ -350,5 +499,67 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginLeft: 4,
+  },
+  // Service Group Card Styles
+  groupCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  groupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  groupIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: '#f0f0ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  groupIcon: {
+    fontSize: 28,
+  },
+  groupInfo: {
+    flex: 1,
+  },
+  groupName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  groupDescription: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 6,
+  },
+  plansCountBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  plansCountText: {
+    fontSize: 12,
+    color: '#667eea',
+    fontWeight: '500',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#999',
+    marginTop: 16,
   },
 });
