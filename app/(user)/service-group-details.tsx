@@ -16,6 +16,18 @@ import { API_URL } from '../../config/api';
 import { getHeaders } from '../../config/fetch';
 import { useAuth } from '../context/AuthContext';
 
+interface PlanField {
+  id: number;
+  plan_id: number;
+  field_key: string;
+  field_label_uz: string;
+  field_label_ru: string;
+  field_value_uz: string;
+  field_value_ru: string;
+  field_type: string;
+  display_order: number;
+}
+
 interface ServicePlan {
   id: number;
   group_id: number;
@@ -32,6 +44,7 @@ interface ServicePlan {
   group_name_uz: string;
   group_name_ru: string;
   group_slug: string;
+  fields?: PlanField[];
 }
 
 export default function ServiceGroupDetailsScreen() {
@@ -58,7 +71,24 @@ export default function ServiceGroupDetailsScreen() {
 
       const data = await response.json();
       if (data.success) {
-        setPlans(data.data);
+        // Load fields for each plan
+        const plansWithFields = await Promise.all(
+          data.data.map(async (plan: ServicePlan) => {
+            try {
+              const planResponse = await fetch(`${API_URL}/api/service-plans/${plan.id}`, {
+                headers: getHeaders(token || undefined),
+              });
+              const planData = await planResponse.json();
+              if (planData.success) {
+                return { ...plan, fields: planData.data.fields || [] };
+              }
+            } catch (err) {
+              console.error('Error loading plan fields:', err);
+            }
+            return { ...plan, fields: [] };
+          })
+        );
+        setPlans(plansWithFields);
       }
     } catch (error) {
       console.error('Error loading plans:', error);
@@ -159,6 +189,25 @@ export default function ServiceGroupDetailsScreen() {
             </Text>
           )}
         </View>
+
+        {/* Characteristics */}
+        {item.fields && item.fields.length > 0 && (
+          <View style={styles.fieldsContainer}>
+            {item.fields.map((field, index) => (
+              <View key={index} style={styles.fieldRow}>
+                <View style={styles.fieldIcon}>
+                  <Ionicons name="checkmark-circle" size={16} color="#667eea" />
+                </View>
+                <View style={styles.fieldContent}>
+                  <Text style={styles.fieldLabel}>{field.field_label_ru}</Text>
+                  {field.field_value_ru && (
+                    <Text style={styles.fieldValue}>{field.field_value_ru}</Text>
+                  )}
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
 
         <View style={styles.priceContainer}>
           {hasDiscount && (
@@ -303,6 +352,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     lineHeight: 20,
+  },
+  fieldsContainer: {
+    marginBottom: 16,
+    gap: 8,
+  },
+  fieldRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  fieldIcon: {
+    marginTop: 2,
+  },
+  fieldContent: {
+    flex: 1,
+  },
+  fieldLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  fieldValue: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 2,
   },
   priceContainer: {
     marginBottom: 16,
