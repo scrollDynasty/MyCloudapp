@@ -241,6 +241,68 @@ const GET_PAYME_PAYMENT_INFO = `
 `;
 
 // ============================================
+// SERVICE GROUPS QUERIES (Группы сервисов)
+// ============================================
+
+// Получение всех групп сервисов
+const GET_SERVICE_GROUPS = `
+  SELECT *
+  FROM service_groups
+  WHERE is_active = true
+  ORDER BY display_order ASC
+`;
+
+// Получение одной группы по ID
+const GET_SERVICE_GROUP_BY_ID = `
+  SELECT *
+  FROM service_groups
+  WHERE id = ? AND is_active = true
+`;
+
+// Получение одной группы по slug
+const GET_SERVICE_GROUP_BY_SLUG = `
+  SELECT *
+  FROM service_groups
+  WHERE slug = ? AND is_active = true
+`;
+
+// ============================================
+// SERVICE PLANS QUERIES (Тарифы)
+// ============================================
+
+// Получение всех тарифов группы
+const GET_SERVICE_PLANS_BY_GROUP = `
+  SELECT 
+    sp.*,
+    sg.name_uz as group_name_uz,
+    sg.name_ru as group_name_ru
+  FROM service_plans sp
+  JOIN service_groups sg ON sp.group_id = sg.id
+  WHERE sp.group_id = ? AND sp.is_active = true
+  ORDER BY sp.display_order ASC
+`;
+
+// Получение одного тарифа по ID
+const GET_SERVICE_PLAN_BY_ID = `
+  SELECT 
+    sp.*,
+    sg.name_uz as group_name_uz,
+    sg.name_ru as group_name_ru,
+    sg.slug as group_slug
+  FROM service_plans sp
+  JOIN service_groups sg ON sp.group_id = sg.id
+  WHERE sp.id = ? AND sp.is_active = true
+`;
+
+// Получение полей тарифа
+const GET_PLAN_FIELDS = `
+  SELECT *
+  FROM plan_fields
+  WHERE plan_id = ?
+  ORDER BY display_order ASC
+`;
+
+// ============================================
 // EXPORTS
 // ============================================
 
@@ -279,5 +341,15 @@ module.exports = {
   CONFIRM_PAYME_PAYMENT,
   CANCEL_PAYME_TRANSACTION,
   GET_PAYME_TRANSACTION,
-  GET_PAYME_PAYMENT_INFO
+  GET_PAYME_PAYMENT_INFO,
+  
+  // Service groups queries
+  GET_SERVICE_GROUPS,
+  GET_SERVICE_GROUP_BY_ID,
+  GET_SERVICE_GROUP_BY_SLUG,
+  
+  // Service plans queries
+  GET_SERVICE_PLANS_BY_GROUP,
+  GET_SERVICE_PLAN_BY_ID,
+  GET_PLAN_FIELDS
 };
