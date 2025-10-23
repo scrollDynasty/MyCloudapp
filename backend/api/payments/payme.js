@@ -280,7 +280,7 @@ async function handleCheckPerformTransaction(params) {
   if (orders.length === 0) {
     return {
       error: {
-        code: PaymeHelper.ERRORS.ORDER_NOT_FOUND,
+        code: PaymeHelper.ERRORS.INVALID_ACCOUNT,
         message: {
           ru: 'Заказ не найден',
           uz: 'Buyurtma topilmadi',
@@ -425,9 +425,9 @@ async function handleCreateTransaction(params) {
     // Return existing transaction
     return {
       result: {
-        create_time: tx.create_time,
+        create_time: parseInt(tx.create_time),
         transaction: tx.transaction,
-        state: tx.state
+        state: parseInt(tx.state)
       }
     };
   }
@@ -441,7 +441,7 @@ async function handleCreateTransaction(params) {
   if (orders.length === 0) {
     return {
       error: {
-        code: PaymeHelper.ERRORS.ORDER_NOT_FOUND,
+        code: PaymeHelper.ERRORS.INVALID_ACCOUNT,
         message: {
           ru: 'Заказ не найден',
           uz: 'Buyurtma topilmadi',
@@ -462,6 +462,25 @@ async function handleCreateTransaction(params) {
           ru: 'Заказ уже оплачен',
           uz: 'Buyurtma allaqachon to\'langan',
           en: 'Order is already paid'
+        }
+      }
+    };
+  }
+
+  // 2.5. Check if order has another ACTIVE transaction (state = 1)
+  const activeTx = await db.query(
+    'SELECT id FROM payme_transactions WHERE order_id = ? AND state = 1 AND payme_transaction_id != ?',
+    [orderId, transactionId]
+  );
+
+  if (activeTx.length > 0) {
+    return {
+      error: {
+        code: PaymeHelper.ERRORS.UNABLE_TO_PERFORM,
+        message: {
+          ru: 'Для этого заказа уже существует активная транзакция',
+          uz: 'Bu buyurtma uchun faol tranzaksiya mavjud',
+          en: 'Another active transaction exists for this order'
         }
       }
     };
@@ -564,8 +583,8 @@ async function handlePerformTransaction(params) {
       return {
         result: {
           transaction: tx.transaction,
-          perform_time: tx.perform_time,
-          state: tx.state
+          perform_time: parseInt(tx.perform_time),
+          state: parseInt(tx.state)
         }
       };
     }
@@ -656,8 +675,8 @@ async function handleCancelTransaction(params) {
     return {
       result: {
         transaction: tx.transaction,
-        cancel_time: tx.cancel_time,
-        state: tx.state
+        cancel_time: parseInt(tx.cancel_time),
+        state: parseInt(tx.state)
       }
     };
   }
@@ -723,11 +742,11 @@ async function handleCheckTransaction(params) {
 
   return {
     result: {
-      create_time: tx.create_time,
-      perform_time: tx.perform_time || 0,
-      cancel_time: tx.cancel_time || 0,
+      create_time: parseInt(tx.create_time) || 0,
+      perform_time: parseInt(tx.perform_time) || 0,
+      cancel_time: parseInt(tx.cancel_time) || 0,
       transaction: tx.transaction,
-      state: tx.state,
+      state: parseInt(tx.state),
       reason: tx.reason || null
     }
   };
