@@ -21,7 +21,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { API_URL } from '../../config/api';
 import { getHeaders } from '../../config/fetch';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../lib/AuthContext';
 
 // Завершать браузер после успешной авторизации
 WebBrowser.maybeCompleteAuthSession();

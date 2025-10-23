@@ -3,7 +3,6 @@ const db = require('../../core/db/connection');
 const SQL = require('../../core/db/queries');
 const PaymeHelper = require('../../core/utils/payme-helper');
 const { authenticate } = require('../../core/utils/auth');
-const { logPayme } = require('../../core/utils/logger');
 
 const router = express.Router();
 const payme = new PaymeHelper();
@@ -11,11 +10,8 @@ const payme = new PaymeHelper();
 // POST /api/payments/payme - Create Payme payment (Authenticated users only)
 router.post('/payme', authenticate, async (req, res) => {
   try {
-    // Database is already initialized at startup
-    
     const { order_id, return_url } = req.body;
 
-    // Validate input
     if (!order_id) {
       return res.status(400).json({
         success: false,
@@ -23,7 +19,7 @@ router.post('/payme', authenticate, async (req, res) => {
       });
     }
 
-    // Get order details
+    // Get order details - поддержка как VPS, так и Service plans
     const orderQuery = `
       SELECT 
         o.*,
@@ -31,12 +27,14 @@ router.post('/payme', authenticate, async (req, res) => {
         u.email,
         u.first_name,
         u.last_name,
-        vp.name as plan_name,
-        p.name as provider_name
+        COALESCE(vp.name, sp.name_ru) as plan_name,
+        COALESCE(p.name, sg.name_ru) as provider_name
       FROM orders o
       JOIN users u ON o.user_id = u.id
-      JOIN vps_plans vp ON o.vps_plan_id = vp.id
-      JOIN providers p ON vp.provider_id = p.id
+      LEFT JOIN vps_plans vp ON o.vps_plan_id = vp.id
+      LEFT JOIN providers p ON vp.provider_id = p.id
+      LEFT JOIN service_plans sp ON o.service_plan_id = sp.id
+      LEFT JOIN service_groups sg ON sp.group_id = sg.id
       WHERE o.id = ?
     `;
 
@@ -177,7 +175,6 @@ router.post('/payme', authenticate, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Payme Payment Error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to create Payme payment',
@@ -189,9 +186,6 @@ router.post('/payme', authenticate, async (req, res) => {
 // POST /api/payments/payme/callback - Payme merchant API callback
 router.post('/payme/callback', async (req, res) => {
   try {
-    logPayme('request', req.body.method, req.body);
-
-    // Verify Payme signature
     if (!payme.verifySignature(req)) {
       const errorResponse = {
         error: {
@@ -203,11 +197,8 @@ router.post('/payme/callback', async (req, res) => {
           }
         }
       };
-      logPayme('response', req.body.method, errorResponse);
       return res.json(errorResponse);
     }
-
-    // Database is already initialized at startup
     
     const { method, params, id: requestId } = req.body;
     let response;
@@ -250,16 +241,13 @@ router.post('/payme/callback', async (req, res) => {
         };
     }
 
-    // Add request ID to response
     if (requestId) {
       response.id = requestId;
     }
 
-    logPayme('response', method, response);
     res.json(response);
 
   } catch (error) {
-    console.error('Payme Callback Error:', error);
     const errorResponse = {
       error: {
         code: PaymeHelper.ERRORS.SYSTEM_ERROR,
@@ -271,7 +259,6 @@ router.post('/payme/callback', async (req, res) => {
         data: error.message
       }
     };
-    logPayme('error', req.body?.method || 'unknown', errorResponse);
     res.json(errorResponse);
   }
 });
@@ -293,7 +280,7 @@ async function handleCheckPerformTransaction(params) {
   if (orders.length === 0) {
     return {
       error: {
-        code: PaymeHelper.ERRORS.ORDER_NOT_FOUND,
+        code: PaymeHelper.ERRORS.INVALID_ACCOUNT,
         message: {
           ru: 'Заказ не найден',
           uz: 'Buyurtma topilmadi',
@@ -438,9 +425,9 @@ async function handleCreateTransaction(params) {
     // Return existing transaction
     return {
       result: {
-        create_time: tx.create_time,
+        create_time: parseInt(tx.create_time),
         transaction: tx.transaction,
-        state: tx.state
+        state: parseInt(tx.state)
       }
     };
   }
@@ -454,7 +441,7 @@ async function handleCreateTransaction(params) {
   if (orders.length === 0) {
     return {
       error: {
-        code: PaymeHelper.ERRORS.ORDER_NOT_FOUND,
+        code: PaymeHelper.ERRORS.INVALID_ACCOUNT,
         message: {
           ru: 'Заказ не найден',
           uz: 'Buyurtma topilmadi',
@@ -475,6 +462,25 @@ async function handleCreateTransaction(params) {
           ru: 'Заказ уже оплачен',
           uz: 'Buyurtma allaqachon to\'langan',
           en: 'Order is already paid'
+        }
+      }
+    };
+  }
+
+  // 2.5. Check if order has another ACTIVE transaction (state = 1)
+  const activeTx = await db.query(
+    'SELECT id FROM payme_transactions WHERE order_id = ? AND state = 1 AND payme_transaction_id != ?',
+    [orderId, transactionId]
+  );
+
+  if (activeTx.length > 0) {
+    return {
+      error: {
+        code: PaymeHelper.ERRORS.UNABLE_TO_PERFORM,
+        message: {
+          ru: 'Для этого заказа уже существует активная транзакция',
+          uz: 'Bu buyurtma uchun faol tranzaksiya mavjud',
+          en: 'Another active transaction exists for this order'
         }
       }
     };
@@ -577,8 +583,8 @@ async function handlePerformTransaction(params) {
       return {
         result: {
           transaction: tx.transaction,
-          perform_time: tx.perform_time,
-          state: tx.state
+          perform_time: parseInt(tx.perform_time),
+          state: parseInt(tx.state)
         }
       };
     }
@@ -669,8 +675,8 @@ async function handleCancelTransaction(params) {
     return {
       result: {
         transaction: tx.transaction,
-        cancel_time: tx.cancel_time,
-        state: tx.state
+        cancel_time: parseInt(tx.cancel_time),
+        state: parseInt(tx.state)
       }
     };
   }
@@ -736,11 +742,11 @@ async function handleCheckTransaction(params) {
 
   return {
     result: {
-      create_time: tx.create_time,
-      perform_time: tx.perform_time || 0,
-      cancel_time: tx.cancel_time || 0,
+      create_time: parseInt(tx.create_time) || 0,
+      perform_time: parseInt(tx.perform_time) || 0,
+      cancel_time: parseInt(tx.cancel_time) || 0,
       transaction: tx.transaction,
-      state: tx.state,
+      state: parseInt(tx.state),
       reason: tx.reason || null
     }
   };
