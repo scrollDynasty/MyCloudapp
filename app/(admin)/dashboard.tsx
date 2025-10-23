@@ -14,7 +14,7 @@ import {
     View,
 } from 'react-native';
 import { API_URL } from '../../config/api';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../lib/AuthContext';
 
 // Helper function to add required headers for ngrok
 const getHeaders = (token?: string) => {

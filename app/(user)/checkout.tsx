@@ -3,15 +3,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Linking,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Linking,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { API_URL } from '../../config/api';
 import { getHeaders } from '../../config/fetch';
@@ -85,29 +85,52 @@ export default function CheckoutScreen() {
       setProcessing(true);
       const token = await AsyncStorage.getItem('token');
       
-      // Return URL для redirect после оплаты
+      if (!token) {
+        Alert.alert('Ошибка', 'Токен авторизации не найден. Пожалуйста, войдите заново.');
+        return;
+      }
+      
+      console.log('🔑 Token exists:', token ? 'Yes (length: ' + token.length + ')' : 'No');
+      console.log('📍 API URL:', API_URL);
+      console.log('📦 Order ID:', orderId);
+      
+      const paymentUrl = `${API_URL}/api/payments/payme`;
       const returnUrl = `${API_URL}/payment-success?order_id=${orderId}`;
       
-      const response = await fetch(`${API_URL}/api/payments/payme`, {
+      console.log('🌐 Full payment URL:', paymentUrl);
+      
+      const response = await fetch(paymentUrl, {
         method: 'POST',
-        headers: getHeaders(token || undefined),
+        headers: getHeaders(token),
         body: JSON.stringify({
           order_id: orderId,
           return_url: returnUrl,
         }),
       });
 
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response ok:', response.ok);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Error response:', errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
       const data = await response.json();
+      console.log('✅ Payment response:', JSON.stringify(data, null, 2));
       
       if (data.success && data.data?.checkout_url) {
+        console.log('🔗 Checkout URL:', data.data.checkout_url);
+        console.log('📊 Merchant ID:', data.data.debug?.merchant_id);
+        console.log('💰 Amount (tiyin):', data.data.debug?.amount_tiyin);
+        
         setCheckoutUrl(data.data.checkout_url);
         
-        // Open Payme checkout in browser
         if (Platform.OS === 'web') {
           const paymentWindow = window.open(data.data.checkout_url, '_blank');
           
           if (!paymentWindow) {
-            // Показываем альтернативные URL если есть
             let message = 'Разрешите всплывающие окна или используйте одну из этих ссылок:\n\n';
             message += '1. Основная ссылка:\n' + data.data.checkout_url + '\n\n';
             
@@ -128,7 +151,6 @@ export default function CheckoutScreen() {
           }
         }
       } else {
-        // Properly handle error messages
         let errorMessage = 'Неизвестная ошибка при создании платежа';
         
         if (data.error) {
@@ -145,26 +167,19 @@ export default function CheckoutScreen() {
           errorMessage += '\n\nДетали: ' + data.message;
         }
         
-        // Add troubleshooting hints
         errorMessage += '\n\n💡 Возможные причины:\n';
         errorMessage += '• Merchant ID не активирован в системе Payme\n';
         errorMessage += '• Account поля не настроены в личном кабинете\n';
         errorMessage += '• Неверная конфигурация кассы\n';
         errorMessage += '• Проверьте логи сервера для деталей';
         
-        // Add debug info if available
         if (data.data?.debug?.note) {
           errorMessage += '\n\n⚠️ ' + data.data.debug.note;
         }
         
         Alert.alert('Ошибка оплаты Payme', errorMessage);
-        console.error('Payment error:', {
-          status: response.status,
-          data: data
-        });
       }
     } catch (error: any) {
-      console.error('Payment error:', error);
       const errorMsg = error?.message || 'Не удалось инициировать оплату';
       Alert.alert('Ошибка', errorMsg);
     } finally {

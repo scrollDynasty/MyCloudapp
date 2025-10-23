@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
-import { useAuth } from '../context/AuthContext';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { useAuth } from '../../lib/AuthContext';
 
 
 export default function CallbackScreen() {

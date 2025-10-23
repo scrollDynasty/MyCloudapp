@@ -1,7 +1,7 @@
 import { Redirect } from 'expo-router';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { useAuth } from './context/AuthContext';
+import { useAuth } from '../lib/AuthContext';
 
 export default function Index() {
   const { user, isLoading } = useAuth();

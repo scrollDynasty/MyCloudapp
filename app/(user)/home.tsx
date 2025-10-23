@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { API_URL } from '../../config/api';
 import { getHeaders } from '../../config/fetch';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../lib/AuthContext';
 
 interface VPSPlan {
   plan_id: number;
@@ -90,7 +90,6 @@ export default function UserHomeScreen() {
         setServiceGroups(groupsData.data);
       }
     } catch (error) {
-      console.error('Error loading data:', error);
       Alert.alert('Ошибка', 'Не удалось загрузить данные');
     } finally {
       setLoading(false);
@@ -108,7 +107,6 @@ export default function UserHomeScreen() {
       await signOut();
       router.replace('/auth/login');
     } catch (error) {
-      console.error('❌ Logout error:', error);
       Alert.alert('Ошибка', 'Не удалось выйти. Попробуйте еще раз.');
     }
   };
@@ -148,7 +146,6 @@ export default function UserHomeScreen() {
         Alert.alert('Ошибка', data.error || 'Не удалось создать заказ');
       }
     } catch (error) {
-      console.error('Error creating order:', error);
       Alert.alert('Ошибка', 'Не удалось создать заказ');
     } finally {
       setLoading(false);
