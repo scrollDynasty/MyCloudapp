@@ -293,7 +293,23 @@ async function handleCheckPerformTransaction(params) {
 
   const order = orders[0];
 
-  // 2. Check if user exists
+  // 2. Validate amount FIRST (before checking payment status)
+  const expectedAmount = payme.toTiyin(order.amount);
+  if (amount !== expectedAmount) {
+    return {
+      error: {
+        code: PaymeHelper.ERRORS.INVALID_AMOUNT,
+        message: {
+          ru: `Неверная сумма. Ожидается ${expectedAmount}, получено ${amount}`,
+          uz: `Noto'g'ri summa. Kutilgan ${expectedAmount}, olindi ${amount}`,
+          en: `Invalid amount. Expected ${expectedAmount}, got ${amount}`
+        },
+        data: 'amount'
+      }
+    };
+  }
+
+  // 3. Check if user exists
   const users = await db.query(
     'SELECT id, status FROM users WHERE id = ?',
     [order.user_id]
@@ -313,7 +329,7 @@ async function handleCheckPerformTransaction(params) {
     };
   }
 
-  // 3. Check if order is already paid
+  // 4. Check if order is already paid
   if (order.payment_status === 'paid') {
     return {
       error: {
@@ -324,22 +340,6 @@ async function handleCheckPerformTransaction(params) {
           en: 'Order is already paid'
         },
         data: 'order_id'
-      }
-    };
-  }
-
-  // 4. Validate amount
-  const expectedAmount = payme.toTiyin(order.amount);
-  if (amount !== expectedAmount) {
-    return {
-      error: {
-        code: PaymeHelper.ERRORS.INVALID_AMOUNT,
-        message: {
-          ru: `Неверная сумма. Ожидается ${expectedAmount}, получено ${amount}`,
-          uz: `Noto'g'ri summa. Kutilgan ${expectedAmount}, olindi ${amount}`,
-          en: `Invalid amount. Expected ${expectedAmount}, got ${amount}`
-        },
-        data: 'amount'
       }
     };
   }
@@ -454,6 +454,22 @@ async function handleCreateTransaction(params) {
 
   const order = orders[0];
 
+  // 2. Validate amount FIRST (before checking payment status)
+  const expectedAmount = payme.toTiyin(order.amount);
+  if (amount !== expectedAmount) {
+    return {
+      error: {
+        code: PaymeHelper.ERRORS.INVALID_AMOUNT,
+        message: {
+          ru: `Неверная сумма. Ожидается ${expectedAmount}, получено ${amount}`,
+          uz: `Noto'g'ri summa. Kutilgan ${expectedAmount}, olindi ${amount}`,
+          en: `Invalid amount. Expected ${expectedAmount}, got ${amount}`
+        }
+      }
+    };
+  }
+
+  // 3. Check if order is already paid
   if (order.payment_status === 'paid') {
     return {
       error: {
@@ -467,7 +483,7 @@ async function handleCreateTransaction(params) {
     };
   }
 
-  // 2.5. Check if order has another ACTIVE transaction (state = 1)
+  // 4. Check if order has another ACTIVE transaction (state = 1)
   const activeTx = await db.query(
     'SELECT id FROM payme_transactions WHERE order_id = ? AND state = 1 AND payme_transaction_id != ?',
     [orderId, transactionId]
@@ -481,21 +497,6 @@ async function handleCreateTransaction(params) {
           ru: 'Для этого заказа уже существует активная транзакция',
           uz: 'Bu buyurtma uchun faol tranzaksiya mavjud',
           en: 'Another active transaction exists for this order'
-        }
-      }
-    };
-  }
-
-  // 3. Validate amount
-  const expectedAmount = payme.toTiyin(order.amount);
-  if (amount !== expectedAmount) {
-    return {
-      error: {
-        code: PaymeHelper.ERRORS.INVALID_AMOUNT,
-        message: {
-          ru: `Неверная сумма. Ожидается ${expectedAmount}, получено ${amount}`,
-          uz: `Noto'g'ri summa. Kutilgan ${expectedAmount}, olindi ${amount}`,
-          en: `Invalid amount. Expected ${expectedAmount}, got ${amount}`
         }
       }
     };
