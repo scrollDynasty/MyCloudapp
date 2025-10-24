@@ -7,7 +7,6 @@ const { authenticate } = require('../../core/utils/auth');
 const router = express.Router();
 const payme = new PaymeHelper();
 
-// POST /api/payments/payme - Create Payme payment (Authenticated users only)
 router.post('/payme', authenticate, async (req, res) => {
   try {
     const { order_id, return_url } = req.body;
@@ -19,7 +18,6 @@ router.post('/payme', authenticate, async (req, res) => {
       });
     }
 
-    // Get order details - поддержка как VPS, так и Service plans
     const orderQuery = `
       SELECT 
         o.*,
@@ -49,7 +47,6 @@ router.post('/payme', authenticate, async (req, res) => {
 
     const order = orders[0];
 
-    // Check if order belongs to user (or user is admin)
     if (req.user.role !== 'admin' && order.user_id !== req.user.id) {
       return res.status(403).json({
         success: false,
@@ -58,7 +55,6 @@ router.post('/payme', authenticate, async (req, res) => {
       });
     }
 
-    // Check if order is already paid
     if (order.payment_status === 'paid') {
       return res.status(400).json({
         success: false,
@@ -66,10 +62,8 @@ router.post('/payme', authenticate, async (req, res) => {
       });
     }
 
-    // Получаем сумму в UZS (узбекских сумах)
     let amountInUzs = order.amount;
 
-    // Валидация суммы для Payme
     const amountInTiyin = Math.round(amountInUzs * 100);
     const MIN_AMOUNT_TIYIN = 100; // Минимум 1 UZS
     const MAX_AMOUNT_TIYIN = 99999999999; // Максимум ~1 млрд UZS
