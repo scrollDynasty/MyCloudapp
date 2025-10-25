@@ -52,8 +52,11 @@ app.use(requestTimeout(30000)); // 30 second timeout
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:8081',
+  'http://localhost:5173', // Vite dev server
   'http://localhost:19006',
   'exp://localhost:8081',
+  'https://crm.mycloud.uz', // CRM Production
+  'https://billing.mycloud.uz', // Mobile App
   process.env.CORS_ORIGIN
 ].filter(Boolean);
 
@@ -73,6 +76,9 @@ app.use(cors({
   allowedHeaders: [
     'Content-Type', 
     'Authorization',
+    'Cache-Control',
+    'Pragma',
+    'Expires',
     'ngrok-skip-browser-warning',  // Allow ngrok header
     'User-Agent'  // Allow custom user agent
   ]
@@ -81,6 +87,14 @@ app.use(cors({
 // Reduced payload size limits to prevent memory issues
 app.use(bodyParser.json({ limit: '2mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '2mb' }));
+
+// Disable caching for API responses
+app.use((req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
 
 // Static files (для HTML страниц)
 app.use(express.static('public'));

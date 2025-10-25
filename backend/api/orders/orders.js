@@ -75,8 +75,10 @@ router.get('/', async (req, res) => {
 
     const formattedOrders = orders.map(order => ({
       order_id: order.id,
+      order_number: order.order_number,
       user_id: order.user_id,
       vps_plan_id: order.vps_plan_id,
+      service_plan_id: order.service_plan_id,
       full_name: `${order.first_name || ''} ${order.last_name || ''}`.trim() || order.username,
       email: order.email,
       plan_name: order.plan_name,
@@ -87,10 +89,12 @@ router.get('/', async (req, res) => {
       storage_gb: order.storage_gb,
       bandwidth_tb: order.bandwidth_tb,
       status: order.status,
-      total_price: parseFloat(order.amount || 0),
+      total_price: parseFloat(order.total_amount || order.amount || 0),
       currency_code: order.currency || 'UZS',
       payment_method: order.payment_method,
+      payment_status: order.payment_status || 'pending',
       payment_id: order.payment_id,
+      payme_transaction_id: order.payme_transaction_id,
       notes: order.notes,
       created_at: order.created_at,
       updated_at: order.updated_at

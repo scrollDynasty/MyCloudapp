@@ -110,24 +110,24 @@ const createRateLimiter = (options) => new RateLimiter(options);
 
 // Preset configurations
 const rateLimiters = {
-  // Strict rate limiting for auth endpoints
+  // Lenient rate limiting for auth endpoints (CRM needs higher limits)
   auth: createRateLimiter({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    maxRequests: 5,
+    windowMs: 1 * 60 * 1000, // 1 minute
+    maxRequests: 100,
     message: 'Too many authentication attempts, please try again later'
   }),
 
-  // Standard rate limiting for API endpoints
+  // Higher rate limiting for API endpoints (CRM dashboard loads multiple endpoints)
   api: createRateLimiter({
-    windowMs: 15 * 60 * 1000, // 15 minutes
+    windowMs: 1 * 60 * 1000, // 1 minute
     maxRequests: 100,
     message: 'Too many requests, please try again later'
   }),
 
-  // Lenient rate limiting for public endpoints
+  // Very lenient rate limiting for public endpoints
   public: createRateLimiter({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    maxRequests: 300,
+    windowMs: 1 * 60 * 1000, // 1 minute
+    maxRequests: 200,
     message: 'Too many requests, please try again later'
   })
 };
