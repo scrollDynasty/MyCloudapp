@@ -7,8 +7,6 @@ const router = express.Router();
 // POST /api/vps-admin - Create new VPS plan (Admin only)
 router.post('/', authenticate, adminOnly, async (req, res) => {
   try {
-    // Database is already initialized at startup
-    
     const {
       plan_name,
       provider,
@@ -31,23 +29,54 @@ router.post('/', authenticate, adminOnly, async (req, res) => {
       });
     }
 
-    // Insert new plan
+    let provider_id;
+
+    // If provider name is provided, find or create provider
+    if (provider && provider.trim()) {
+      // Check if provider exists
+      const existingProvider = await db.query('SELECT id FROM providers WHERE name = ?', [provider.trim()]);
+      
+      if (existingProvider.length > 0) {
+        provider_id = existingProvider[0].id;
+      } else {
+        // Create new provider with auto-generated code
+        const providerCode = provider.trim().toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 50);
+        const providerResult = await db.query(
+          'INSERT INTO providers (name, code, website, country) VALUES (?, ?, ?, ?)',
+          [provider.trim(), providerCode, null, null]
+        );
+        provider_id = providerResult.insertId;
+      }
+    } else {
+      // Use or create "Custom" provider
+      const customProvider = await db.query('SELECT id FROM providers WHERE name = ?', ['Custom']);
+      
+      if (customProvider.length > 0) {
+        provider_id = customProvider[0].id;
+      } else {
+        const providerResult = await db.query(
+          'INSERT INTO providers (name, code, website, country) VALUES (?, ?, ?, ?)',
+          ['Custom', 'custom', null, null]
+        );
+        provider_id = providerResult.insertId;
+      }
+    }
+
+    // Insert new VPS plan
     const result = await db.query(`
       INSERT INTO vps_plans 
-      (provider, plan_name, cpu_cores, ram_gb, storage_gb, storage_type,
-       bandwidth, price_per_month, currency, location, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+      (provider_id, name, cpu_cores, ram_gb, storage_gb, 
+       bandwidth_gb, price_monthly, available, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
     `, [
-      provider || 'Custom',
+      provider_id,
       plan_name,
       cpu_cores,
       ram_gb,
       storage_gb,
-      storage_type,
-      bandwidth_tb || null,
+      bandwidth_tb ? bandwidth_tb * 1000 : null,
       price_per_month,
-      currency,
-      location || null
+      available
     ]);
 
     res.status(201).json({
@@ -71,8 +100,6 @@ router.post('/', authenticate, adminOnly, async (req, res) => {
 // PUT /api/vps-admin/:id - Update VPS plan (Admin only)
 router.put('/:id', authenticate, adminOnly, async (req, res) => {
   try {
-    // Database is already initialized at startup
-    
     const { id } = req.params;
     const {
       plan_name,
@@ -80,16 +107,13 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
       cpu_cores,
       ram_gb,
       storage_gb,
-      storage_type,
       bandwidth_tb,
       price_per_month,
-      currency,
-      location,
       available
     } = req.body;
 
-    // Check if plan exists (check both id and plan_id columns)
-    const planExists = await db.query('SELECT plan_id FROM vps_plans WHERE plan_id = ? OR id = ?', [id, id]);
+    // Check if plan exists
+    const planExists = await db.query('SELECT id, provider_id FROM vps_plans WHERE id = ?', [id]);
     if (planExists.length === 0) {
       return res.status(404).json({
         success: false,
@@ -101,13 +125,31 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
     let updateFields = [];
     let updateValues = [];
 
-    if (plan_name !== undefined) {
-      updateFields.push('plan_name = ?');
-      updateValues.push(plan_name);
+    // Handle provider update
+    if (provider !== undefined && provider !== null) {
+      // Check if provider exists
+      const existingProvider = await db.query('SELECT id FROM providers WHERE name = ?', [provider.trim()]);
+      
+      let provider_id;
+      if (existingProvider.length > 0) {
+        provider_id = existingProvider[0].id;
+      } else {
+        // Create new provider with auto-generated code
+        const providerCode = provider.trim().toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 50);
+        const providerResult = await db.query(
+          'INSERT INTO providers (name, code, website, country) VALUES (?, ?, ?, ?)',
+          [provider.trim(), providerCode, null, null]
+        );
+        provider_id = providerResult.insertId;
+      }
+      
+      updateFields.push('provider_id = ?');
+      updateValues.push(provider_id);
     }
-    if (provider !== undefined) {
-      updateFields.push('provider = ?');
-      updateValues.push(provider);
+
+    if (plan_name !== undefined) {
+      updateFields.push('name = ?');
+      updateValues.push(plan_name);
     }
     if (cpu_cores !== undefined) {
       updateFields.push('cpu_cores = ?');
@@ -121,25 +163,13 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
       updateFields.push('storage_gb = ?');
       updateValues.push(storage_gb);
     }
-    if (storage_type !== undefined) {
-      updateFields.push('storage_type = ?');
-      updateValues.push(storage_type);
-    }
     if (bandwidth_tb !== undefined) {
-      updateFields.push('bandwidth = ?');
-      updateValues.push(bandwidth_tb);
+      updateFields.push('bandwidth_gb = ?');
+      updateValues.push(bandwidth_tb ? bandwidth_tb * 1000 : null);
     }
     if (price_per_month !== undefined) {
-      updateFields.push('price_per_month = ?');
+      updateFields.push('price_monthly = ?');
       updateValues.push(price_per_month);
-    }
-    if (currency !== undefined) {
-      updateFields.push('currency = ?');
-      updateValues.push(currency);
-    }
-    if (location !== undefined) {
-      updateFields.push('location = ?');
-      updateValues.push(location);
     }
     if (available !== undefined) {
       updateFields.push('available = ?');
@@ -157,8 +187,7 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
     updateFields.push('updated_at = NOW()');
     updateValues.push(id);
 
-    const query = `UPDATE vps_plans SET ${updateFields.join(', ')} WHERE plan_id = ? OR id = ?`;
-    updateValues.push(id);
+    const query = `UPDATE vps_plans SET ${updateFields.join(', ')} WHERE id = ?`;
     await db.query(query, updateValues);
 
     res.json({
@@ -181,12 +210,10 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
 // DELETE /api/vps-admin/:id - Delete VPS plan (Admin only)
 router.delete('/:id', authenticate, adminOnly, async (req, res) => {
   try {
-    // Database is already initialized at startup
-    
     const { id } = req.params;
 
-    // Check if plan exists (check both id and plan_id columns)
-    const planExists = await db.query('SELECT plan_id FROM vps_plans WHERE plan_id = ? OR id = ?', [id, id]);
+    // Check if plan exists
+    const planExists = await db.query('SELECT id FROM vps_plans WHERE id = ?', [id]);
     if (planExists.length === 0) {
       return res.status(404).json({
         success: false,
@@ -198,7 +225,7 @@ router.delete('/:id', authenticate, adminOnly, async (req, res) => {
     const ordersExist = await db.query('SELECT id FROM orders WHERE vps_plan_id = ? LIMIT 1', [id]);
     if (ordersExist.length > 0) {
       // Don't delete, just mark as unavailable
-      await db.query('UPDATE vps_plans SET available = false WHERE plan_id = ? OR id = ?', [id, id]);
+      await db.query('UPDATE vps_plans SET available = false WHERE id = ?', [id]);
       return res.json({
         success: true,
         data: {
@@ -208,7 +235,7 @@ router.delete('/:id', authenticate, adminOnly, async (req, res) => {
     }
 
     // Safe to delete
-    await db.query('DELETE FROM vps_plans WHERE plan_id = ? OR id = ?', [id, id]);
+    await db.query('DELETE FROM vps_plans WHERE id = ?', [id]);
 
     res.json({
       success: true,
