@@ -1,34 +1,69 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import Login from './pages/Login'
+import Dashboard from './pages/Dashboard'
+import Users from './pages/Users'
+import Orders from './pages/Orders'
+import VPSPlans from './pages/VPSPlans'
+import ServiceGroups from './pages/ServiceGroups'
+import ServicePlans from './pages/ServicePlans'
+import Layout from './components/Layout'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const token = localStorage.getItem('crm_token')
+    const user = localStorage.getItem('crm_user')
+    
+    if (token && user) {
+      try {
+        const userData = JSON.parse(user)
+        if (userData.role === 'admin') {
+          setIsAuthenticated(true)
+        } else {
+          localStorage.removeItem('crm_token')
+          localStorage.removeItem('crm_user')
+        }
+      } catch (error) {
+        localStorage.removeItem('crm_token')
+        localStorage.removeItem('crm_user')
+      }
+    }
+    
+    setIsLoading(false)
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg">Loading...</div>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <Routes>
+        <Route path="/login" element={<Login setIsAuthenticated={setIsAuthenticated} />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    )
+  }
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <Layout setIsAuthenticated={setIsAuthenticated}>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/users" element={<Users />} />
+        <Route path="/orders" element={<Orders />} />
+        <Route path="/vps-plans" element={<VPSPlans />} />
+        <Route path="/service-groups" element={<ServiceGroups />} />
+        <Route path="/service-plans" element={<ServicePlans />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Layout>
   )
 }
 
