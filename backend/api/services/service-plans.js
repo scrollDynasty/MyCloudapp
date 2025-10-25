@@ -4,6 +4,38 @@ const { authenticate } = require('../../core/utils/auth');
 
 const router = express.Router();
 
+// GET /api/service-plans/all - Get all service plans (for CRM)
+router.get('/all', authenticate, async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        sp.*,
+        sg.name_uz as group_name_uz,
+        sg.name_ru as group_name_ru,
+        sg.slug as group_slug
+      FROM service_plans sp
+      JOIN service_groups sg ON sp.group_id = sg.id
+      WHERE sp.is_active = true AND sg.is_active = true
+      ORDER BY sg.display_order ASC, sp.display_order ASC
+    `;
+
+    const plans = await db.query(query);
+
+    res.json({
+      success: true,
+      data: plans
+    });
+
+  } catch (error) {
+    console.error('Get All Service Plans Error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch service plans',
+      message: error.message
+    });
+  }
+});
+
 // GET /api/service-plans - Get all plans for a group (Public for authenticated users)
 router.get('/', authenticate, async (req, res) => {
   try {

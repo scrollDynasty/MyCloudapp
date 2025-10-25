@@ -11,49 +11,43 @@ router.post('/', authenticate, adminOnly, async (req, res) => {
     
     const {
       plan_name,
-      provider_id,
+      provider,
       cpu_cores,
-      memory_gb,
+      ram_gb,
       storage_gb,
+      storage_type = 'SSD',
       bandwidth_tb,
       price_per_month,
-      currency,
-      region,
+      currency = 'UZS',
+      location,
       available = true
     } = req.body;
 
     // Validate required fields
-    if (!plan_name || !provider_id || !cpu_cores || !memory_gb || !storage_gb || !price_per_month) {
+    if (!plan_name || !cpu_cores || !ram_gb || !storage_gb || !price_per_month) {
       return res.status(400).json({
         success: false,
-        error: 'Missing required fields: plan_name, provider_id, cpu_cores, memory_gb, storage_gb, price_per_month'
-      });
-    }
-
-    // Verify provider exists
-    const providerExists = await db.query('SELECT id FROM providers WHERE id = ?', [provider_id]);
-    if (providerExists.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: 'Provider not found'
+        error: 'Missing required fields: plan_name, cpu_cores, ram_gb, storage_gb, price_per_month'
       });
     }
 
     // Insert new plan
     const result = await db.query(`
       INSERT INTO vps_plans 
-      (provider_id, name, cpu_cores, ram_gb, storage_gb, bandwidth_gb, 
-       price_monthly, available, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+      (provider, plan_name, cpu_cores, ram_gb, storage_gb, storage_type,
+       bandwidth, price_per_month, currency, location, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
     `, [
-      provider_id,
+      provider || 'Custom',
       plan_name,
       cpu_cores,
-      memory_gb,
+      ram_gb,
       storage_gb,
-      (bandwidth_tb || 0) * 1000, // Convert TB to GB
+      storage_type,
+      bandwidth_tb || null,
       price_per_month,
-      available
+      currency,
+      location || null
     ]);
 
     res.status(201).json({
@@ -82,19 +76,20 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
     const { id } = req.params;
     const {
       plan_name,
-      provider_id,
+      provider,
       cpu_cores,
-      memory_gb,
+      ram_gb,
       storage_gb,
+      storage_type,
       bandwidth_tb,
       price_per_month,
       currency,
-      region,
+      location,
       available
     } = req.body;
 
-    // Check if plan exists
-    const planExists = await db.query('SELECT id FROM vps_plans WHERE id = ?', [id]);
+    // Check if plan exists (check both id and plan_id columns)
+    const planExists = await db.query('SELECT plan_id FROM vps_plans WHERE plan_id = ? OR id = ?', [id, id]);
     if (planExists.length === 0) {
       return res.status(404).json({
         success: false,
@@ -107,32 +102,44 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
     let updateValues = [];
 
     if (plan_name !== undefined) {
-      updateFields.push('name = ?');
+      updateFields.push('plan_name = ?');
       updateValues.push(plan_name);
     }
-    if (provider_id !== undefined) {
-      updateFields.push('provider_id = ?');
-      updateValues.push(provider_id);
+    if (provider !== undefined) {
+      updateFields.push('provider = ?');
+      updateValues.push(provider);
     }
     if (cpu_cores !== undefined) {
       updateFields.push('cpu_cores = ?');
       updateValues.push(cpu_cores);
     }
-    if (memory_gb !== undefined) {
+    if (ram_gb !== undefined) {
       updateFields.push('ram_gb = ?');
-      updateValues.push(memory_gb);
+      updateValues.push(ram_gb);
     }
     if (storage_gb !== undefined) {
       updateFields.push('storage_gb = ?');
       updateValues.push(storage_gb);
     }
+    if (storage_type !== undefined) {
+      updateFields.push('storage_type = ?');
+      updateValues.push(storage_type);
+    }
     if (bandwidth_tb !== undefined) {
-      updateFields.push('bandwidth_gb = ?');
-      updateValues.push((bandwidth_tb || 0) * 1000); // Convert TB to GB
+      updateFields.push('bandwidth = ?');
+      updateValues.push(bandwidth_tb);
     }
     if (price_per_month !== undefined) {
-      updateFields.push('price_monthly = ?');
+      updateFields.push('price_per_month = ?');
       updateValues.push(price_per_month);
+    }
+    if (currency !== undefined) {
+      updateFields.push('currency = ?');
+      updateValues.push(currency);
+    }
+    if (location !== undefined) {
+      updateFields.push('location = ?');
+      updateValues.push(location);
     }
     if (available !== undefined) {
       updateFields.push('available = ?');
@@ -146,9 +153,12 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
       });
     }
 
+    // Add updated_at timestamp
+    updateFields.push('updated_at = NOW()');
     updateValues.push(id);
 
-    const query = `UPDATE vps_plans SET ${updateFields.join(', ')} WHERE id = ?`;
+    const query = `UPDATE vps_plans SET ${updateFields.join(', ')} WHERE plan_id = ? OR id = ?`;
+    updateValues.push(id);
     await db.query(query, updateValues);
 
     res.json({
@@ -175,8 +185,8 @@ router.delete('/:id', authenticate, adminOnly, async (req, res) => {
     
     const { id } = req.params;
 
-    // Check if plan exists
-    const planExists = await db.query('SELECT id FROM vps_plans WHERE id = ?', [id]);
+    // Check if plan exists (check both id and plan_id columns)
+    const planExists = await db.query('SELECT plan_id FROM vps_plans WHERE plan_id = ? OR id = ?', [id, id]);
     if (planExists.length === 0) {
       return res.status(404).json({
         success: false,
@@ -188,7 +198,7 @@ router.delete('/:id', authenticate, adminOnly, async (req, res) => {
     const ordersExist = await db.query('SELECT id FROM orders WHERE vps_plan_id = ? LIMIT 1', [id]);
     if (ordersExist.length > 0) {
       // Don't delete, just mark as unavailable
-      await db.query('UPDATE vps_plans SET available = false WHERE id = ?', [id]);
+      await db.query('UPDATE vps_plans SET available = false WHERE plan_id = ? OR id = ?', [id, id]);
       return res.json({
         success: true,
         data: {
@@ -198,7 +208,7 @@ router.delete('/:id', authenticate, adminOnly, async (req, res) => {
     }
 
     // Safe to delete
-    await db.query('DELETE FROM vps_plans WHERE id = ?', [id]);
+    await db.query('DELETE FROM vps_plans WHERE plan_id = ? OR id = ?', [id, id]);
 
     res.json({
       success: true,

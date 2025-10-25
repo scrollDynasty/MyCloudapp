@@ -1,13 +1,14 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
-import { useState, useEffect } from 'react'
-import Login from './pages/Login'
+import { useEffect, useState } from 'react'
+import { Navigate, Route, Routes } from 'react-router-dom'
+import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
-import Users from './pages/Users'
+import Login from './pages/Login'
 import Orders from './pages/Orders'
-import VPSPlans from './pages/VPSPlans'
 import ServiceGroups from './pages/ServiceGroups'
 import ServicePlans from './pages/ServicePlans'
-import Layout from './components/Layout'
+import ServicesManagement from './pages/ServicesManagement'
+import Users from './pages/Users'
+import VPSPlans from './pages/VPSPlans'
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -61,6 +62,7 @@ function App() {
         <Route path="/vps-plans" element={<VPSPlans />} />
         <Route path="/service-groups" element={<ServiceGroups />} />
         <Route path="/service-plans" element={<ServicePlans />} />
+        <Route path="/services" element={<ServicesManagement />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

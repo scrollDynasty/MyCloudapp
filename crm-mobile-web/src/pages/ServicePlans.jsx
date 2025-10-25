@@ -6,8 +6,35 @@ export default function ServicePlans() {
     queryKey: ['service-plans'],
     queryFn: async () => {
       const res = await api.get('/service-plans')
-      return res.data
+      return res.data?.data ?? res.data ?? []
     },
+  })
+
+  const plansList = (data || []).map((plan) => {
+    const priceRaw = plan.price ?? 0
+    const priceNum = Number(String(priceRaw).replace(/[^0-9.-]+/g, '')) || 0
+    const discountRaw = plan.discount_price ?? 0
+    const discountNum = Number(String(discountRaw).replace(/[^0-9.-]+/g, '')) || 0
+    return (
+      <div key={plan.id} className="bg-white rounded-lg shadow p-6 border">
+        <h3 className="text-lg font-bold mb-2">{plan.name_ru}</h3>
+        <p className="text-sm text-gray-600 mb-4">{plan.description_ru}</p>
+        <div className="space-y-2">
+          <p className="text-2xl font-bold text-indigo-600">{priceNum.toLocaleString()} UZS</p>
+          {discountNum > 0 && (
+            <p className="text-sm text-gray-500 line-through">{discountNum.toLocaleString()} UZS</p>
+          )}
+          <p className="text-xs text-gray-500">per {plan.billing_period}</p>
+        </div>
+        <div className="mt-4">
+          <span className={`px-2 py-1 text-xs rounded-full ${
+            plan.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+          }`}>
+            {plan.is_active ? 'Active' : 'Inactive'}
+          </span>
+        </div>
+      </div>
+    )
   })
 
   return (
@@ -17,30 +44,7 @@ export default function ServicePlans() {
         <div>Loading...</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {data?.data?.map((plan) => (
-            <div key={plan.id} className="bg-white rounded-lg shadow p-6 border">
-              <h3 className="text-lg font-bold mb-2">{plan.name_ru}</h3>
-              <p className="text-sm text-gray-600 mb-4">{plan.description_ru}</p>
-              <div className="space-y-2">
-                <p className="text-2xl font-bold text-indigo-600">
-                  {parseFloat(plan.price).toLocaleString()} UZS
-                </p>
-                {plan.discount_price && (
-                  <p className="text-sm text-gray-500 line-through">
-                    {parseFloat(plan.discount_price).toLocaleString()} UZS
-                  </p>
-                )}
-                <p className="text-xs text-gray-500">per {plan.billing_period}</p>
-              </div>
-              <div className="mt-4">
-                <span className={`px-2 py-1 text-xs rounded-full ${
-                  plan.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                }`}>
-                  {plan.is_active ? 'Active' : 'Inactive'}
-                </span>
-              </div>
-            </div>
-          ))}
+          {plansList}
         </div>
       )}
     </div>

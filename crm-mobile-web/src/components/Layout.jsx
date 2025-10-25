@@ -1,10 +1,9 @@
 import {
-    Grid,
     LayoutDashboard,
     LogOut,
     Menu,
-    Package,
     Server,
+    Settings,
     ShoppingCart,
     Users,
     X
@@ -24,12 +23,11 @@ export default function Layout({ children, setIsAuthenticated }) {
   }
 
   const navigation = [
-    { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-    { name: 'Users', href: '/users', icon: Users },
-    { name: 'Orders', href: '/orders', icon: ShoppingCart },
-    { name: 'VPS Plans', href: '/vps-plans', icon: Server },
-    { name: 'Service Groups', href: '/service-groups', icon: Grid },
-    { name: 'Service Plans', href: '/service-plans', icon: Package },
+    { name: 'Главная', href: '/', icon: LayoutDashboard },
+    { name: 'Пользователи', href: '/users', icon: Users },
+    { name: 'Заказы', href: '/orders', icon: ShoppingCart },
+    { name: 'Управление сервисами', href: '/services', icon: Settings },
+    { name: 'VPS планы', href: '/vps-plans', icon: Server },
   ]
 
   return (
@@ -98,7 +96,7 @@ export default function Layout({ children, setIsAuthenticated }) {
               className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             >
               <LogOut size={20} />
-              Logout
+              Выход
             </button>
           </div>
         </div>
