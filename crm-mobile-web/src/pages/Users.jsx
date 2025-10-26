@@ -103,7 +103,16 @@ export default function Users() {
         alert('Пользователь успешно обновлён!')
       } else {
         // При создании - пароль обязателен
-        await api.post('/auth/register', formData)
+        // Формируем full_name из first_name и last_name для backend
+        const registerData = {
+          email: formData.email,
+          password: formData.password,
+          full_name: `${formData.first_name} ${formData.last_name}`.trim() || formData.username,
+          phone: formData.phone,
+          role: formData.role,
+          company_name: formData.company_name,
+        }
+        await api.post('/auth/register', registerData)
         alert('Пользователь успешно создан!')
       }
       setShowModal(false)

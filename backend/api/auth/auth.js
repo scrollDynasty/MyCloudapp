@@ -38,7 +38,7 @@ router.post('/register', async (req, res) => {
     const last_name = nameParts.slice(1).join(' ') || nameParts[0];
 
     // Validate role
-    const validRoles = ['individual', 'legal_entity'];
+    const validRoles = ['individual', 'legal_entity', 'company', 'admin'];
     const userRole = role || 'individual';
     
     if (!validRoles.includes(userRole)) {
@@ -77,7 +77,7 @@ router.post('/register', async (req, res) => {
       company_name || null,
       tax_id || null,
       legal_address || null,
-      'local' // oauth_provider
+      null // oauth_provider - NULL для локальных пользователей
     ]);
 
     const userId = result.insertId;
