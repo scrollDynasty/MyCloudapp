@@ -17,7 +17,8 @@ export default function Users() {
     last_name: '',
     company_name: '',
     role: 'individual',
-    status: 'active'
+    status: 'active',
+    password: '' // Добавлено поле пароля
   })
 
   useEffect(() => {
@@ -60,7 +61,8 @@ export default function Users() {
       last_name: user.last_name || '',
       company_name: user.company_name || '',
       role: user.role || 'individual',
-      status: user.status || 'active'
+      status: user.status || 'active',
+      password: '' // Пустой пароль при редактировании
     })
     setShowModal(true)
   }
@@ -75,25 +77,39 @@ export default function Users() {
       last_name: '',
       company_name: '',
       role: 'individual',
-      status: 'active'
+      status: 'active',
+      password: '' // Пустой пароль для нового пользователя
     })
     setShowModal(true)
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    // Валидация пароля для нового пользователя
+    if (!editingUser && !formData.password.trim()) {
+      alert('Введите пароль для нового пользователя')
+      return
+    }
+    
     try {
       if (editingUser) {
-        await api.put(`/auth/users/${editingUser.id}`, formData)
-        alert('User updated successfully!')
+        // При редактировании - отправляем пароль только если он заполнен
+        const updateData = { ...formData }
+        if (!updateData.password) {
+          delete updateData.password
+        }
+        await api.put(`/auth/users/${editingUser.id}`, updateData)
+        alert('Пользователь успешно обновлён!')
       } else {
-        await api.post('/auth/register', { ...formData, password: 'changeme123' })
-        alert('User created successfully! Default password: changeme123')
+        // При создании - пароль обязателен
+        await api.post('/auth/register', formData)
+        alert('Пользователь успешно создан!')
       }
       setShowModal(false)
       fetchUsers()
     } catch (error) {
-      alert('Error: ' + (error.response?.data?.error || 'Operation failed'))
+      alert('Ошибка: ' + (error.response?.data?.error || 'Операция не выполнена'))
     }
   }
 
@@ -362,6 +378,22 @@ export default function Users() {
                     onChange={(e) => setFormData({...formData, phone: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Пароль {editingUser ? '' : '*'}
+                  </label>
+                  <input
+                    type="password"
+                    required={!editingUser}
+                    value={formData.password}
+                    onChange={(e) => setFormData({...formData, password: e.target.value})}
+                    placeholder={editingUser ? 'Оставьте пустым для сохранения текущего' : 'Минимум 6 символов'}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  {editingUser && (
+                    <p className="text-xs text-gray-500 mt-1">Оставьте поле пустым, чтобы не менять пароль</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
