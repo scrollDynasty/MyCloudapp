@@ -396,8 +396,8 @@ export default function ServicesManagement() {
       {/* Group Modal */}
       {showGroupModal && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" 
-          style={{ zIndex: 9999 }}
+          className="fixed inset-0 flex items-center justify-center p-4" 
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 9999 }}
           onClick={() => setShowGroupModal(false)}
         >
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -518,8 +518,8 @@ export default function ServicesManagement() {
       {/* Plan Modal */}
       {showPlanModal && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" 
-          style={{ zIndex: 9999 }}
+          className="fixed inset-0 flex items-center justify-center p-4" 
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 9999 }}
           onClick={() => setShowPlanModal(false)}
         >
           <div 
