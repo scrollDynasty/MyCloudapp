@@ -38,7 +38,7 @@ router.post('/register', async (req, res) => {
     const last_name = nameParts.slice(1).join(' ') || nameParts[0];
 
     // Validate role
-    const validRoles = ['individual', 'legal_entity'];
+    const validRoles = ['individual', 'legal_entity', 'company', 'admin'];
     const userRole = role || 'individual';
     
     if (!validRoles.includes(userRole)) {
@@ -77,7 +77,7 @@ router.post('/register', async (req, res) => {
       company_name || null,
       tax_id || null,
       legal_address || null,
-      'local' // oauth_provider
+      null // oauth_provider - NULL для локальных пользователей
     ]);
 
     const userId = result.insertId;
@@ -443,7 +443,8 @@ router.put('/users/:id', authenticate, adminOrSelf, async (req, res) => {
       phone,
       company_name,
       tax_id,
-      legal_address
+      legal_address,
+      password // Добавлено поле пароля
     } = req.body;
 
     // Check if user exists
@@ -482,6 +483,13 @@ router.put('/users/:id', authenticate, adminOrSelf, async (req, res) => {
     if (legal_address !== undefined) {
       updates.push('legal_address = ?');
       params.push(legal_address);
+    }
+    
+    // Если указан новый пароль - хэшируем и добавляем
+    if (password && password.trim()) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      updates.push('password = ?');
+      params.push(hashedPassword);
     }
 
     if (updates.length === 0) {

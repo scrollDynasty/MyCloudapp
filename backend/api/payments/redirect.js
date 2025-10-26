@@ -177,7 +177,7 @@ router.get('/payment-success', async (req, res) => {
         </a>
         
         <div class="redirect-info">
-          <p>Вы будете автоматически перенаправлены через <span id="countdown">5</span> секунд
+          <p>Вы будете автоматически перенаправлены через <span id="countdown">3</span> секунд
             <span class="spinner"></span>
           </p>
         </div>
@@ -185,8 +185,33 @@ router.get('/payment-success', async (req, res) => {
       
       <script>
         // Обратный отсчёт
-        let seconds = 5;
+        let seconds = 3;
         const countdownEl = document.getElementById('countdown');
+        
+        // Определяем мобильное устройство
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        const isExpoGo = /Expo/i.test(navigator.userAgent);
+        
+        // URL для редиректа
+        const webUrl = '${process.env.FRONTEND_URL || 'http://localhost:8081'}/(user)/payment-success?order_id=${order_id || ''}';
+        const deepLink = 'exp://192.168.1.100:8081/--/(user)/payment-success?order_id=${order_id || ''}'; // Для Expo Go
+        const customScheme = 'mycloud://payment-success?order_id=${order_id || ''}'; // Для production app
+        
+        // Для мобильных - пробуем открыть deep link немедленно
+        if (isMobile) {
+          // Попытка #1: Custom scheme (production)
+          window.location.href = customScheme;
+          
+          // Попытка #2: Expo deep link (development)
+          setTimeout(() => {
+            window.location.href = deepLink;
+          }, 500);
+          
+          // Попытка #3: Universal link (fallback)
+          setTimeout(() => {
+            window.location.href = webUrl;
+          }, 1500);
+        }
         
         const timer = setInterval(() => {
           seconds--;
@@ -195,16 +220,18 @@ router.get('/payment-success', async (req, res) => {
           if (seconds <= 0) {
             clearInterval(timer);
             // Перенаправление
-            window.location.href = '${process.env.FRONTEND_URL || 'http://localhost:8081'}/(user)/orders';
+            if (isMobile) {
+              // Для мобильных - финальная попытка
+              window.location.href = customScheme;
+              setTimeout(() => {
+                window.location.href = deepLink;
+              }, 500);
+            } else {
+              // Для веба
+              window.location.href = webUrl;
+            }
           }
         }, 1000);
-        
-        // Для мобильных устройств - попробовать открыть deep link
-        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-          setTimeout(() => {
-            window.location.href = 'myapp://orders';
-          }, 1000);
-        }
       </script>
     </body>
     </html>
