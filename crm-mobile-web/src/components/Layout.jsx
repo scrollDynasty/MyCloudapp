@@ -105,7 +105,8 @@ export default function Layout({ children, setIsAuthenticated }) {
       {/* Overlay for mobile */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
+          className="fixed inset-0 z-30 lg:hidden"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
           onClick={() => setIsSidebarOpen(false)}
         />
       )}

@@ -275,7 +275,11 @@ export default function Orders() {
 
       {/* Order Details Modal */}
       {showModal && selectedOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setShowModal(false)}>
+        <div 
+          className="fixed inset-0 flex items-center justify-center p-4 z-50" 
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+          onClick={() => setShowModal(false)}
+        >
           <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="p-6 border-b border-gray-200">
               <div className="flex justify-between items-start">

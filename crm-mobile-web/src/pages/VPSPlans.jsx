@@ -294,8 +294,8 @@ export default function VPSPlans() {
       {/* Edit Modal */}
       {showEditModal && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" 
-          style={{ zIndex: 9999 }}
+          className="fixed inset-0 flex items-center justify-center p-4" 
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 9999 }}
           onClick={() => setShowEditModal(false)}
         >
           <div 
@@ -423,8 +423,8 @@ export default function VPSPlans() {
       {/* Create Modal */}
       {showCreateModal && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" 
-          style={{ zIndex: 9999 }}
+          className="fixed inset-0 flex items-center justify-center p-4" 
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 9999 }}
           onClick={() => setShowCreateModal(false)}
         >
           <div 
