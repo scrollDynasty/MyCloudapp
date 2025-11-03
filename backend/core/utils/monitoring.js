@@ -69,19 +69,13 @@ class PerformanceMonitor {
 
   checkMemoryThresholds() {
     const heapUsedPercent = (this.metrics.memory.heapUsed / this.metrics.memory.heapTotal) * 100;
-    const systemMemUsedPercent = ((this.metrics.system.totalMemory - this.metrics.system.freeMemory) / this.metrics.system.totalMemory) * 100;
 
-    // Warn if heap usage is above 80%
-    if (heapUsedPercent > 80) {
-      console.warn(`High heap usage: ${heapUsedPercent.toFixed(2)}% (${this.metrics.memory.heapUsed}MB/${this.metrics.memory.heapTotal}MB)`);
+    // Only warn if heap usage is critically high (above 90%)
+    if (heapUsedPercent > 90) {
+      console.warn(`Critical heap usage: ${heapUsedPercent.toFixed(2)}% (${this.metrics.memory.heapUsed}MB/${this.metrics.memory.heapTotal}MB)`);
     }
 
-    // Warn if system memory is above 90%
-    if (systemMemUsedPercent > 90) {
-      console.warn(`High system memory usage: ${systemMemUsedPercent.toFixed(2)}%`);
-    }
-
-    // Suggest garbage collection if memory is high
+    // Suggest garbage collection if memory is critically high
     if (heapUsedPercent > 85 && global.gc) {
       global.gc();
     }
@@ -116,9 +110,9 @@ class PerformanceMonitor {
         this.metrics.requests.averageResponseTime = 
           this.requestTimings.reduce((a, b) => a + b, 0) / this.requestTimings.length;
 
-        // Log slow requests
-        if (duration > 5000) {
-          console.warn(`Slow request: ${req.method} ${req.originalUrl} took ${duration}ms`);
+        // Only log extremely slow requests (over 10 seconds)
+        if (duration > 10000 && process.env.NODE_ENV === 'development') {
+          console.warn(`Very slow request: ${req.method} ${req.originalUrl} took ${duration}ms`);
         }
       });
 
@@ -179,14 +173,17 @@ class PerformanceMonitor {
     });
   }
 
-  // Log memory snapshot
+  // Log memory snapshot - disabled by default
   logMemorySnapshot() {
+    // Only log in development mode
+    if (process.env.NODE_ENV !== 'development') {
+      return;
+    }
+    
     const mem = this.metrics.memory;
     console.log('Memory Snapshot:');
     console.log(`   Heap: ${mem.heapUsed}MB / ${mem.heapTotal}MB (${((mem.heapUsed / mem.heapTotal) * 100).toFixed(2)}%)`);
     console.log(`   RSS: ${mem.rss}MB`);
-    console.log(`   External: ${mem.external}MB`);
-    console.log(`   System Free: ${this.metrics.system.freeMemory}MB / ${this.metrics.system.totalMemory}MB`);
   }
 
   destroy() {

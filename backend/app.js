@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const morgan = require('morgan');
 const compression = require('compression');
 const bodyParser = require('body-parser');
 const passport = require('passport');
@@ -43,7 +42,7 @@ app.use(monitor.trackRequest());
 // Security and optimization middleware
 app.use(helmet()); // Security headers
 app.use(compression()); // Compress responses
-app.use(morgan('dev')); // Logging - only HTTP status codes
+// Removed morgan middleware to reduce logging overhead
 
 // Request timeout to prevent hanging requests
 app.use(requestTimeout(30000)); // 30 second timeout
@@ -195,20 +194,19 @@ let server;
 async function startServer() {
   try {
     // Initialize database connection
-    logger.info('Initializing database connection...');
     await initializeDatabase();
     logger.success('Database connected successfully');
 
     // Start HTTP server
     server = app.listen(PORT, () => {
       logger.success(`VPS Billing API Server running on port ${PORT}`);
-      logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
-      logger.info(`API Base URL: http://localhost:${PORT}`);
-      logger.info(`Health check: http://localhost:${PORT}/health`);
-      logger.info(`Metrics: http://localhost:${PORT}/metrics`);
       
-      // Log initial memory usage
-      monitor.logMemorySnapshot();
+      // Only show detailed info in development
+      if (process.env.NODE_ENV === 'development') {
+        logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+        logger.info(`API Base URL: http://localhost:${PORT}`);
+        logger.info(`Health check: http://localhost:${PORT}/health`);
+      }
     });
 
     // Handle server errors
@@ -225,17 +223,14 @@ async function startServer() {
 
 // Graceful shutdown handler
 async function gracefulShutdown(signal) {
-  logger.info(`${signal} received, starting graceful shutdown...`);
+  logger.warn(`${signal} received, shutting down...`);
   
   if (server) {
     // Stop accepting new connections
     server.close(async () => {
-      logger.info('HTTP server closed');
-      
       try {
         // Close database connections
         await db.close();
-        logger.success('Database connections closed');
         
         // Clean up monitoring
         monitor.destroy();

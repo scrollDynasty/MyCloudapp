@@ -45,8 +45,11 @@ class Database {
       
       this.connected = true;
       this.connectionAttempts = 0;
-      console.log('MariaDB connected successfully');
-      console.log(`Database: ${dbConfig.database} on ${dbConfig.host}:${dbConfig.port}`);
+      // Only log in development mode
+      if (process.env.NODE_ENV === 'development') {
+        console.log('MariaDB connected successfully');
+        console.log(`Database: ${dbConfig.database} on ${dbConfig.host}:${dbConfig.port}`);
+      }
       
       return this.poolPromise;
     } catch (error) {
@@ -101,8 +104,11 @@ class Database {
       return rows;
     } catch (error) {
       console.error('Database query error:', error.message);
-      console.error('SQL:', sql);
-      console.error('Params:', params);
+      // Only log SQL details in development
+      if (process.env.NODE_ENV === 'development') {
+        console.error('SQL:', sql);
+        console.error('Params:', params);
+      }
       throw error;
     }
   }
@@ -145,7 +151,9 @@ class Database {
         this.connected = false;
         this.pool = null;
         this.poolPromise = null;
-        console.log('🔐 Database connection pool closed gracefully');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔐 Database connection pool closed gracefully');
+        }
       } catch (error) {
         console.error('Error closing database pool:', error);
         throw error;
