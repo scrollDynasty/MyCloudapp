@@ -1,17 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Linking,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Linking,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { API_URL } from '../../config/api';
 import { getHeaders } from '../../config/fetch';
@@ -217,20 +218,25 @@ export default function CheckoutScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* Header */}
-      <View style={styles.header}>
+    <View style={styles.container}>
+      <LinearGradient
+        colors={['#3B82F6', '#2563EB', '#1D4ED8']}
+        style={styles.header}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
         <TouchableOpacity onPress={handleCancel} style={styles.closeButton}>
-          <Ionicons name="close" size={28} color="#333" />
+          <Ionicons name="close" size={28} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Оформление заказа</Text>
         <View style={{ width: 28 }} />
-      </View>
+      </LinearGradient>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
 
       {/* Order Summary Card */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Ionicons name="server" size={32} color="#667eea" />
+          <Ionicons name="server" size={32} color="#3B82F6" />
           <Text style={styles.cardTitle}>
             {order.order_type === 'vps' ? 'Детали VPS' : 'Детали тарифа'}
           </Text>
@@ -293,7 +299,7 @@ export default function CheckoutScreen() {
       {/* Customer Info */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Ionicons name="person" size={28} color="#667eea" />
+          <Ionicons name="person" size={28} color="#3B82F6" />
           <Text style={styles.cardTitle}>Данные клиента</Text>
         </View>
         <View style={styles.infoRow}>
@@ -372,14 +378,18 @@ export default function CheckoutScreen() {
           </Text>
         </View>
       )}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f7fa',
+    backgroundColor: '#F8FAFC',
+  },
+  scrollView: {
+    flex: 1,
   },
   contentContainer: {
     padding: 20,
@@ -389,34 +399,46 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f7fa',
+    backgroundColor: '#F8FAFC',
     padding: 20,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
-    paddingTop: 40,
+    padding: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
   },
   closeButton: {
-    padding: 4,
+    padding: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 12,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
-    color: '#333',
+    color: '#FFFFFF',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    letterSpacing: 0.3,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     padding: 20,
     marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -542,7 +564,9 @@ const styles = StyleSheet.create({
   totalValue: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#667eea',
+    color: '#3B82F6',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    letterSpacing: 0.3,
   },
   instructionsCard: {
     backgroundColor: '#e3f2fd',
@@ -583,8 +607,8 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   payButton: {
-    backgroundColor: '#667eea',
-    shadowColor: '#667eea',
+    backgroundColor: '#3B82F6',
+    shadowColor: '#3B82F6',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -613,7 +637,7 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 14,
-    color: '#667eea',
+    color: '#3B82F6',
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   loadingText: {

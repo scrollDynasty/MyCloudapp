@@ -1,16 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Platform,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { API_URL } from '../../config/api';
 import { getHeaders } from '../../config/fetch';
@@ -196,7 +198,7 @@ export default function ServiceGroupDetailsScreen() {
             {item.fields.map((field, index) => (
               <View key={index} style={styles.fieldRow}>
                 <View style={styles.fieldIcon}>
-                  <Ionicons name="checkmark-circle" size={16} color="#667eea" />
+                  <Ionicons name="checkmark-circle" size={16} color="#3B82F6" />
                 </View>
                 <View style={styles.fieldContent}>
                   <Text style={styles.fieldLabel}>{field.field_label_ru}</Text>
@@ -226,10 +228,15 @@ export default function ServiceGroupDetailsScreen() {
         </View>
 
         <View style={styles.orderButtonContainer}>
-          <View style={styles.orderButton}>
+          <LinearGradient
+            colors={['#3B82F6', '#2563EB', '#1D4ED8']}
+            style={styles.orderButton}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
             <Text style={styles.orderButtonText}>Оформить заказ</Text>
             <Ionicons name="arrow-forward" size={20} color="#fff" />
-          </View>
+          </LinearGradient>
         </View>
       </TouchableOpacity>
     );
@@ -246,13 +253,18 @@ export default function ServiceGroupDetailsScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <LinearGradient
+        colors={['#3B82F6', '#2563EB', '#1D4ED8']}
+        style={styles.header}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{groupName}</Text>
         <View style={{ width: 32 }} />
-      </View>
+      </LinearGradient>
 
       {/* Plans List */}
       <FlatList
@@ -279,50 +291,56 @@ export default function ServiceGroupDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F8FAFC',
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F8FAFC',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#667eea',
     padding: 20,
-    paddingTop: 60,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
   },
   backButton: {
-    padding: 4,
+    padding: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 12,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '700',
-    color: '#fff',
+    color: '#FFFFFF',
     flex: 1,
     textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    letterSpacing: 0.3,
   },
   listContent: {
-    padding: 16,
+    padding: 20,
   },
   planCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     padding: 20,
     marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
     position: 'relative',
   },
   discountBadge: {
@@ -343,15 +361,18 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   planName: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
-    color: '#333',
+    color: '#0F172A',
     marginBottom: 8,
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    letterSpacing: 0.2,
   },
   planDescription: {
     fontSize: 14,
-    color: '#666',
+    color: '#64748B',
     lineHeight: 20,
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
   },
   fieldsContainer: {
     marginBottom: 16,
@@ -393,31 +414,41 @@ const styles = StyleSheet.create({
   },
   priceText: {
     fontSize: 32,
-    fontWeight: 'bold',
-    color: '#667eea',
+    fontWeight: '700',
+    color: '#3B82F6',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    letterSpacing: 0.3,
   },
   priceLabel: {
     fontSize: 16,
-    color: '#666',
+    color: '#64748B',
     marginLeft: 8,
+    fontWeight: '500',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
   },
   orderButtonContainer: {
-    marginTop: 8,
+    marginTop: 12,
   },
   orderButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#667eea',
-    paddingVertical: 14,
+    paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
     gap: 8,
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   orderButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#fff',
+    color: '#FFFFFF',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    letterSpacing: 0.2,
   },
   emptyContainer: {
     alignItems: 'center',

@@ -1,12 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   FlatList,
+  Platform,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -15,19 +18,6 @@ import {
 import { API_URL } from '../../config/api';
 import { getHeaders } from '../../config/fetch';
 import { useAuth } from '../../lib/AuthContext';
-
-interface VPSPlan {
-  plan_id: number;
-  provider_name: string;
-  plan_name: string;
-  cpu_cores: number;
-  ram_gb: number;
-  storage_gb: number;
-  bandwidth_tb: number;
-  price: number;
-  currency_code: string;
-  region_name: string;
-}
 
 interface ServiceGroup {
   id: number;
@@ -54,11 +44,33 @@ export default function UserHomeScreen() {
   const router = useRouter();
   const { user: authUser, signOut } = useAuth();
   const [user, setUser] = useState<User | null>(null);
-  const [vpsPlans, setVpsPlans] = useState<VPSPlan[]>([]);
   const [serviceGroups, setServiceGroups] = useState<ServiceGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'vps' | 'services'>('services');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  
+  // Анимации
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+  
+  // Анимация появления контента
+  useEffect(() => {
+    if (!loading) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          tension: 50,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [loading]);
 
   useEffect(() => {
     // Используем данные из AuthContext
@@ -71,15 +83,6 @@ export default function UserHomeScreen() {
   const loadData = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
-      
-      // Load VPS plans
-      const vpsResponse = await fetch(`${API_URL}/api/vps`, {
-        headers: getHeaders(token || undefined),
-      });
-      const vpsData = await vpsResponse.json();
-      if (vpsData.success) {
-        setVpsPlans(vpsData.data);
-      }
 
       // Load service groups
       const groupsResponse = await fetch(`${API_URL}/api/service-groups`, {
@@ -111,419 +114,560 @@ export default function UserHomeScreen() {
     }
   };
 
-  const handleOrderVPS = async (plan: VPSPlan) => {
-    try {
-      setLoading(true);
-      const token = await AsyncStorage.getItem('token');
-      
-      const userId = authUser?.user_id;
-      
-      if (!userId) {
-        Alert.alert('Ошибка', 'Не удалось определить пользователя');
-        return;
-      }
-
-      const requestBody = {
-        user_id: userId,
-        vps_plan_id: plan.plan_id,
-        notes: `Заказ VPS плана: ${plan.plan_name}`,
-      };
-
-      const response = await fetch(`${API_URL}/api/orders`, {
-        method: 'POST',
-        headers: getHeaders(token || undefined),
-        body: JSON.stringify(requestBody),
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
-        router.push({
-          pathname: '/(user)/checkout',
-          params: { orderId: data.data.id },
-        });
-      } else {
-        Alert.alert('Ошибка', data.error || 'Не удалось создать заказ');
-      }
-    } catch (error) {
-      Alert.alert('Ошибка', 'Не удалось создать заказ');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleOpenServiceGroup = (group: ServiceGroup) => {
     router.push({
       pathname: '/(user)/service-group-details',
       params: { groupId: group.id, groupName: group.name_ru },
     });
   };
+  
+  const handleCategorySelect = (category: string | null) => {
+    setSelectedCategory(category);
+  };
 
-  const renderVPSPlanCard = ({ item }: { item: VPSPlan }) => (
-    <TouchableOpacity
-      style={styles.planCard}
-      onPress={() => handleOrderVPS(item)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.planHeader}>
-        <View>
-          <Text style={styles.providerName}>{item.provider_name}</Text>
-          <Text style={styles.planName}>{item.plan_name}</Text>
-        </View>
-        <View style={styles.regionBadge}>
-          <Ionicons name="location" size={14} color="#667eea" />
-          <Text style={styles.regionText}>{item.region_name}</Text>
-        </View>
-      </View>
+  // Фильтрация групп сервисов по категории
+  const filteredServiceGroups = selectedCategory
+    ? serviceGroups.filter((group) => {
+        const groupName = group.name_ru.toLowerCase();
+        const groupNameUz = group.name_uz.toLowerCase();
+        const groupSlug = group.slug.toLowerCase();
+        const categoryMap: { [key: string]: string[] } = {
+          video: ['video', 'видео'],
+          drive: ['drive', 'драйв', 'хранилище', 'storage'],
+          cctv: ['cctv', 'камера', 'видеонаблюдение'],
+          vps: ['vps', 'впс', 'виртуальный'],
+          'vps-new': ['vps new', 'vps-new', 'новый vps', 'новый впс'],
+          colocation: ['colocation', 'колокация', 'колокейшн'],
+          ssl: ['ssl', 'сертификат', 'certificate'],
+          temp: ['temp', 'временный', 'temporary'],
+          nvr: ['nvr', 'нвр', 'видеорегистратор'],
+        };
+        const searchTerms = categoryMap[selectedCategory] || [];
+        return searchTerms.some((term) => 
+          groupName.includes(term) || 
+          groupNameUz.includes(term) || 
+          groupSlug.includes(term)
+        );
+      })
+    : serviceGroups;
 
-      <View style={styles.specsContainer}>
-        <View style={styles.specItem}>
-          <Ionicons name="hardware-chip" size={18} color="#667eea" />
-          <Text style={styles.specText}>{item.cpu_cores} CPU</Text>
-        </View>
-        <View style={styles.specItem}>
-          <Ionicons name="server" size={18} color="#667eea" />
-          <Text style={styles.specText}>{item.ram_gb} GB RAM</Text>
-        </View>
-        <View style={styles.specItem}>
-          <Ionicons name="save" size={18} color="#667eea" />
-          <Text style={styles.specText}>{item.storage_gb} GB</Text>
-        </View>
-        <View style={styles.specItem}>
-          <Ionicons name="swap-horizontal" size={18} color="#667eea" />
-          <Text style={styles.specText}>{item.bandwidth_tb} TB</Text>
-        </View>
-      </View>
+  // Категории с иконками и цветами
+  const categories = [
+    { id: 'video', name: 'Video', icon: 'videocam', color: '#EF4444' },
+    { id: 'drive', name: 'Drive', icon: 'folder', color: '#3B82F6' },
+    { id: 'cctv', name: 'CCTV', icon: 'camera', color: '#10B981' },
+    { id: 'vps', name: 'VPS', icon: 'cloud', color: '#8B5CF6' },
+    { id: 'vps-new', name: 'Vps new', icon: 'sparkles', color: '#06B6D4' },
+    { id: 'colocation', name: 'Colocation', icon: 'server', color: '#F59E0B' },
+    { id: 'ssl', name: 'SSL', icon: 'lock-closed', color: '#84CC16' },
+    { id: 'temp', name: 'Temp', icon: 'time', color: '#A78BFA' },
+    { id: 'nvr', name: 'NVR', icon: 'tv', color: '#EC4899' },
+  ];
 
-      <View style={styles.priceContainer}>
-        <Text style={styles.priceText}>
-          {item.price} {item.currency_code}
-        </Text>
-        <Text style={styles.priceLabel}>/месяц</Text>
-      </View>
-    </TouchableOpacity>
-  );
-
-  const renderServiceGroupCard = ({ item }: { item: ServiceGroup }) => (
-    <TouchableOpacity
-      style={styles.groupCard}
-      onPress={() => handleOpenServiceGroup(item)}
-      activeOpacity={0.7}
-    >
+  // Компонент карточки группы сервисов с анимацией
+  const ServiceGroupCard = React.memo(({ item, index }: { item: ServiceGroup; index: number }) => {
+    const cardAnim = React.useRef(new Animated.Value(0)).current;
+    const scaleAnim = React.useRef(new Animated.Value(1)).current;
+    
+    React.useEffect(() => {
+      Animated.parallel([
+        Animated.timing(cardAnim, {
+          toValue: 1,
+          duration: 400,
+          delay: index * 50,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          delay: index * 50,
+          tension: 50,
+          friction: 7,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }, []);
+    
+    const handlePressIn = () => {
+      Animated.spring(scaleAnim, {
+        toValue: 0.98,
+        useNativeDriver: true,
+      }).start();
+    };
+    
+    const handlePressOut = () => {
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+      }).start();
+    };
+    
+    const opacity = cardAnim;
+    const translateY = cardAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [20, 0],
+    });
+    
+    return (
+      <Animated.View
+        style={{
+          opacity,
+          transform: [{ translateY }, { scale: scaleAnim }],
+        }}
+      >
+        <TouchableOpacity
+          style={styles.groupCard}
+          onPress={() => handleOpenServiceGroup(item)}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          activeOpacity={0.9}
+        >
       <View style={styles.groupHeader}>
         <View style={styles.groupIconContainer}>
-          <Text style={styles.groupIcon}>{item.icon || '📦'}</Text>
+          <Ionicons name="apps" size={24} color="#6366F1" />
         </View>
         <View style={styles.groupInfo}>
           <Text style={styles.groupName}>{item.name_ru}</Text>
           <Text style={styles.groupDescription} numberOfLines={2}>
-            {item.description_ru || item.name_uz}
+            {item.description_ru || item.name_uz || 'Доступные тарифы и услуги'}
           </Text>
           <View style={styles.plansCountBadge}>
-            <Ionicons name="apps" size={14} color="#667eea" />
             <Text style={styles.plansCountText}>
               {item.plans_count} {item.plans_count === 1 ? 'тариф' : 'тарифов'}
             </Text>
           </View>
         </View>
-        <Ionicons name="chevron-forward" size={24} color="#ccc" />
+        <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
       </View>
-    </TouchableOpacity>
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  });
+
+  // Функция рендеринга для FlatList
+  const renderServiceGroupCard = ({ item, index }: { item: ServiceGroup; index: number }) => (
+    <ServiceGroupCard item={item} index={index} />
   );
 
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#667eea" />
+        <ActivityIndicator size="large" color="#6366F1" />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
+    <Animated.View 
+      style={[
+        styles.container,
+        {
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }],
+        }
+      ]}
+    >
+      {/* Professional Header */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Добро пожаловать,</Text>
-          <Text style={styles.userName}>{user?.full_name || 'Пользователь'}</Text>
-          {user?.role === 'legal_entity' && user?.company_name && (
-            <Text style={styles.companyName}>{user.company_name}</Text>
-          )}
+        <View style={styles.headerContent}>
+          <View style={styles.headerLeft}>
+            <View style={styles.headerIconContainer}>
+              <Ionicons name="home" size={28} color="#6366F1" />
+            </View>
+            {user?.role === 'legal_entity' && user?.company_name && (
+              <View style={styles.companyBadge}>
+                <Ionicons name="business" size={12} color="#6366F1" />
+                <Text style={styles.companyName}>{user.company_name}</Text>
+              </View>
+            )}
+          </View>
+          <TouchableOpacity 
+            onPress={() => router.push('/(user)/orders')} 
+            style={styles.iconButton}
+            activeOpacity={0.6}
+          >
+            <Ionicons name="cart-outline" size={24} color="#1F2937" />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-          <Ionicons name="log-out-outline" size={24} color="#d32f2f" />
-        </TouchableOpacity>
       </View>
 
-      {/* Tabs */}
-      <View style={styles.tabsContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'services' && styles.tabActive]}
-          onPress={() => setActiveTab('services')}
+      {/* Category Buttons */}
+      <View style={styles.categoriesContainer}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoriesScrollContent}
         >
-          <Ionicons 
-            name="grid" 
-            size={20} 
-            color={activeTab === 'services' ? '#667eea' : '#999'} 
-          />
-          <Text style={[styles.tabText, activeTab === 'services' && styles.tabTextActive]}>
-            Сервисы
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'vps' && styles.tabActive]}
-          onPress={() => setActiveTab('vps')}
-        >
-          <Ionicons 
-            name="server" 
-            size={20} 
-            color={activeTab === 'vps' ? '#667eea' : '#999'} 
-          />
-          <Text style={[styles.tabText, activeTab === 'vps' && styles.tabTextActive]}>
-            VPS
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.categoryButton,
+              selectedCategory === null && styles.categoryButtonActive
+            ]}
+            onPress={() => handleCategorySelect(null)}
+            activeOpacity={0.7}
+          >
+            <View style={[
+              styles.categoryIconContainer,
+              selectedCategory === null && styles.categoryIconContainerActive
+            ]}>
+              <Ionicons 
+                name="apps" 
+                size={20} 
+                color={selectedCategory === null ? '#4F46E5' : '#6B7280'} 
+              />
+            </View>
+            <Text style={[
+              styles.categoryText,
+              selectedCategory === null && styles.categoryTextActive
+            ]}>
+              Все
+            </Text>
+          </TouchableOpacity>
+          {categories.map((category) => (
+            <TouchableOpacity
+              key={category.id}
+              style={[
+                styles.categoryButton,
+                selectedCategory === category.id && styles.categoryButtonActive
+              ]}
+              onPress={() => handleCategorySelect(category.id)}
+              activeOpacity={0.7}
+            >
+              <View style={[
+                styles.categoryIconContainer,
+                selectedCategory === category.id && styles.categoryIconContainerActive
+              ]}>
+                <Ionicons 
+                  name={category.icon as any} 
+                  size={20} 
+                  color={selectedCategory === category.id ? '#4F46E5' : '#6B7280'} 
+                />
+              </View>
+              <Text style={[
+                styles.categoryText,
+                selectedCategory === category.id && styles.categoryTextActive
+              ]}>
+                {category.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
       {/* Content */}
       <View style={styles.contentSection}>
-        {activeTab === 'services' ? (
-          <>
-            <Text style={styles.sectionTitle}>Группы сервисов</Text>
-            <FlatList
-              data={serviceGroups}
-              renderItem={renderServiceGroupCard}
-              keyExtractor={(item) => item.id.toString()}
-              contentContainerStyle={styles.listContent}
-              showsVerticalScrollIndicator={false}
-              refreshControl={
-                <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#667eea']} />
-              }
-              ListEmptyComponent={
-                <View style={styles.emptyContainer}>
-                  <Ionicons name="apps-outline" size={64} color="#ccc" />
-                  <Text style={styles.emptyText}>Нет доступных сервисов</Text>
-                </View>
-              }
-            />
-          </>
-        ) : (
-          <>
-            <Text style={styles.sectionTitle}>Доступные VPS планы</Text>
-            <FlatList
-              data={vpsPlans}
-              renderItem={renderVPSPlanCard}
-              keyExtractor={(item, index) => item?.plan_id?.toString() || `plan-${index}`}
-              contentContainerStyle={styles.listContent}
-              showsVerticalScrollIndicator={false}
-              refreshControl={
-                <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#667eea']} />
-              }
-              ListEmptyComponent={
-                <View style={styles.emptyContainer}>
-                  <Ionicons name="server-outline" size={64} color="#ccc" />
-                  <Text style={styles.emptyText}>Нет доступных VPS планов</Text>
-                </View>
-              }
-            />
-          </>
-        )}
+        <FlatList
+          ListHeaderComponent={
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Сервисы</Text>
+            </View>
+          }
+          data={filteredServiceGroups}
+          renderItem={renderServiceGroupCard}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#6366F1']} />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons name="apps-outline" size={64} color="#D1D5DB" />
+              <Text style={styles.emptyText}>Нет доступных сервисов</Text>
+            </View>
+          }
+        />
       </View>
-    </View>
+
+      {/* Bottom Navigation Bar */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity 
+          style={styles.bottomNavItem}
+          onPress={() => {}}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="home" size={24} color="#6366F1" />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.bottomNavItem}
+          onPress={() => router.push('/(user)/orders')}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="cart-outline" size={24} color="#9CA3AF" />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.bottomNavItem}
+          onPress={handleLogout}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="person-outline" size={24} color="#9CA3AF" />
+        </TouchableOpacity>
+      </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F9FAFB',
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#FFFFFF',
   },
   header: {
+    paddingTop: Platform.OS === 'ios' ? 60 : 50,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 20,
-    paddingTop: 60,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
-  greeting: {
-    fontSize: 14,
-    color: '#666',
+  headerLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
-  userName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 4,
+  headerIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#F9FAFB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#111827',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "SF Pro Display"' : 'Roboto, sans-serif',
+    letterSpacing: -0.5,
+    lineHeight: 34,
+  },
+  companyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+    gap: 4,
   },
   companyName: {
-    fontSize: 14,
-    color: '#667eea',
-    marginTop: 2,
+    fontSize: 11,
+    color: '#6366F1',
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
   },
-  logoutButton: {
-    padding: 8,
+  iconButton: {
+    padding: 6,
+    marginLeft: 8,
   },
   tabsContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    gap: 8,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#F3F4F6',
+  },
+  tabsWrapper: {
+    flexDirection: 'row',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    padding: 4,
+    gap: 4,
   },
   tab: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#f5f5f5',
-    gap: 8,
+    gap: 6,
   },
   tabActive: {
-    backgroundColor: '#e3f2fd',
+    backgroundColor: '#6366F1',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+    transform: [{ scale: 1.02 }],
   },
   tabText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#999',
+    color: '#6B7280',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "SF Pro Display"' : 'Roboto, sans-serif',
+    letterSpacing: 0.1,
   },
   tabTextActive: {
-    color: '#667eea',
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   contentSection: {
     flex: 1,
-    padding: 16,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    backgroundColor: '#F9FAFB',
+  },
+  sectionHeader: {
+    marginBottom: 16,
+    paddingHorizontal: 0,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 12,
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 0,
+    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "SF Pro Display"' : 'Roboto, sans-serif',
+    letterSpacing: -0.5,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    fontWeight: '400',
+    color: '#94A3B8',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    letterSpacing: 0,
   },
   listContent: {
-    paddingBottom: 16,
+    paddingBottom: 20,
   },
   // VPS Plan Card Styles
   planCard: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 16,
+    padding: 24,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
   planHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 20,
   },
   providerName: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: 11,
+    color: '#9CA3AF',
     textTransform: 'uppercase',
+    fontWeight: '600',
+    letterSpacing: 0.8,
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    marginBottom: 4,
   },
   planName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginTop: 4,
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#111827',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "SF Pro Display"' : 'Roboto, sans-serif',
+    letterSpacing: -0.5,
   },
   regionBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f0f0ff',
+    backgroundColor: '#F3F4F6',
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: 8,
+    gap: 4,
   },
   regionText: {
-    fontSize: 12,
-    color: '#667eea',
-    marginLeft: 4,
-    fontWeight: '500',
+    fontSize: 11,
+    color: '#6B7280',
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
   },
   specsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 12,
-    gap: 12,
+    marginBottom: 20,
+    gap: 8,
   },
   specItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F9FAFB',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
+    gap: 6,
   },
   specText: {
     fontSize: 13,
-    color: '#333',
-    marginLeft: 6,
-    fontWeight: '500',
+    color: '#374151',
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
   },
   priceContainer: {
     flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'flex-end',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
   },
   priceText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#667eea',
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#111827',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "SF Pro Display"' : 'Roboto, sans-serif',
+    letterSpacing: -0.6,
+    lineHeight: 34,
   },
   priceLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 4,
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 2,
+    fontWeight: '500',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
   },
   // Service Group Card Styles
   groupCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 20,
     marginBottom: 12,
+    borderWidth: 0,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 10,
+    elevation: 4,
   },
   groupHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 18,
   },
   groupIconContainer: {
-    width: 56,
-    height: 56,
+    width: 48,
+    height: 48,
     borderRadius: 12,
-    backgroundColor: '#f0f0ff',
+    backgroundColor: '#F9FAFB',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  groupIcon: {
-    fontSize: 28,
+    borderWidth: 0,
   },
   groupInfo: {
     flex: 1,
@@ -531,32 +675,142 @@ const styles = StyleSheet.create({
   groupName: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: '#111827',
     marginBottom: 4,
+    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "SF Pro Display"' : 'Roboto, sans-serif',
+    letterSpacing: -0.3,
+    lineHeight: 24,
   },
   groupDescription: {
-    fontSize: 13,
-    color: '#666',
-    marginBottom: 6,
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 10,
+    lineHeight: 20,
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    letterSpacing: 0,
   },
   plansCountBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    borderWidth: 0,
   },
   plansCountText: {
     fontSize: 12,
-    color: '#667eea',
+    color: '#4B5563',
     fontWeight: '500',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    letterSpacing: 0,
+  },
+  orderButton: {
+    backgroundColor: '#6366F1',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  orderButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "SF Pro Display"' : 'Roboto, sans-serif',
+    letterSpacing: 0.2,
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
+    paddingVertical: 80,
   },
   emptyText: {
     fontSize: 16,
-    color: '#999',
+    color: '#9CA3AF',
     marginTop: 16,
+    fontWeight: '500',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+  },
+  categoriesContainer: {
+    paddingTop: 20,
+    paddingBottom: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  categoriesScrollContent: {
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+  categoryButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    minWidth: 84,
+    gap: 8,
+  },
+  categoryButtonActive: {
+    backgroundColor: '#EEF2FF',
+    borderColor: '#4F46E5',
+    borderWidth: 1,
+    shadowColor: '#4F46E5',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  categoryIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#F9FAFB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 0,
+  },
+  categoryIconContainerActive: {
+    backgroundColor: '#FFFFFF',
+  },
+  categoryText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#374151',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "SF Pro Display"' : 'Roboto, sans-serif',
+    letterSpacing: 0,
+  },
+  categoryTextActive: {
+    fontWeight: '600',
+    color: '#4F46E5',
+  },
+  // Bottom Navigation
+  bottomNav: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 0,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 16,
+    paddingHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  bottomNavItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    gap: 4,
   },
 });

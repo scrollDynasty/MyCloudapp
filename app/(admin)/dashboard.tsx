@@ -3,15 +3,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Platform,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { API_URL } from '../../config/api';
 import { useAuth } from '../../lib/AuthContext';
@@ -29,16 +29,6 @@ const getHeaders = (token?: string) => {
   return headers;
 };
 
-interface AdminUser {
-  user_id: number;
-  full_name: string;
-  email: string;
-  role: string;
-  company_name?: string;
-  phone?: string;
-  created_at: string;
-}
-
 interface User {
   user_id: number;
   full_name: string;
@@ -49,6 +39,7 @@ interface User {
 
 interface Order {
   order_id: number;
+  order_number?: string;
   user_id: number;
   full_name: string;
   plan_name: string;
@@ -56,26 +47,18 @@ interface Order {
   total_price: number;
   currency_code: string;
   status: string;
+  payment_status?: string;
   created_at: string;
-}
-
-interface Stats {
-  totalUsers: number;
-  totalOrders: number;
-  totalRevenue: number;
-  pendingOrders: number;
 }
 
 export default function AdminDashboardScreen() {
   const router = useRouter();
   const { user: authUser, signOut } = useAuth();
-  const [admin, setAdmin] = useState<User | null>(null);
-  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [user, setUser] = useState<User | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'users' | 'orders' | 'stats' | 'plans' | 'services'>('stats');
+  const [activeSegment, setActiveSegment] = useState<'servers' | 'storage'>('servers');
 
   useEffect(() => {
     if (authUser) {
@@ -84,7 +67,7 @@ export default function AdminDashboardScreen() {
         router.replace('/auth/login');
         return;
       }
-      setAdmin(authUser);
+      setUser(authUser);
     }
     loadDashboardData();
   }, [authUser]);
@@ -99,92 +82,20 @@ export default function AdminDashboardScreen() {
         return;
       }
 
-      // Загрузить пользователей
-      const usersResponse = await fetch(`${API_URL}/api/auth/users`, {
-        headers: getHeaders(token),
-      });
-      
-      // Get the raw text first to see what we're actually getting
-      const usersText = await usersResponse.text();
-      
-      // Try to parse as JSON
-      let usersData;
-      try {
-        usersData = JSON.parse(usersText);
-      } catch (e) {
-        console.error('Failed to parse users response as JSON:', e);
-        throw new Error('Server returned HTML instead of JSON - check backend endpoint');
-      }
-
       // Загрузить заказы
       const ordersResponse = await fetch(`${API_URL}/api/orders`, {
         headers: getHeaders(token),
       });
       const ordersData = await ordersResponse.json();
 
-      // Безопасная установка пользователей
-      if (usersData.success && Array.isArray(usersData.data)) {
-        setUsers(usersData.data);
-      } else {
-        setUsers([]);
-      }
-
       if (ordersData.success && Array.isArray(ordersData.data)) {
         setOrders(ordersData.data || []);
-        
-        // Рассчитать статистику
-        const totalRevenue = (ordersData.data || [])
-          .filter((o: Order) => o.status === 'active' && o.total_price != null)
-          .reduce((sum: number, o: Order) => {
-            const price = o.total_price != null ? parseFloat(o.total_price.toString()) : 0;
-            return sum + (isNaN(price) ? 0 : price);
-          }, 0);
-        
-        const pendingOrders = (ordersData.data || []).filter((o: Order) => o.status === 'pending').length;
-
-        setStats({
-          totalUsers: (usersData.data || []).length,
-          totalOrders: (ordersData.data || []).length,
-          totalRevenue,
-          pendingOrders,
-        });
       } else {
-        // If orders fetch failed, still set empty data and stats
         setOrders([]);
-        setStats({
-          totalUsers: (usersData.data || []).length,
-          totalOrders: 0,
-          totalRevenue: 0,
-          pendingOrders: 0,
-        });
       }
     } catch (error: any) {
       console.error('Error loading dashboard data:', error);
-      
-      // Проверяем, не ошибка ли авторизации
-      if (error?.message?.includes('authorization') || error?.message?.includes('token')) {
-        Alert.alert(
-          'Сессия истекла',
-          'Пожалуйста, войдите снова',
-          [
-            {
-              text: 'OK',
-              onPress: () => router.replace('/auth/login'),
-            },
-          ]
-        );
-        return;
-      }
-      
-      // Установить пустые данные при ошибке
-      setUsers([]);
       setOrders([]);
-      setStats({
-        totalUsers: 0,
-        totalOrders: 0,
-        totalRevenue: 0,
-        pendingOrders: 0,
-      });
       Alert.alert('Ошибка', 'Не удалось загрузить данные');
     } finally {
       setLoading(false);
@@ -206,40 +117,19 @@ export default function AdminDashboardScreen() {
     }
   };
 
-  const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return '#d32f2f';
-      case 'legal_entity':
-        return '#1976d2';
-      default:
-        return '#388e3c';
-    }
-  };
-
-  const getRoleLabel = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return 'Администратор';
-      case 'legal_entity':
-        return 'Юр. лицо';
-      default:
-        return 'Физ. лицо';
-    }
-  };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
-        return '#4caf50';
+      case 'completed':
+      case 'paid':
+        return '#10B981';
       case 'pending':
-        return '#ff9800';
+      case 'processing':
+        return '#F59E0B';
       case 'cancelled':
-        return '#f44336';
-      case 'suspended':
-        return '#9e9e9e';
+        return '#EF4444';
       default:
-        return '#757575';
+        return '#7A7A7A';
     }
   };
 
@@ -248,214 +138,255 @@ export default function AdminDashboardScreen() {
       case 'active':
         return 'Активен';
       case 'pending':
-        return 'В ожидании';
+      case 'processing':
+        return 'Обработка';
+      case 'completed':
+      case 'paid':
+        return 'Завершено';
       case 'cancelled':
-        return 'Отменен';
-      case 'suspended':
-        return 'Приостановлен';
+        return 'Отменено';
       default:
         return status;
     }
   };
 
-  const renderUserCard = ({ item }: { item: AdminUser }) => (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <View>
-          <Text style={styles.cardTitle}>{item.full_name}</Text>
-          <Text style={styles.cardSubtitle}>{item.email}</Text>
-          {item.company_name && (
-            <Text style={styles.companyText}>🏢 {item.company_name}</Text>
-          )}
-        </View>
-        <View style={[styles.roleBadge, { backgroundColor: getRoleBadgeColor(item.role) }]}>
-          <Text style={styles.roleBadgeText}>{getRoleLabel(item.role)}</Text>
-        </View>
-      </View>
-      {item.phone && (
-        <Text style={styles.phoneText}>📱 {item.phone}</Text>
-      )}
-      <Text style={styles.dateText}>
-        Зарегистрирован: {new Date(item.created_at).toLocaleDateString('ru-RU')}
-      </Text>
-    </View>
-  );
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
 
-  const renderOrderCard = ({ item }: { item: Order }) => (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.cardTitle}>{item.plan_name}</Text>
-          <Text style={styles.cardSubtitle}>{item.provider_name}</Text>
-          <Text style={styles.userNameText}>👤 {item.full_name}</Text>
-        </View>
-        <View>
-          <Text style={styles.priceText}>
-            {item.total_price} {item.currency_code}
-          </Text>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-            <Text style={styles.statusBadgeText}>{getStatusLabel(item.status)}</Text>
-          </View>
-        </View>
-      </View>
-      <Text style={styles.dateText}>
-        Создан: {new Date(item.created_at).toLocaleDateString('ru-RU')}
-      </Text>
-    </View>
-  );
+    if (diffMins < 60) {
+      return `${diffMins} минут назад`;
+    } else if (diffHours < 24) {
+      return `${diffHours} ${diffHours === 1 ? 'час' : 'часа'} назад`;
+    } else if (diffDays === 1) {
+      return 'Вчера';
+    } else if (diffDays < 7) {
+      return `${diffDays} ${diffDays === 1 ? 'день' : 'дня'} назад`;
+    } else {
+      return date.toLocaleDateString('ru-RU');
+    }
+  };
 
-  const renderStatsCard = (title: string, value: string | number, icon: string, color: string) => (
-    <View style={[styles.statsCard, { borderLeftColor: color }]}>
-      <View style={styles.statsIconContainer}>
-        <Ionicons name={icon as any} size={24} color={color} />
-      </View>
-      <View style={styles.statsTextContainer}>
-        <Text style={styles.statsValue}>{value}</Text>
-        <Text style={styles.statsTitle}>{title}</Text>
-      </View>
-    </View>
-  );
+  // Получаем последние заказы
+  const recentOrders = orders
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 2);
+
+  // Подсчитываем статистику
+  const activeServices = orders.filter(o => o.status === 'active' || o.payment_status === 'paid').length;
+  const pendingServices = orders.filter(o => o.status === 'pending' || o.payment_status === 'pending').length;
 
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#667eea" />
+        <ActivityIndicator size="large" color="#5B5AFD" />
       </View>
     );
   }
+
+  const userName = user?.full_name?.split(' ')[0] || 'Пользователь';
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Панель управления</Text>
-          <Text style={styles.userName}>{admin?.full_name || 'Администратор'}</Text>
+        <View style={styles.headerContent}>
+          <TouchableOpacity style={styles.menuButton} onPress={() => {}}>
+            <Ionicons name="reorder-three-outline" size={24} color="#1A1A1A" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Главная</Text>
+          <TouchableOpacity style={styles.profileButton} onPress={handleLogout}>
+            <View style={styles.avatar}>
+              <Ionicons name="person" size={20} color="#5B5AFD" />
+            </View>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-          <Ionicons name="log-out-outline" size={24} color="#d32f2f" />
-        </TouchableOpacity>
       </View>
 
-      {/* Tabs */}
-      <View style={styles.tabs}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'stats' && styles.tabActive]}
-          onPress={() => setActiveTab('stats')}
-        >
-          <Ionicons 
-            name="stats-chart" 
-            size={20} 
-            color={activeTab === 'stats' ? '#667eea' : '#999'} 
-          />
-          <Text style={[styles.tabText, activeTab === 'stats' && styles.tabTextActive]}>
-            Статистика
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'users' && styles.tabActive]}
-          onPress={() => setActiveTab('users')}
-        >
-          <Ionicons 
-            name="people" 
-            size={20} 
-            color={activeTab === 'users' ? '#667eea' : '#999'} 
-          />
-          <Text style={[styles.tabText, activeTab === 'users' && styles.tabTextActive]}>
-            Пользователи
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'orders' && styles.tabActive]}
-          onPress={() => setActiveTab('orders')}
-        >
-          <Ionicons 
-            name="cart" 
-            size={20} 
-            color={activeTab === 'orders' ? '#667eea' : '#999'} 
-          />
-          <Text style={[styles.tabText, activeTab === 'orders' && styles.tabTextActive]}>
-            Заказы
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'plans' && styles.tabActive]}
-          onPress={() => {
-            setActiveTab('plans');
-            router.push('/(admin)/plans');
-          }}
-        >
-          <Ionicons 
-            name="server" 
-            size={20} 
-            color={activeTab === 'plans' ? '#667eea' : '#999'} 
-          />
-          <Text style={[styles.tabText, activeTab === 'plans' && styles.tabTextActive]}>
-            VPS
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'services' && styles.tabActive]}
-          onPress={() => {
-            setActiveTab('services');
-            router.push('/(admin)/service-groups');
-          }}
-        >
-          <Ionicons 
-            name="grid" 
-            size={20} 
-            color={activeTab === 'services' ? '#667eea' : '#999'} 
-          />
-          <Text style={[styles.tabText, activeTab === 'services' && styles.tabTextActive]}>
-            Сервисы
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Content */}
-      {activeTab === 'stats' && stats && (
-        <ScrollView
-          style={styles.content}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#667eea']} />
-          }
-        >
-          <View style={styles.statsGrid}>
-            {renderStatsCard('Всего пользователей', stats.totalUsers, 'people', '#667eea')}
-            {renderStatsCard('Всего заказов', stats.totalOrders, 'cart', '#4caf50')}
-            {renderStatsCard('Выручка (UZS)', stats.totalRevenue.toFixed(2), 'cash', '#ff9800')}
-            {renderStatsCard('Ожидают оплаты', stats.pendingOrders, 'time', '#f44336')}
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#5B5AFD']} />
+        }
+      >
+        {/* Welcome Section */}
+        <View style={styles.welcomeSection}>
+          <View style={styles.welcomeText}>
+            <Text style={styles.welcomeTitle}>Добро пожаловать, {userName}</Text>
+            <Text style={styles.welcomeSubtitle}>Управляйте подключёнными сервисами и заказами</Text>
           </View>
-        </ScrollView>
-      )}
+          <View style={styles.avatarLarge}>
+            <Ionicons name="person" size={32} color="#5B5AFD" />
+          </View>
+        </View>
 
-      {activeTab === 'users' && (
-        <FlatList
-          data={users}
-          renderItem={renderUserCard}
-          keyExtractor={(item, index) => item?.user_id?.toString() || `user-${index}`}
-          contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#667eea']} />
-          }
-        />
-      )}
+        {/* Segment Control */}
+        <View style={styles.segmentContainer}>
+          <TouchableOpacity
+            style={[styles.segmentButton, activeSegment === 'servers' && styles.segmentButtonActive]}
+            onPress={() => setActiveSegment('servers')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.segmentText, activeSegment === 'servers' && styles.segmentTextActive]}>
+              Мои серверы
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.segmentButton, activeSegment === 'storage' && styles.segmentButtonActive]}
+            onPress={() => setActiveSegment('storage')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.segmentText, activeSegment === 'storage' && styles.segmentTextActive]}>
+              Моё хранилище
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-      {activeTab === 'orders' && (
-        <FlatList
-          data={orders}
-          renderItem={renderOrderCard}
-          keyExtractor={(item, index) => item?.order_id?.toString() || `order-${index}`}
-          contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#667eea']} />
-          }
-        />
-      )}
+        {/* Subscription Card */}
+        <View style={styles.subscriptionCard}>
+          <View style={styles.subscriptionHeader}>
+            <Text style={styles.subscriptionTitle}>Подписка Pro — помесячно</Text>
+            <TouchableOpacity>
+              <Text style={styles.subscriptionLink}>Изменить план</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.subscriptionStats}>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{activeServices}</Text>
+              <Text style={styles.statLabel}>Активные сервисы</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{pendingServices}</Text>
+              <Text style={styles.statLabel}>Ожидают</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* My Services Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Мои сервисы</Text>
+          
+          <View style={styles.serviceCard}>
+            <View style={styles.serviceIconContainer}>
+              <Ionicons name="server" size={24} color="#5B5AFD" />
+            </View>
+            <View style={styles.serviceInfo}>
+              <Text style={styles.serviceName}>Серверы</Text>
+              <Text style={styles.serviceDescription}>
+                {activeServices} активных • средняя загрузка 28%
+              </Text>
+            </View>
+            <TouchableOpacity style={styles.serviceButton}>
+              <Text style={styles.serviceButtonText}>Открыть</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.serviceCard}>
+            <View style={styles.serviceIconContainer}>
+              <Ionicons name="cloud" size={24} color="#5B5AFD" />
+            </View>
+            <View style={styles.serviceInfo}>
+              <Text style={styles.serviceName}>Объектное хранилище</Text>
+              <Text style={styles.serviceDescription}>1 бакет • 40 ГБ</Text>
+            </View>
+            <TouchableOpacity style={styles.serviceButton}>
+              <Text style={styles.serviceButtonText}>Открыть</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Recent Orders Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Последние заказы</Text>
+          
+          {recentOrders.length > 0 ? (
+            recentOrders.map((order) => (
+              <View key={order.order_id} style={styles.orderCard}>
+                <View style={styles.orderIconContainer}>
+                  <Ionicons name="document-text" size={20} color="#5B5AFD" />
+                </View>
+                <View style={styles.orderInfo}>
+                  <Text style={styles.orderTitle}>{order.plan_name}</Text>
+                  <Text style={styles.orderSubtitle}>
+                    Заказ №{order.order_number || order.order_id} • {formatTimeAgo(order.created_at)}
+                  </Text>
+                </View>
+                <View style={[styles.orderStatusBadge, { backgroundColor: getStatusColor(order.status || order.payment_status || 'pending') }]}>
+                  <Text style={styles.orderStatusText}>
+                    {getStatusLabel(order.status || order.payment_status || 'pending')}
+                  </Text>
+                </View>
+              </View>
+            ))
+          ) : (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyText}>Нет заказов</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Support Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Поддержка</Text>
+          
+          <TouchableOpacity style={styles.supportCard}>
+            <View style={styles.supportIconContainer}>
+              <Ionicons name="chatbubble-ellipses" size={24} color="#5B5AFD" />
+            </View>
+            <View style={styles.supportInfo}>
+              <Text style={styles.supportTitle}>Открыть тикет</Text>
+              <Text style={styles.supportDescription}>Поможем решить вопрос</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#7A7A7A" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.supportCard}>
+            <View style={styles.supportIconContainer}>
+              <Ionicons name="receipt" size={24} color="#5B5AFD" />
+            </View>
+            <View style={styles.supportInfo}>
+              <Text style={styles.supportTitle}>Оплата и счета</Text>
+              <Text style={styles.supportDescription}>Способы оплаты и история</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#7A7A7A" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.bottomSpacer} />
+      </ScrollView>
+
+      {/* Bottom Navigation */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity style={styles.bottomNavItem}>
+          <View style={styles.bottomNavIconActive}>
+            <Ionicons name="home" size={24} color="#5B5AFD" />
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.bottomNavItem}
+          onPress={() => router.push('/(user)/home')}
+        >
+          <Ionicons name="grid" size={24} color="#7A7A7A" />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.bottomNavItem}
+          onPress={() => router.push('/(user)/orders')}
+        >
+          <Ionicons name="cart" size={24} color="#7A7A7A" />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.bottomNavItem}
+          onPress={handleLogout}
+        >
+          <Ionicons name="person" size={24} color="#7A7A7A" />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -463,183 +394,362 @@ export default function AdminDashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F8F9FB',
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F8F9FB',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#667eea',
-    padding: 20,
-    paddingTop: 60,
-  },
-  greeting: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginTop: 4,
-  },
-  logoutButton: {
-    padding: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 8,
-  },
-  tabs: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingTop: Platform.OS === 'ios' ? 60 : 50,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#E5E7EB',
   },
-  tab: {
-    flex: 1,
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  menuButton: {
+    width: 40,
+    height: 40,
     justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 8,
+    alignItems: 'center',
   },
-  tabActive: {
-    backgroundColor: '#f0f0ff',
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "SF Pro Display"' : 'Roboto, sans-serif',
+    letterSpacing: -0.3,
   },
-  tabText: {
-    fontSize: 14,
-    color: '#999',
-    marginLeft: 6,
-    fontWeight: '500',
+  profileButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  tabTextActive: {
-    color: '#667eea',
-    fontWeight: '600',
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F0F0FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarLarge: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#F0F0FF',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   content: {
     flex: 1,
   },
-  listContent: {
-    padding: 16,
-  },
-  statsGrid: {
-    padding: 16,
-    gap: 12,
-  },
-  statsCard: {
+  welcomeSection: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 20,
+  },
+  welcomeText: {
+    flex: 1,
+  },
+  welcomeTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 4,
+    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "SF Pro Display"' : 'Roboto, sans-serif',
+    letterSpacing: -0.5,
+  },
+  welcomeSubtitle: {
+    fontSize: 14,
+    color: '#7A7A7A',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    lineHeight: 20,
+  },
+  segmentContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 20,
+    marginBottom: 16,
     borderRadius: 12,
-    padding: 16,
-    borderLeftWidth: 4,
+    padding: 4,
+    gap: 4,
+  },
+  segmentButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  segmentButtonActive: {
+    backgroundColor: '#5B5AFD',
+  },
+  segmentText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#7A7A7A',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+  },
+  segmentTextActive: {
+    color: '#FFFFFF',
+  },
+  subscriptionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginHorizontal: 20,
+    marginBottom: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  statsIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#f5f5f5',
-    justifyContent: 'center',
+  subscriptionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginRight: 12,
+    marginBottom: 16,
   },
-  statsTextContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  subscriptionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
   },
-  statsValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  statsTitle: {
+  subscriptionLink: {
     fontSize: 14,
-    color: '#666',
-    marginTop: 2,
+    fontWeight: '500',
+    color: '#5B5AFD',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
   },
-  card: {
-    backgroundColor: '#fff',
+  subscriptionStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statItem: {
+    flex: 1,
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 4,
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#7A7A7A',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+  },
+  statDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: '#E5E7EB',
+    marginHorizontal: 20,
+  },
+  section: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 12,
+    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "SF Pro Display"' : 'Roboto, sans-serif',
+    letterSpacing: -0.3,
+  },
+  serviceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
+  serviceIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F0F0FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
-  cardTitle: {
+  serviceInfo: {
+    flex: 1,
+  },
+  serviceName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: '#1A1A1A',
+    marginBottom: 4,
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
   },
-  cardSubtitle: {
+  serviceDescription: {
     fontSize: 14,
-    color: '#666',
-    marginTop: 2,
+    color: '#7A7A7A',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
   },
-  companyText: {
-    fontSize: 13,
-    color: '#667eea',
-    marginTop: 4,
+  serviceButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#5B5AFD',
   },
-  userNameText: {
-    fontSize: 13,
-    color: '#666',
-    marginTop: 4,
-  },
-  phoneText: {
-    fontSize: 13,
-    color: '#666',
-    marginBottom: 4,
-  },
-  dateText: {
-    fontSize: 12,
-    color: '#999',
-  },
-  roleBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  roleBadgeText: {
-    fontSize: 11,
+  serviceButtonText: {
+    fontSize: 14,
     fontWeight: '600',
-    color: '#fff',
+    color: '#FFFFFF',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
   },
-  priceText: {
+  orderCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  orderIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F0F0FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  orderInfo: {
+    flex: 1,
+  },
+  orderTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'right',
-    marginBottom: 4,
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    alignSelf: 'flex-end',
-  },
-  statusBadgeText: {
-    fontSize: 11,
     fontWeight: '600',
-    color: '#fff',
+    color: '#1A1A1A',
+    marginBottom: 4,
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+  },
+  orderSubtitle: {
+    fontSize: 12,
+    color: '#7A7A7A',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+  },
+  orderStatusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  orderStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+  },
+  emptyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 24,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#7A7A7A',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+  },
+  supportCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  supportIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F0F0FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  supportInfo: {
+    flex: 1,
+  },
+  supportTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    marginBottom: 4,
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+  },
+  supportDescription: {
+    fontSize: 14,
+    color: '#7A7A7A',
+    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+  },
+  bottomSpacer: {
+    height: 20,
+  },
+  bottomNav: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    paddingTop: 8,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 16,
+    paddingHorizontal: 20,
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  bottomNavItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+  },
+  bottomNavIconActive: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F0F0FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#5B5AFD',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
   },
 });
