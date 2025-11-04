@@ -42,7 +42,7 @@ interface Order {
 export default function UserHomeScreen() {
   const router = useRouter();
   const pathname = usePathname();
-  const { user: authUser, signOut } = useAuth();
+  const { user: authUser } = useAuth();
   const [user, setUser] = useState<User | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -113,15 +113,6 @@ export default function UserHomeScreen() {
   const handleRefresh = () => {
     setRefreshing(true);
     loadDashboardData();
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut();
-      router.replace('/auth/login');
-    } catch (error) {
-      Alert.alert('Ошибка', 'Не удалось выйти. Попробуйте еще раз.');
-    }
   };
 
   const getStatusColor = (status: string) => {

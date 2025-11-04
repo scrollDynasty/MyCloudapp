@@ -29,6 +29,9 @@ router.get('/', async (req, res) => {
       params.push(status);
     }
 
+    // Исключаем просроченные неоплаченные заказы (старше 10 минут)
+    whereConditions.push(`NOT (o.status = 'pending' AND (o.payment_status IS NULL OR o.payment_status = 'pending') AND o.created_at < DATE_SUB(NOW(), INTERVAL 10 MINUTE))`);
+
     const whereClause = whereConditions.length > 0 
       ? `WHERE ${whereConditions.join(' AND ')}`
       : '';
@@ -40,17 +43,19 @@ router.get('/', async (req, res) => {
         u.email,
         u.first_name,
         u.last_name,
-        vp.name as plan_name,
+        COALESCE(vp.name, sp.name_ru) as plan_name,
         vp.cpu_cores,
         vp.ram_gb as memory_gb,
         vp.storage_gb,
         vp.bandwidth_gb as bandwidth_tb,
-        p.name as provider_name,
+        COALESCE(p.name, sg.name_ru) as provider_name,
         p.country as provider_country
       FROM orders o
       JOIN users u ON o.user_id = u.id
-      JOIN vps_plans vp ON o.vps_plan_id = vp.id
-      JOIN providers p ON vp.provider_id = p.id
+      LEFT JOIN vps_plans vp ON o.vps_plan_id = vp.id
+      LEFT JOIN providers p ON vp.provider_id = p.id
+      LEFT JOIN service_plans sp ON o.service_plan_id = sp.id
+      LEFT JOIN service_groups sg ON sp.group_id = sg.id
       ${whereClause}
       ORDER BY o.created_at DESC
       LIMIT ? OFFSET ?
@@ -65,8 +70,10 @@ router.get('/', async (req, res) => {
       SELECT COUNT(*) as total
       FROM orders o
       JOIN users u ON o.user_id = u.id
-      JOIN vps_plans vp ON o.vps_plan_id = vp.id
-      JOIN providers p ON vp.provider_id = p.id
+      LEFT JOIN vps_plans vp ON o.vps_plan_id = vp.id
+      LEFT JOIN providers p ON vp.provider_id = p.id
+      LEFT JOIN service_plans sp ON o.service_plan_id = sp.id
+      LEFT JOIN service_groups sg ON sp.group_id = sg.id
       ${whereClause}
     `;
     

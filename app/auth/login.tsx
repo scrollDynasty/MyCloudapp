@@ -170,7 +170,6 @@ const LoginScreen: React.FC = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [touched, setTouched] = useState({ email: false, password: false });
   const [focusedField, setFocusedField] = useState<'email' | 'password' | null>(null);
@@ -322,17 +321,10 @@ const LoginScreen: React.FC = () => {
   const handleTogglePassword = useCallback(() => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
+    } 
     setShowPassword(prev => !prev);
   }, []);
 
-  // Обработчик "Запомнить меня" с haptic feedback
-  const handleToggleRememberMe = useCallback(() => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    setRememberMe(prev => !prev);
-  }, []);
 
   // Обработчик входа с защитой от rate limiting
   const handleLogin = useCallback(async () => {
@@ -585,8 +577,6 @@ const LoginScreen: React.FC = () => {
                 },
               ]}
             >
-              {/* Заголовок убран для минималистичного дизайна */}
-
               {/* Форма входа */}
               <Animated.View
                 style={[
@@ -594,190 +584,169 @@ const LoginScreen: React.FC = () => {
                   { transform: [{ translateX: shakeAnim }] },
                 ]}
               >
-                {/* Поле Email */}
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.inputLabel}>Email</Text>
-                  <Animated.View
-                    style={[
-                      styles.inputContainer,
-                      errors.email && touched.email && styles.inputError,
-                      focusedField === 'email' && styles.inputFocused,
-                      { height: adaptiveStyles.inputHeight }
-                    ]}
-                  >
-                    <TextInput
-                      style={styles.input}
-                      placeholder="your@email.com"
-                      placeholderTextColor={COLORS.textLighter}
-                      value={email}
-                      onChangeText={memoizedHandlers.emailChange}
-                      onFocus={memoizedHandlers.emailFocus}
-                      onBlur={memoizedHandlers.emailBlur}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      autoComplete="email"
-                      editable={!loading}
-                      returnKeyType="next"
-                      accessibilityLabel="Поле ввода email"
-                      textContentType="emailAddress"
-                    />
-                  </Animated.View>
-                  {errors.email && touched.email && (
-                    <View style={styles.errorContainer}>
-                      <Text style={styles.errorText}>{errors.email}</Text>
-                    </View>
-                  )}
-                </View>
+                <View style={styles.formInner}>
+                  {/* Header */}
+                  <View style={styles.header}>
+                    <Text style={styles.headerTitle}>Вход</Text>
+                  </View>
 
-                {/* Поле Пароль */}
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.inputLabel}>Пароль</Text>
-                  <Animated.View
-                    style={[
-                      styles.inputContainer,
-                      errors.password && touched.password && styles.inputError,
-                      focusedField === 'password' && styles.inputFocused,
-                      { height: adaptiveStyles.inputHeight }
-                    ]}
-                  >
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Введите пароль"
-                      placeholderTextColor={COLORS.textLighter}
-                      value={password}
-                      onChangeText={memoizedHandlers.passwordChange}
-                      onFocus={memoizedHandlers.passwordFocus}
-                      onBlur={memoizedHandlers.passwordBlur}
-                      secureTextEntry={!showPassword}
-                      editable={!loading}
-                      returnKeyType="done"
-                      onSubmitEditing={handleLogin}
-                      accessibilityLabel="Поле ввода пароля"
-                      textContentType="password"
-                      autoComplete="password"
-                    />
-                    <TouchableOpacity
-                      onPress={handleTogglePassword}
-                      style={styles.eyeIcon}
-                      accessibilityLabel={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                  {/* Welcome Section */}
+                  <View style={styles.welcomeSection}>
+                    <View style={styles.welcomeIconContainer}>
+                      {/* Иконка будет здесь, но пока пропустим */}
+                    </View>
+                    <Text style={styles.welcomeTitle}>Добро пожаловать</Text>
+                    <Text style={styles.welcomeSubtitle}>Войдите, чтобы управлять сервисами и заказами</Text>
+                  </View>
+                  {/* Поле Email */}
+                  <View style={styles.inputWrapper}>
+                    <Text style={styles.inputLabel}>Email</Text>
+                    <Animated.View
+                      style={[
+                        styles.inputContainer,
+                        errors.email && touched.email && styles.inputError,
+                        focusedField === 'email' && styles.inputFocused,
+                      ]}
                     >
-                      <Ionicons
-                        name={showPassword ? 'eye-outline' : 'eye-off-outline'}
-                        size={22}
-                        color={focusedField === 'password' ? COLORS.primary : COLORS.gray}
+                      <Ionicons name="mail-outline" size={20} color="#9CA3AF" />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="your@email.com"
+                        placeholderTextColor="#9CA3AF"
+                        value={email}
+                        onChangeText={memoizedHandlers.emailChange}
+                        onFocus={memoizedHandlers.emailFocus}
+                        onBlur={memoizedHandlers.emailBlur}
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        autoComplete="email"
+                        editable={!loading}
+                        returnKeyType="next"
+                        accessibilityLabel="Поле ввода email"
+                        textContentType="emailAddress"
                       />
-                    </TouchableOpacity>
-                  </Animated.View>
-                  {errors.password && touched.password && (
-                    <View style={styles.errorContainer}>
-                      <Text style={styles.errorText}>{errors.password}</Text>
-                    </View>
-                  )}
-                </View>
-
-                {/* Запомнить меня и Забыли пароль */}
-                <View style={styles.optionsContainer}>
-                  <TouchableOpacity
-                    style={styles.rememberMeContainer}
-                    onPress={handleToggleRememberMe}
-                    accessibilityLabel="Запомнить меня"
-                    disabled={loading}
-                  >
-                    <View style={[
-                      styles.checkbox,
-                      rememberMe && styles.checkboxActive
-                    ]}>
-                      {rememberMe && (
-                        <Ionicons name="checkmark" size={18} color={COLORS.white} />
-                      )}
-                    </View>
-                    <Text style={styles.rememberMeText}>Запомнить меня</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity 
-                    onPress={handleForgotPassword} 
-                    accessibilityLabel="Забыли пароль?"
-                    disabled={loading}
-                  >
-                    <Text style={styles.forgotPasswordText}>Забыли пароль?</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* Кнопка входа */}
-                <TouchableOpacity
-                  style={[
-                    styles.loginButton,
-                    loading && styles.loginButtonDisabled,
-                    { height: adaptiveStyles.buttonHeight }
-                  ]}
-                  onPress={handleLogin}
-                  disabled={loading}
-                  accessibilityLabel="Войти в систему"
-                  activeOpacity={0.8}
-                >
-                  <LinearGradient
-                    colors={loading ? ['#94A3B8', '#94A3B8'] : ['#3B82F6', '#2563EB', '#1D4ED8']}
-                    style={[styles.loginButtonGradient, { height: adaptiveStyles.buttonHeight }]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    {loading ? (
-                      <ActivityIndicator color={COLORS.white} size="small" />
-                    ) : (
-                      <View style={styles.loginButtonContent}>
-                        <Text style={styles.loginButtonText}>Войти</Text>
-                        <Ionicons name="arrow-forward" size={20} color={COLORS.white} style={styles.loginButtonIcon} />
+                    </Animated.View>
+                    {errors.email && touched.email && (
+                      <View style={styles.errorContainer}>
+                        <Text style={styles.errorText}>{errors.email}</Text>
                       </View>
                     )}
-                  </LinearGradient>
-                </TouchableOpacity>
-
-                {/* Разделитель */}
-                <View style={styles.divider}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.dividerText}>или</Text>
-                  <View style={styles.dividerLine} />
-                </View>
-
-                {/* Кнопка входа через Google */}
-                <TouchableOpacity
-                  style={[
-                    styles.googleButton,
-                    { height: adaptiveStyles.buttonHeight }
-                  ]}
-                  onPress={handleGoogleLogin}
-                  disabled={loading}
-                  accessibilityLabel="Войти через Google"
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.googleLogoContainer}>
-                    <View style={styles.googleLogo}>
-                      {/* Синий сектор - левая верхняя часть G */}
-                      <View style={[styles.googleGPart, styles.googleGBlue]} />
-                      {/* Красный сектор - правая верхняя часть G */}
-                      <View style={[styles.googleGPart, styles.googleGRed]} />
-                      {/* Желтый сектор - левая нижняя часть G */}
-                      <View style={[styles.googleGPart, styles.googleGYellow]} />
-                      {/* Зеленый сектор - правая нижняя часть G */}
-                      <View style={[styles.googleGPart, styles.googleGGreen]} />
-                      {/* Центральная часть G (белая/прозрачная) */}
-                      <View style={styles.googleGCenter} />
-                    </View>
                   </View>
-                  <Text style={styles.googleButtonText}>Продолжить с Google</Text>
-                </TouchableOpacity>
 
-                {/* Ссылка на регистрацию */}
-                <View style={styles.registerContainer}>
-                  <Text style={styles.registerText}>Нет аккаунта? </Text>
-                  <TouchableOpacity 
-                    onPress={handleGoToRegister} 
-                    accessibilityLabel="Перейти к регистрации"
+                  {/* Поле Пароль */}
+                  <View style={styles.inputWrapper}>
+                    <Text style={styles.inputLabel}>Пароль</Text>
+                    <Animated.View
+                      style={[
+                        styles.inputContainer,
+                        errors.password && touched.password && styles.inputError,
+                        focusedField === 'password' && styles.inputFocused,
+                      ]}
+                    >
+                      <Ionicons name="lock-closed-outline" size={20} color="#9CA3AF" />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Введите пароль"
+                        placeholderTextColor="#9CA3AF"
+                        value={password}
+                        onChangeText={memoizedHandlers.passwordChange}
+                        onFocus={memoizedHandlers.passwordFocus}
+                        onBlur={memoizedHandlers.passwordBlur}
+                        secureTextEntry={!showPassword}
+                        editable={!loading}
+                        returnKeyType="done"
+                        onSubmitEditing={handleLogin}
+                        accessibilityLabel="Поле ввода пароля"
+                        textContentType="password"
+                        autoComplete="password"
+                      />
+                      <TouchableOpacity
+                        onPress={handleTogglePassword}
+                        style={styles.eyeIcon}
+                        accessibilityLabel={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                      >
+                        <Ionicons
+                          name={showPassword ? 'eye-outline' : 'eye-off-outline'}
+                          size={20}
+                          color="#9CA3AF"
+                        />
+                      </TouchableOpacity>
+                    </Animated.View>
+                    {errors.password && touched.password && (
+                      <View style={styles.errorContainer}>
+                        <Text style={styles.errorText}>{errors.password}</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Забыли пароль и Нет аккаунта */}
+                  <View style={styles.optionsContainer}>
+                    <TouchableOpacity 
+                      onPress={handleForgotPassword} 
+                      accessibilityLabel="Забыли пароль?"
+                      disabled={loading}
+                    >
+                      <Text style={styles.forgotPasswordText}>Забыли пароль?</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      onPress={handleGoToRegister} 
+                      accessibilityLabel="Нет аккаунта?"
+                      disabled={loading}
+                    >
+                      <Text style={styles.forgotPasswordText}>Нет аккаунта?</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Кнопка входа */}
+                  <TouchableOpacity
+                    style={[
+                      styles.loginButton,
+                      loading && styles.loginButtonDisabled,
+                    ]}
+                    onPress={handleLogin}
                     disabled={loading}
+                    accessibilityLabel="Войти в систему"
+                    activeOpacity={0.8}
                   >
-                    <Text style={styles.registerLink}>Зарегистрироваться</Text>
+                    {loading ? (
+                      <ActivityIndicator color="#FFFFFF" size="small" />
+                    ) : (
+                      <Text style={styles.loginButtonText}>Войти</Text>
+                    )}
                   </TouchableOpacity>
+
+                  {/* Разделитель */}
+                  <View style={styles.divider}>
+                    <View style={styles.dividerLine} />
+                    <Text style={styles.dividerText}>или</Text>
+                    <View style={styles.dividerLine} />
+                  </View>
+
+                  {/* Кнопка входа через Google */}
+                  <TouchableOpacity
+                    style={styles.googleButton}
+                    onPress={handleGoogleLogin}
+                    disabled={loading}
+                    accessibilityLabel="Войти через Google"
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="logo-google" size={16} color="#374151" />
+                    <Text style={styles.googleButtonText}>Войти через Google</Text>
+                  </TouchableOpacity>
+
+                  {/* Ссылка на регистрацию */}
+                  <View style={styles.registerContainer}>
+                    <Text style={styles.registerText}>Нет аккаунта?</Text>
+                    <TouchableOpacity 
+                      onPress={handleGoToRegister} 
+                      accessibilityLabel="Перейти к регистрации"
+                      disabled={loading}
+                      style={styles.registerButton}
+                    >
+                      <Text style={styles.registerLink}>Зарегистрироваться</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </Animated.View>
             </Animated.View>
@@ -794,17 +763,19 @@ export default React.memo(LoginScreen);
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#F9FAFB',
   },
   gradientBackground: {
     flex: 1,
+    backgroundColor: '#F9FAFB',
   },
   container: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingVertical: 20,
+    paddingVertical: 30,
+    paddingHorizontal: 24,
     justifyContent: 'center',
   },
   content: {
@@ -814,144 +785,155 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   formContainer: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 24,
-    padding: 24,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 24,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 48,
+    padding: 1,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 30,
     elevation: 8,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#E5E7EB',
+    overflow: 'hidden',
+  },
+  formInner: {
+    backgroundColor: '#FFFFFF',
+    paddingBottom: 16,
+  },
+  header: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    paddingBottom: 17,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+    lineHeight: 21.78,
+  },
+  welcomeSection: {
+    paddingTop: 20,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    alignItems: 'center',
+    gap: 8,
+  },
+  welcomeIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 24,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  welcomeTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    lineHeight: 21.78,
+  },
+  welcomeSubtitle: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: '#9CA3AF',
+    lineHeight: 14.52,
+    textAlign: 'center',
   },
   inputWrapper: {
-    marginBottom: 20,
+    marginBottom: 12,
+    paddingHorizontal: 16,
   },
   inputLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: COLORS.text,
-    marginBottom: 10,
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "Segoe UI"' : 'Roboto, sans-serif',
-    letterSpacing: 0.1,
+    fontSize: 12,
+    fontWeight: '400',
+    color: '#9CA3AF',
+    marginBottom: 6,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.inputBg,
-    borderRadius: 14,
-    paddingHorizontal: 18,
-    borderWidth: 2,
-    borderColor: COLORS.border,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 24,
+    paddingHorizontal: 13,
+    paddingVertical: 13,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 8,
   },
   inputFocused: {
-    backgroundColor: COLORS.inputFocusBg,
-    borderColor: COLORS.borderFocus,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#6366F1',
   },
   inputError: {
-    borderColor: COLORS.error,
-    backgroundColor: COLORS.errorLight,
+    borderColor: '#EF4444',
+    backgroundColor: '#FEE2E2',
   },
   input: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '400',
-    color: COLORS.text,
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "Segoe UI"' : 'Roboto, sans-serif',
+    color: '#111827',
+    lineHeight: 16.94,
     paddingVertical: 0,
-    letterSpacing: 0.2,
   },
   eyeIcon: {
-    padding: 8,
-    marginLeft: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingLeft: 4,
+    minWidth: 24,
+    height: 20,
   },
   errorContainer: {
-    marginTop: 8,
+    marginTop: 4,
     paddingLeft: 4,
+    paddingHorizontal: 16,
   },
   errorText: {
-    color: COLORS.error,
-    fontSize: 13,
-    fontWeight: '500',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+    color: '#EF4444',
+    fontSize: 12,
+    fontWeight: '400',
   },
   optionsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
-    marginTop: 8,
-  },
-  rememberMeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: COLORS.border,
-    marginRight: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.white,
-  },
-  checkboxActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  rememberMeText: {
-    color: COLORS.textLight,
-    fontSize: 14,
-    fontWeight: '400',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "Segoe UI"' : 'Roboto, sans-serif',
-    letterSpacing: 0.1,
+    marginBottom: 12,
+    paddingHorizontal: 16,
   },
   forgotPasswordText: {
-    color: COLORS.primary,
+    color: '#111827',
     fontSize: 14,
     fontWeight: '500',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "Segoe UI"' : 'Roboto, sans-serif',
-    letterSpacing: 0.1,
+    lineHeight: 16.94,
   },
   loginButton: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginTop: 4,
-    shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 12,
-  },
-  loginButtonGradient: {
+    borderRadius: 24,
+    backgroundColor: '#6366F1',
+    borderWidth: 1,
+    borderColor: '#6366F1',
+    paddingVertical: 13,
+    paddingHorizontal: 13,
+    marginHorizontal: 16,
+    marginBottom: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 16,
-    width: '100%',
-    flex: 1,
-  },
-  loginButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    gap: 8,
   },
   loginButtonText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "Segoe UI"' : 'Roboto, sans-serif',
-    letterSpacing: 0.3,
-  },
-  loginButtonIcon: {
-    marginLeft: 8,
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
+    lineHeight: 16.94,
+    textAlign: 'center',
   },
   loginButtonDisabled: {
     opacity: 0.6,
@@ -959,120 +941,68 @@ const styles = StyleSheet.create({
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 28,
+    marginVertical: 12,
+    paddingHorizontal: 16,
+    gap: 12,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: COLORS.border,
+    backgroundColor: '#E5E7EB',
   },
   dividerText: {
-    marginHorizontal: 16,
-    color: COLORS.textLighter,
-    fontSize: 13,
+    color: '#9CA3AF',
+    fontSize: 12,
     fontWeight: '400',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "Segoe UI"' : 'Roboto, sans-serif',
-    letterSpacing: 0.1,
+    lineHeight: 14.52,
   },
   googleButton: {
-    backgroundColor: COLORS.googleBg,
-    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
     flexDirection: 'row',
-    borderWidth: 1.5,
-    borderColor: '#DADCE0',
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    paddingHorizontal: 16,
-  },
-  googleLogoContainer: {
-    marginRight: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 20,
-    height: 20,
-  },
-  googleLogo: {
-    width: 20,
-    height: 20,
-    position: 'relative',
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-  googleGPart: {
-    position: 'absolute',
-  },
-  googleGBlue: {
-    width: 10,
-    height: 10,
-    backgroundColor: '#4285F4',
-    top: 0,
-    left: 0,
-    borderTopLeftRadius: 10,
-  },
-  googleGRed: {
-    width: 10,
-    height: 10,
-    backgroundColor: '#EA4335',
-    top: 0,
-    right: 0,
-    borderTopRightRadius: 10,
-  },
-  googleGYellow: {
-    width: 10,
-    height: 10,
-    backgroundColor: '#FBBC05',
-    bottom: 0,
-    left: 0,
-    borderBottomLeftRadius: 10,
-  },
-  googleGGreen: {
-    width: 10,
-    height: 10,
-    backgroundColor: '#34A853',
-    bottom: 0,
-    right: 0,
-    borderBottomRightRadius: 10,
-  },
-  googleGCenter: {
-    position: 'absolute',
-    width: 8,
-    height: 8,
-    backgroundColor: COLORS.white,
-    top: '50%',
-    left: '50%',
-    marginTop: -4,
-    marginLeft: -4,
-    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingVertical: 13,
+    paddingHorizontal: 13,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    gap: 8,
   },
   googleButtonText: {
-    color: COLORS.text,
-    fontSize: 16,
+    color: '#374151',
+    fontSize: 14,
     fontWeight: '500',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "Segoe UI"' : 'Roboto, sans-serif',
-    letterSpacing: 0.2,
+    lineHeight: 16.94,
   },
   registerContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 28,
+    alignItems: 'center',
+    paddingTop: 4,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    gap: 8,
   },
   registerText: {
-    color: COLORS.textLight,
-    fontSize: 15,
+    color: '#9CA3AF',
+    fontSize: 13,
     fontWeight: '400',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "Segoe UI"' : 'Roboto, sans-serif',
-    letterSpacing: 0.1,
+    lineHeight: 15.73,
+  },
+  registerButton: {
+    borderRadius: 24,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingVertical: 9,
+    paddingHorizontal: 11,
   },
   registerLink: {
-    color: COLORS.primary,
-    fontSize: 15,
+    color: '#374151',
+    fontSize: 13,
     fontWeight: '500',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "Segoe UI"' : 'Roboto, sans-serif',
-    letterSpacing: 0.1,
+    lineHeight: 15.73,
   },
 });

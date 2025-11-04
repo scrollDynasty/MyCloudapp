@@ -14,6 +14,7 @@ const { rateLimiters } = require('./core/middleware/rate-limiter');
 const requestTimeout = require('./core/middleware/request-timeout');
 const { monitor } = require('./core/utils/monitoring');
 const { logger } = require('./core/utils/logger');
+const { startOrderCleanupJob } = require('./core/utils/order-cleanup');
 
 // Import routes
 const vpsRoutes = require('./api/services/vps');
@@ -200,6 +201,9 @@ async function startServer() {
     // Start HTTP server
     server = app.listen(PORT, () => {
       logger.success(`VPS Billing API Server running on port ${PORT}`);
+      
+      // Start order cleanup job
+      startOrderCleanupJob();
       
       // Only show detailed info in development
       if (process.env.NODE_ENV === 'development') {

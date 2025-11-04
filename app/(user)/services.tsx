@@ -45,7 +45,7 @@ interface ServiceGroup {
 export default function ServicesScreen() {
   const router = useRouter();
   const pathname = usePathname();
-  const { user: authUser, signOut } = useAuth();
+  const { user: authUser } = useAuth();
   const [user, setUser] = useState<User | null>(null);
   const [serviceGroups, setServiceGroups] = useState<ServiceGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -117,15 +117,6 @@ export default function ServicesScreen() {
   const handleRefresh = () => {
     setRefreshing(true);
     loadServices();
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut();
-      router.replace('/auth/login');
-    } catch (error) {
-      Alert.alert('Ошибка', 'Не удалось выйти. Попробуйте еще раз.');
-    }
   };
 
   const handleOpenServiceGroup = (group: ServiceGroup) => {

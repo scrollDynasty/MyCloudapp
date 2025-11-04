@@ -136,7 +136,7 @@ const checkPasswordStrength = (password: string): PasswordStrength => {
   if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) score++;
 
   const labels = ['Очень слабый', 'Слабый', 'Средний', 'Хороший', 'Отличный'];
-  const colors = [COLORS.error, COLORS.warning, COLORS.warning, COLORS.success, COLORS.success];
+  const colors = ['#EF4444', '#F59E0B', '#F59E0B', '#10B981', '#10B981'];
 
   return {
     score: Math.min(score, 4),
@@ -626,7 +626,7 @@ const RegisterScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <LinearGradient
-        colors={[COLORS.backgroundLight, COLORS.background]}
+        colors={['#F9FAFB', '#FFFFFF']}
         style={styles.gradientBackground}
       >
         <KeyboardAvoidingView
@@ -655,8 +655,6 @@ const RegisterScreen: React.FC = () => {
                 },
               ]}
             >
-              {/* Заголовок убран для минималистичного дизайна */}
-
               {/* Форма регистрации */}
               <Animated.View
                 style={[
@@ -664,362 +662,360 @@ const RegisterScreen: React.FC = () => {
                   { transform: [{ translateX: shakeAnim }] },
                 ]}
               >
-                {/* Выбор роли */}
-                <View style={styles.roleContainer}>
-                  <TouchableOpacity
-                    style={[styles.roleButton, role === 'individual' && styles.roleButtonActive]}
-                    onPress={() => handleRoleChange('individual')}
-                    disabled={loading}
-                    accessibilityLabel="Физическое лицо"
-                    activeOpacity={0.8}
-                  >
-                    <View style={styles.roleButtonInner}>
-                      <View style={[styles.roleIndicator, role === 'individual' && styles.roleIndicatorActive]} />
+                <View style={styles.formInner}>
+                  {/* Header */}
+                  <View style={styles.header}>
+                    <Text style={styles.headerTitle}>Регистрация</Text>
+                  </View>
+
+                  {/* Welcome Section */}
+                  <View style={styles.welcomeSection}>
+                    <View style={styles.welcomeIconContainer}>
+                      {/* Иконка будет здесь, но пока пропустим */}
+                    </View>
+                    <Text style={styles.welcomeTitle}>Создайте аккаунт</Text>
+                    <Text style={styles.welcomeSubtitle}>Заполните форму для регистрации</Text>
+                  </View>
+                  {/* Выбор роли */}
+                  <View style={styles.roleContainer}>
+                    <TouchableOpacity
+                      style={[styles.roleButton, role === 'individual' && styles.roleButtonActive]}
+                      onPress={() => handleRoleChange('individual')}
+                      disabled={loading}
+                      accessibilityLabel="Физическое лицо"
+                      activeOpacity={0.8}
+                    >
                       <Text style={[styles.roleText, role === 'individual' && styles.roleTextActive]}>
                         Физическое лицо
                       </Text>
-                    </View>
-                  </TouchableOpacity>
+                    </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={[styles.roleButton, role === 'legal_entity' && styles.roleButtonActive]}
-                    onPress={() => handleRoleChange('legal_entity')}
-                    disabled={loading}
-                    accessibilityLabel="Юридическое лицо"
-                    activeOpacity={0.8}
-                  >
-                    <View style={styles.roleButtonInner}>
-                      <View style={[styles.roleIndicator, role === 'legal_entity' && styles.roleIndicatorActive]} />
+                    <TouchableOpacity
+                      style={[styles.roleButton, role === 'legal_entity' && styles.roleButtonActive]}
+                      onPress={() => handleRoleChange('legal_entity')}
+                      disabled={loading}
+                      accessibilityLabel="Юридическое лицо"
+                      activeOpacity={0.8}
+                    >
                       <Text style={[styles.roleText, role === 'legal_entity' && styles.roleTextActive]}>
                         Юридическое лицо
                       </Text>
-                    </View>
-                  </TouchableOpacity>
-                </View>
-
-                {/* Полное имя */}
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.inputLabel}>Полное имя *</Text>
-                  <Animated.View
-                    style={[
-                      styles.inputContainer,
-                      errors.fullName && touched.fullName && styles.inputError,
-                      focusedField === 'fullName' && styles.inputFocused,
-                      { height: adaptiveStyles.inputHeight }
-                    ]}
-                  >
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Иван Иванов"
-                      placeholderTextColor={COLORS.textLighter}
-                      value={fullName}
-                      onChangeText={(text) => handleFieldChange('fullName', text)}
-                      onFocus={() => handleFocus('fullName')}
-                      onBlur={() => handleBlur('fullName')}
-                      editable={!loading}
-                      returnKeyType="next"
-                      accessibilityLabel="Поле ввода полного имени"
-                      autoCapitalize="words"
-                      textContentType="name"
-                    />
-                  </Animated.View>
-                  {errors.fullName && touched.fullName && (
-                    <View style={styles.errorContainer}>
-                      <Text style={styles.errorText}>{errors.fullName}</Text>
-                    </View>
-                  )}
-                </View>
-
-                {/* Email */}
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.inputLabel}>Email *</Text>
-                  <Animated.View
-                    style={[
-                      styles.inputContainer,
-                      errors.email && touched.email && styles.inputError,
-                      focusedField === 'email' && styles.inputFocused,
-                      { height: adaptiveStyles.inputHeight }
-                    ]}
-                  >
-                    <TextInput
-                      style={styles.input}
-                      placeholder="your@email.com"
-                      placeholderTextColor={COLORS.textLighter}
-                      value={email}
-                      onChangeText={(text) => handleFieldChange('email', text)}
-                      onFocus={() => handleFocus('email')}
-                      onBlur={() => handleBlur('email')}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      editable={!loading}
-                      returnKeyType="next"
-                      accessibilityLabel="Поле ввода email"
-                      autoComplete="email"
-                      textContentType="emailAddress"
-                    />
-                  </Animated.View>
-                  {errors.email && touched.email && (
-                    <View style={styles.errorContainer}>
-                      <Text style={styles.errorText}>{errors.email}</Text>
-                    </View>
-                  )}
-                </View>
-
-                {/* Телефон */}
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.inputLabel}>Телефон (опционально)</Text>
-                  <Animated.View
-                    style={[
-                      styles.inputContainer,
-                      errors.phone && touched.phone && styles.inputError,
-                      focusedField === 'phone' && styles.inputFocused,
-                      { height: adaptiveStyles.inputHeight }
-                    ]}
-                  >
-                    <TextInput
-                      style={styles.input}
-                      placeholder="+998 90 123 45 67"
-                      placeholderTextColor={COLORS.textLighter}
-                      value={phone}
-                      onChangeText={(text) => handleFieldChange('phone', text)}
-                      onFocus={() => handleFocus('phone')}
-                      onBlur={() => handleBlur('phone')}
-                      keyboardType="phone-pad"
-                      editable={!loading}
-                      returnKeyType="next"
-                      accessibilityLabel="Поле ввода телефона"
-                      textContentType="telephoneNumber"
-                    />
-                  </Animated.View>
-                  {errors.phone && touched.phone && (
-                    <View style={styles.errorContainer}>
-                      <Text style={styles.errorText}>{errors.phone}</Text>
-                    </View>
-                  )}
-                </View>
-
-                {/* Поля для юридических лиц */}
-                {role === 'legal_entity' && (
-                  <>
-                    <View style={styles.inputWrapper}>
-                      <Text style={styles.inputLabel}>Название компании *</Text>
-                      <Animated.View
-                        style={[
-                          styles.inputContainer,
-                          errors.companyName && touched.companyName && styles.inputError,
-                          focusedField === 'companyName' && styles.inputFocused,
-                          { height: adaptiveStyles.inputHeight }
-                        ]}
-                      >
-                        <TextInput
-                          style={styles.input}
-                          placeholder="ООО Компания"
-                          placeholderTextColor={COLORS.textLighter}
-                          value={companyName}
-                          onChangeText={(text) => handleFieldChange('companyName', text)}
-                          onFocus={() => handleFocus('companyName')}
-                          onBlur={() => handleBlur('companyName')}
-                          editable={!loading}
-                          returnKeyType="next"
-                          accessibilityLabel="Поле ввода названия компании"
-                          autoCapitalize="words"
-                        />
-                      </Animated.View>
-                      {errors.companyName && touched.companyName && (
-                        <View style={styles.errorContainer}>
-                          <Text style={styles.errorText}>{errors.companyName}</Text>
-                        </View>
-                      )}
-                    </View>
-
-                    <View style={styles.inputWrapper}>
-                      <Text style={styles.inputLabel}>ИНН *</Text>
-                      <Animated.View
-                        style={[
-                          styles.inputContainer,
-                          errors.taxId && touched.taxId && styles.inputError,
-                          focusedField === 'taxId' && styles.inputFocused,
-                          { height: adaptiveStyles.inputHeight }
-                        ]}
-                      >
-                        <TextInput
-                          style={styles.input}
-                          placeholder="123456789"
-                          placeholderTextColor={COLORS.textLighter}
-                          value={taxId}
-                          onChangeText={(text) => handleFieldChange('taxId', text)}
-                          onFocus={() => handleFocus('taxId')}
-                          onBlur={() => handleBlur('taxId')}
-                          keyboardType="numeric"
-                          editable={!loading}
-                          returnKeyType="next"
-                          accessibilityLabel="Поле ввода ИНН"
-                          maxLength={12}
-                        />
-                      </Animated.View>
-                      {errors.taxId && touched.taxId && (
-                        <View style={styles.errorContainer}>
-                          <Text style={styles.errorText}>{errors.taxId}</Text>
-                        </View>
-                      )}
-                    </View>
-                  </>
-                )}
-
-                {/* Пароль */}
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.inputLabel}>Пароль *</Text>
-                  <Animated.View
-                    style={[
-                      styles.inputContainer,
-                      errors.password && touched.password && styles.inputError,
-                      focusedField === 'password' && styles.inputFocused,
-                      { height: adaptiveStyles.inputHeight }
-                    ]}
-                  >
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Минимум 6 символов"
-                      placeholderTextColor={COLORS.textLighter}
-                      value={password}
-                      onChangeText={(text) => handleFieldChange('password', text)}
-                      onFocus={() => handleFocus('password')}
-                      onBlur={() => handleBlur('password')}
-                      secureTextEntry={!showPassword}
-                      editable={!loading}
-                      returnKeyType="next"
-                      accessibilityLabel="Поле ввода пароля"
-                      textContentType="newPassword"
-                      autoComplete="password-new"
-                    />
-                    <TouchableOpacity
-                      onPress={() => handleTogglePassword('password')}
-                      style={styles.eyeIcon}
-                      accessibilityLabel={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
-                    >
-                      <Ionicons
-                        name={showPassword ? 'eye-outline' : 'eye-off-outline'}
-                        size={22}
-                        color={focusedField === 'password' ? COLORS.primary : COLORS.gray}
-                      />
                     </TouchableOpacity>
-                  </Animated.View>
-                  {errors.password && touched.password && (
-                    <View style={styles.errorContainer}>
-                      <Text style={styles.errorText}>{errors.password}</Text>
-                    </View>
-                  )}
-                  
-                  {/* Индикатор силы пароля */}
-                  {password.length > 0 && (
-                    <View style={styles.passwordStrengthContainer}>
-                      <View style={styles.passwordStrengthBar}>
-                        {[0, 1, 2, 3, 4].map((index) => (
-                          <View
-                            key={index}
-                            style={[
-                              styles.passwordStrengthSegment,
-                              index <= passwordStrength.score && {
-                                backgroundColor: passwordStrength.color,
-                              },
-                            ]}
-                          />
-                        ))}
-                      </View>
-                      <View style={styles.passwordStrengthInfo}>
-                        <Text style={[styles.passwordStrengthText, { color: passwordStrength.color }]}>
-                          {passwordStrength.label}
-                        </Text>
-                      </View>
-                    </View>
-                  )}
-                </View>
+                  </View>
 
-                {/* Подтверждение пароля */}
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.inputLabel}>Подтвердите пароль *</Text>
-                  <Animated.View
-                    style={[
-                      styles.inputContainer,
-                      errors.confirmPassword && touched.confirmPassword && styles.inputError,
-                      focusedField === 'confirmPassword' && styles.inputFocused,
-                      { height: adaptiveStyles.inputHeight }
-                    ]}
-                  >
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Повторите пароль"
-                      placeholderTextColor={COLORS.textLighter}
-                      value={confirmPassword}
-                      onChangeText={(text) => handleFieldChange('confirmPassword', text)}
-                      onFocus={() => handleFocus('confirmPassword')}
-                      onBlur={() => handleBlur('confirmPassword')}
-                      secureTextEntry={!showConfirmPassword}
-                      editable={!loading}
-                      returnKeyType="done"
-                      onSubmitEditing={handleRegister}
-                      accessibilityLabel="Поле подтверждения пароля"
-                      textContentType="newPassword"
-                    />
-                    <TouchableOpacity
-                      onPress={() => handleTogglePassword('confirmPassword')}
-                      style={styles.eyeIcon}
-                      accessibilityLabel={showConfirmPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                  {/* Полное имя */}
+                  <View style={styles.inputWrapper}>
+                    <Text style={styles.inputLabel}>Полное имя *</Text>
+                    <Animated.View
+                      style={[
+                        styles.inputContainer,
+                        errors.fullName && touched.fullName && styles.inputError,
+                        focusedField === 'fullName' && styles.inputFocused,
+                      ]}
                     >
-                      <Ionicons
-                        name={showConfirmPassword ? 'eye-outline' : 'eye-off-outline'}
-                        size={22}
-                        color={focusedField === 'confirmPassword' ? COLORS.primary : COLORS.gray}
+                      <Ionicons name="person-outline" size={20} color="#9CA3AF" />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Иван Иванов"
+                        placeholderTextColor="#9CA3AF"
+                        value={fullName}
+                        onChangeText={(text) => handleFieldChange('fullName', text)}
+                        onFocus={() => handleFocus('fullName')}
+                        onBlur={() => handleBlur('fullName')}
+                        editable={!loading}
+                        returnKeyType="next"
+                        accessibilityLabel="Поле ввода полного имени"
+                        autoCapitalize="words"
+                        textContentType="name"
                       />
-                    </TouchableOpacity>
-                  </Animated.View>
-                  {errors.confirmPassword && touched.confirmPassword && (
-                    <View style={styles.errorContainer}>
-                      <Text style={styles.errorText}>{errors.confirmPassword}</Text>
-                    </View>
-                  )}
-                </View>
-
-                {/* Кнопка регистрации */}
-                <TouchableOpacity
-                  style={[
-                    styles.registerButton,
-                    loading && styles.registerButtonDisabled,
-                    { height: adaptiveStyles.buttonHeight }
-                  ]}
-                  onPress={handleRegister}
-                  disabled={loading}
-                  accessibilityLabel="Зарегистрироваться"
-                  activeOpacity={0.8}
-                >
-                  <LinearGradient
-                    colors={loading ? ['#94A3B8', '#94A3B8'] : ['#3B82F6', '#2563EB', '#1D4ED8']}
-                    style={[styles.registerButtonGradient, { height: adaptiveStyles.buttonHeight }]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    {loading ? (
-                      <ActivityIndicator color={COLORS.white} size="small" />
-                    ) : (
-                      <View style={styles.registerButtonContent}>
-                        <Text style={styles.registerButtonText}>Создать аккаунт</Text>
-                        <Ionicons name="arrow-forward" size={20} color={COLORS.white} style={styles.registerButtonIcon} />
+                    </Animated.View>
+                    {errors.fullName && touched.fullName && (
+                      <View style={styles.errorContainer}>
+                        <Text style={styles.errorText}>{errors.fullName}</Text>
                       </View>
                     )}
-                  </LinearGradient>
-                </TouchableOpacity>
+                  </View>
 
-                {/* Ссылка на логин */}
-                <View style={styles.loginContainer}>
-                  <Text style={styles.loginText}>Уже есть аккаунт? </Text>
-                  <TouchableOpacity 
-                    onPress={handleGoToLogin} 
-                    accessibilityLabel="Перейти ко входу"
+                  {/* Email */}
+                  <View style={styles.inputWrapper}>
+                    <Text style={styles.inputLabel}>Email *</Text>
+                    <Animated.View
+                      style={[
+                        styles.inputContainer,
+                        errors.email && touched.email && styles.inputError,
+                        focusedField === 'email' && styles.inputFocused,
+                      ]}
+                    >
+                      <Ionicons name="mail-outline" size={20} color="#9CA3AF" />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="your@email.com"
+                        placeholderTextColor="#9CA3AF"
+                        value={email}
+                        onChangeText={(text) => handleFieldChange('email', text)}
+                        onFocus={() => handleFocus('email')}
+                        onBlur={() => handleBlur('email')}
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        editable={!loading}
+                        returnKeyType="next"
+                        accessibilityLabel="Поле ввода email"
+                        autoComplete="email"
+                        textContentType="emailAddress"
+                      />
+                    </Animated.View>
+                    {errors.email && touched.email && (
+                      <View style={styles.errorContainer}>
+                        <Text style={styles.errorText}>{errors.email}</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Телефон */}
+                  <View style={styles.inputWrapper}>
+                    <Text style={styles.inputLabel}>Телефон (опционально)</Text>
+                    <Animated.View
+                      style={[
+                        styles.inputContainer,
+                        errors.phone && touched.phone && styles.inputError,
+                        focusedField === 'phone' && styles.inputFocused,
+                      ]}
+                    >
+                      <Ionicons name="call-outline" size={20} color="#9CA3AF" />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="+998 90 123 45 67"
+                        placeholderTextColor="#9CA3AF"
+                        value={phone}
+                        onChangeText={(text) => handleFieldChange('phone', text)}
+                        onFocus={() => handleFocus('phone')}
+                        onBlur={() => handleBlur('phone')}
+                        keyboardType="phone-pad"
+                        editable={!loading}
+                        returnKeyType="next"
+                        accessibilityLabel="Поле ввода телефона"
+                        textContentType="telephoneNumber"
+                      />
+                    </Animated.View>
+                    {errors.phone && touched.phone && (
+                      <View style={styles.errorContainer}>
+                        <Text style={styles.errorText}>{errors.phone}</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Поля для юридических лиц */}
+                  {role === 'legal_entity' && (
+                    <>
+                      <View style={styles.inputWrapper}>
+                        <Text style={styles.inputLabel}>Название компании *</Text>
+                        <Animated.View
+                          style={[
+                            styles.inputContainer,
+                            errors.companyName && touched.companyName && styles.inputError,
+                            focusedField === 'companyName' && styles.inputFocused,
+                          ]}
+                        >
+                          <Ionicons name="business-outline" size={20} color="#9CA3AF" />
+                          <TextInput
+                            style={styles.input}
+                            placeholder="ООО Компания"
+                            placeholderTextColor="#9CA3AF"
+                            value={companyName}
+                            onChangeText={(text) => handleFieldChange('companyName', text)}
+                            onFocus={() => handleFocus('companyName')}
+                            onBlur={() => handleBlur('companyName')}
+                            editable={!loading}
+                            returnKeyType="next"
+                            accessibilityLabel="Поле ввода названия компании"
+                            autoCapitalize="words"
+                          />
+                        </Animated.View>
+                        {errors.companyName && touched.companyName && (
+                          <View style={styles.errorContainer}>
+                            <Text style={styles.errorText}>{errors.companyName}</Text>
+                          </View>
+                        )}
+                      </View>
+
+                      <View style={styles.inputWrapper}>
+                        <Text style={styles.inputLabel}>ИНН *</Text>
+                        <Animated.View
+                          style={[
+                            styles.inputContainer,
+                            errors.taxId && touched.taxId && styles.inputError,
+                            focusedField === 'taxId' && styles.inputFocused,
+                          ]}
+                        >
+                          <Ionicons name="card-outline" size={20} color="#9CA3AF" />
+                          <TextInput
+                            style={styles.input}
+                            placeholder="123456789"
+                            placeholderTextColor="#9CA3AF"
+                            value={taxId}
+                            onChangeText={(text) => handleFieldChange('taxId', text)}
+                            onFocus={() => handleFocus('taxId')}
+                            onBlur={() => handleBlur('taxId')}
+                            keyboardType="numeric"
+                            editable={!loading}
+                            returnKeyType="next"
+                            accessibilityLabel="Поле ввода ИНН"
+                            maxLength={12}
+                          />
+                        </Animated.View>
+                        {errors.taxId && touched.taxId && (
+                          <View style={styles.errorContainer}>
+                            <Text style={styles.errorText}>{errors.taxId}</Text>
+                          </View>
+                        )}
+                      </View>
+                    </>
+                  )}
+
+                  {/* Пароль */}
+                  <View style={styles.inputWrapper}>
+                    <Text style={styles.inputLabel}>Пароль *</Text>
+                    <Animated.View
+                      style={[
+                        styles.inputContainer,
+                        errors.password && touched.password && styles.inputError,
+                        focusedField === 'password' && styles.inputFocused,
+                      ]}
+                    >
+                      <Ionicons name="lock-closed-outline" size={20} color="#9CA3AF" />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Минимум 6 символов"
+                        placeholderTextColor="#9CA3AF"
+                        value={password}
+                        onChangeText={(text) => handleFieldChange('password', text)}
+                        onFocus={() => handleFocus('password')}
+                        onBlur={() => handleBlur('password')}
+                        secureTextEntry={!showPassword}
+                        editable={!loading}
+                        returnKeyType="next"
+                        accessibilityLabel="Поле ввода пароля"
+                        textContentType="newPassword"
+                        autoComplete="password-new"
+                      />
+                      <TouchableOpacity
+                        onPress={() => handleTogglePassword('password')}
+                        style={styles.eyeIcon}
+                        accessibilityLabel={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                      >
+                        <Ionicons
+                          name={showPassword ? 'eye-outline' : 'eye-off-outline'}
+                          size={20}
+                          color="#9CA3AF"
+                        />
+                      </TouchableOpacity>
+                    </Animated.View>
+                    {errors.password && touched.password && (
+                      <View style={styles.errorContainer}>
+                        <Text style={styles.errorText}>{errors.password}</Text>
+                      </View>
+                    )}
+                    
+                    {/* Индикатор силы пароля */}
+                    {password.length > 0 && (
+                      <View style={styles.passwordStrengthContainer}>
+                        <View style={styles.passwordStrengthBar}>
+                          {[0, 1, 2, 3, 4].map((index) => (
+                            <View
+                              key={index}
+                              style={[
+                                styles.passwordStrengthSegment,
+                                index <= passwordStrength.score && {
+                                  backgroundColor: passwordStrength.color,
+                                },
+                              ]}
+                            />
+                          ))}
+                        </View>
+                        <View style={styles.passwordStrengthInfo}>
+                          <Text style={[styles.passwordStrengthText, { color: passwordStrength.color }]}>
+                            {passwordStrength.label}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Подтверждение пароля */}
+                  <View style={styles.inputWrapper}>
+                    <Text style={styles.inputLabel}>Подтвердите пароль *</Text>
+                    <Animated.View
+                      style={[
+                        styles.inputContainer,
+                        errors.confirmPassword && touched.confirmPassword && styles.inputError,
+                        focusedField === 'confirmPassword' && styles.inputFocused,
+                      ]}
+                    >
+                      <Ionicons name="lock-closed-outline" size={20} color="#9CA3AF" />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Повторите пароль"
+                        placeholderTextColor="#9CA3AF"
+                        value={confirmPassword}
+                        onChangeText={(text) => handleFieldChange('confirmPassword', text)}
+                        onFocus={() => handleFocus('confirmPassword')}
+                        onBlur={() => handleBlur('confirmPassword')}
+                        secureTextEntry={!showConfirmPassword}
+                        editable={!loading}
+                        returnKeyType="done"
+                        onSubmitEditing={handleRegister}
+                        accessibilityLabel="Поле подтверждения пароля"
+                        textContentType="newPassword"
+                      />
+                      <TouchableOpacity
+                        onPress={() => handleTogglePassword('confirmPassword')}
+                        style={styles.eyeIcon}
+                        accessibilityLabel={showConfirmPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                      >
+                        <Ionicons
+                          name={showConfirmPassword ? 'eye-outline' : 'eye-off-outline'}
+                          size={20}
+                          color="#9CA3AF"
+                        />
+                      </TouchableOpacity>
+                    </Animated.View>
+                    {errors.confirmPassword && touched.confirmPassword && (
+                      <View style={styles.errorContainer}>
+                        <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Кнопка регистрации */}
+                  <TouchableOpacity
+                    style={[
+                      styles.registerButton,
+                      loading && styles.registerButtonDisabled,
+                    ]}
+                    onPress={handleRegister}
                     disabled={loading}
+                    accessibilityLabel="Зарегистрироваться"
+                    activeOpacity={0.8}
                   >
-                    <Text style={styles.loginLink}>Войти</Text>
+                    {loading ? (
+                      <ActivityIndicator color="#FFFFFF" size="small" />
+                    ) : (
+                      <Text style={styles.registerButtonText}>Создать аккаунт</Text>
+                    )}
                   </TouchableOpacity>
+
+                  {/* Ссылка на логин */}
+                  <View style={styles.loginContainer}>
+                    <Text style={styles.loginText}>Уже есть аккаунт?</Text>
+                    <TouchableOpacity 
+                      onPress={handleGoToLogin} 
+                      accessibilityLabel="Перейти ко входу"
+                      disabled={loading}
+                    >
+                      <Text style={styles.loginLink}>Войти</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </Animated.View>
             </Animated.View>
@@ -1036,17 +1032,20 @@ export default React.memo(RegisterScreen);
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#F9FAFB',
   },
   gradientBackground: {
     flex: 1,
+    backgroundColor: '#F9FAFB',
   },
   container: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingVertical: 20,
+    paddingVertical: 30,
+    paddingHorizontal: 24,
+    justifyContent: 'center',
   },
   content: {
     flex: 1,
@@ -1055,138 +1054,163 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   formContainer: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 24,
-    padding: 24,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 24,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 48,
+    padding: 1,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 30,
     elevation: 8,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#E5E7EB',
+    overflow: 'hidden',
+  },
+  formInner: {
+    backgroundColor: '#FFFFFF',
+    paddingBottom: 16,
+  },
+  header: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    paddingBottom: 17,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+    lineHeight: 21.78,
+  },
+  welcomeSection: {
+    paddingTop: 20,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    alignItems: 'center',
+    gap: 8,
+  },
+  welcomeIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 24,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  welcomeTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    lineHeight: 21.78,
+  },
+  welcomeSubtitle: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: '#9CA3AF',
+    lineHeight: 14.52,
+    textAlign: 'center',
   },
   roleContainer: {
     flexDirection: 'row',
-    marginBottom: 24,
-    gap: 12,
-    padding: 4,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 16,
+    marginBottom: 16,
+    marginHorizontal: 16,
+    gap: 8,
+    padding: 7,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   roleButton: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 18,
-    borderRadius: 12,
-    backgroundColor: COLORS.white,
-    minHeight: 80,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    paddingVertical: 7,
+    paddingHorizontal: 11,
+    borderRadius: 24,
+    backgroundColor: 'transparent',
+    minHeight: 40,
   },
   roleButtonActive: {
-    backgroundColor: COLORS.white,
-    borderColor: COLORS.primary,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  roleButtonInner: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-  },
-  roleIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.border,
-    marginBottom: 10,
-  },
-  roleIndicatorActive: {
-    backgroundColor: COLORS.primary,
-    width: 32,
-    height: 4,
-    borderRadius: 2,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   roleText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.textLight,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#9CA3AF',
+    lineHeight: 14.52,
     textAlign: 'center',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "Segoe UI"' : 'Roboto, sans-serif',
-    letterSpacing: 0.1,
   },
   roleTextActive: {
-    color: COLORS.primary,
-    fontWeight: '700',
+    color: '#374151',
+    fontWeight: '600',
   },
   inputWrapper: {
-    marginBottom: 18,
+    marginBottom: 12,
+    paddingHorizontal: 16,
   },
   inputLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: COLORS.text,
-    marginBottom: 10,
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "Segoe UI"' : 'Roboto, sans-serif',
-    letterSpacing: 0.1,
+    fontSize: 12,
+    fontWeight: '400',
+    color: '#9CA3AF',
+    marginBottom: 6,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.inputBg,
-    borderRadius: 14,
-    paddingHorizontal: 18,
-    borderWidth: 2,
-    borderColor: COLORS.border,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 24,
+    paddingHorizontal: 13,
+    paddingVertical: 13,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 8,
   },
   inputFocused: {
-    backgroundColor: COLORS.inputFocusBg,
-    borderColor: COLORS.borderFocus,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#6366F1',
   },
   inputError: {
-    borderColor: COLORS.error,
-    backgroundColor: COLORS.errorLight,
+    borderColor: '#EF4444',
+    backgroundColor: '#FEE2E2',
   },
   input: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '400',
-    color: COLORS.text,
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "Segoe UI"' : 'Roboto, sans-serif',
+    color: '#111827',
+    lineHeight: 16.94,
     paddingVertical: 0,
-    letterSpacing: 0.2,
   },
   eyeIcon: {
-    padding: 8,
-    marginLeft: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingLeft: 4,
+    minWidth: 24,
+    height: 20,
   },
   errorContainer: {
-    marginTop: 8,
+    marginTop: 4,
     paddingLeft: 4,
+    paddingHorizontal: 16,
   },
   errorText: {
-    color: COLORS.error,
-    fontSize: 13,
-    fontWeight: '500',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "Segoe UI"' : 'Roboto, sans-serif',
+    color: '#EF4444',
+    fontSize: 12,
+    fontWeight: '400',
   },
   passwordStrengthContainer: {
-    marginTop: 10,
+    marginTop: 8,
+    paddingHorizontal: 0,
   },
   passwordStrengthBar: {
     flexDirection: 'row',
@@ -1196,7 +1220,7 @@ const styles = StyleSheet.create({
   passwordStrengthSegment: {
     flex: 1,
     height: 4,
-    backgroundColor: COLORS.border,
+    backgroundColor: '#E5E7EB',
     borderRadius: 2,
   },
   passwordStrengthInfo: {
@@ -1206,40 +1230,27 @@ const styles = StyleSheet.create({
   passwordStrengthText: {
     fontSize: 12,
     fontWeight: '500',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "Segoe UI"' : 'Roboto, sans-serif',
-    letterSpacing: 0.1,
   },
   registerButton: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginTop: 8,
-    shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 12,
-  },
-  registerButtonGradient: {
+    borderRadius: 24,
+    backgroundColor: '#6366F1',
+    borderWidth: 1,
+    borderColor: '#6366F1',
+    paddingVertical: 13,
+    paddingHorizontal: 13,
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 16,
-    width: '100%',
-    flex: 1,
-  },
-  registerButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    gap: 8,
   },
   registerButtonText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "Segoe UI"' : 'Roboto, sans-serif',
-    letterSpacing: 0.3,
-  },
-  registerButtonIcon: {
-    marginLeft: 8,
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
+    lineHeight: 16.94,
+    textAlign: 'center',
   },
   registerButtonDisabled: {
     opacity: 0.6,
@@ -1247,20 +1258,22 @@ const styles = StyleSheet.create({
   loginContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 24,
+    alignItems: 'center',
+    paddingTop: 4,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    gap: 8,
   },
   loginText: {
-    color: COLORS.textLight,
-    fontSize: 15,
+    color: '#9CA3AF',
+    fontSize: 13,
     fontWeight: '400',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "Segoe UI"' : 'Roboto, sans-serif',
-    letterSpacing: 0.1,
+    lineHeight: 15.73,
   },
   loginLink: {
-    color: COLORS.primary,
-    fontSize: 15,
+    color: '#374151',
+    fontSize: 13,
     fontWeight: '500',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "Segoe UI"' : 'Roboto, sans-serif',
-    letterSpacing: 0.1,
+    lineHeight: 15.73,
   },
 });
