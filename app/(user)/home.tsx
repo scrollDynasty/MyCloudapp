@@ -1,36 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Animated,
-  FlatList,
   Platform,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import { API_URL } from '../../config/api';
 import { getHeaders } from '../../config/fetch';
 import { useAuth } from '../../lib/AuthContext';
-
-interface ServiceGroup {
-  id: number;
-  name_uz: string;
-  name_ru: string;
-  description_uz?: string;
-  description_ru?: string;
-  slug: string;
-  icon?: string;
-  display_order: number;
-  is_active: boolean;
-  plans_count: number;
-}
 
 interface User {
   user_id: number;
@@ -40,26 +25,48 @@ interface User {
   company_name?: string;
 }
 
+interface Order {
+  order_id: number;
+  order_number?: string;
+  user_id: number;
+  full_name: string;
+  plan_name: string;
+  provider_name: string;
+  total_price: number;
+  currency_code: string;
+  status: string;
+  payment_status?: string;
+  created_at: string;
+}
+
 export default function UserHomeScreen() {
   const router = useRouter();
+  const pathname = usePathname();
   const { user: authUser, signOut } = useAuth();
   const [user, setUser] = useState<User | null>(null);
-  const [serviceGroups, setServiceGroups] = useState<ServiceGroup[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  
+  const [activeSegment, setActiveSegment] = useState<'servers' | 'storage'>('servers');
+
   // Анимации
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(20)).current;
-  
+  const slideAnim = useRef(new Animated.Value(30)).current;
+
+  useEffect(() => {
+    if (authUser) {
+      setUser(authUser);
+    }
+    loadDashboardData();
+  }, [authUser]);
+
   // Анимация появления контента
   useEffect(() => {
     if (!loading) {
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 600,
+          duration: 400,
           useNativeDriver: true,
         }),
         Animated.spring(slideAnim, {
@@ -72,27 +79,30 @@ export default function UserHomeScreen() {
     }
   }, [loading]);
 
-  useEffect(() => {
-    // Используем данные из AuthContext
-    if (authUser) {
-      setUser(authUser);
-    }
-    loadData();
-  }, [authUser]);
-
-  const loadData = async () => {
+  const loadDashboardData = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
+      
+      if (!token) {
+        Alert.alert('Ошибка', 'Токен авторизации не найден. Пожалуйста, войдите снова.');
+        router.replace('/auth/login');
+        return;
+      }
 
-      // Load service groups
-      const groupsResponse = await fetch(`${API_URL}/api/service-groups`, {
+      // Загрузить заказы
+      const ordersResponse = await fetch(`${API_URL}/api/orders`, {
         headers: getHeaders(token || undefined),
       });
-      const groupsData = await groupsResponse.json();
-      if (groupsData.success) {
-        setServiceGroups(groupsData.data);
+      const ordersData = await ordersResponse.json();
+
+      if (ordersData.success && Array.isArray(ordersData.data)) {
+        setOrders(ordersData.data || []);
+      } else {
+        setOrders([]);
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error loading dashboard data:', error);
+      setOrders([]);
       Alert.alert('Ошибка', 'Не удалось загрузить данные');
     } finally {
       setLoading(false);
@@ -102,7 +112,7 @@ export default function UserHomeScreen() {
 
   const handleRefresh = () => {
     setRefreshing(true);
-    loadData();
+    loadDashboardData();
   };
 
   const handleLogout = async () => {
@@ -114,295 +124,334 @@ export default function UserHomeScreen() {
     }
   };
 
-  const handleOpenServiceGroup = (group: ServiceGroup) => {
-    router.push({
-      pathname: '/(user)/service-group-details',
-      params: { groupId: group.id, groupName: group.name_ru },
-    });
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active':
+      case 'completed':
+      case 'paid':
+        return '#10B981';
+      case 'pending':
+      case 'processing':
+        return '#F59E0B';
+      case 'cancelled':
+        return '#EF4444';
+      default:
+        return '#9CA3AF';
+    }
   };
-  
-  const handleCategorySelect = (category: string | null) => {
-    setSelectedCategory(category);
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'Активен';
+      case 'pending':
+      case 'processing':
+        return 'Обработка';
+      case 'completed':
+      case 'paid':
+        return 'Завершено';
+      case 'cancelled':
+        return 'Отменено';
+      default:
+        return status;
+    }
   };
 
-  // Фильтрация групп сервисов по категории
-  const filteredServiceGroups = selectedCategory
-    ? serviceGroups.filter((group) => {
-        const groupName = group.name_ru.toLowerCase();
-        const groupNameUz = group.name_uz.toLowerCase();
-        const groupSlug = group.slug.toLowerCase();
-        const categoryMap: { [key: string]: string[] } = {
-          video: ['video', 'видео'],
-          drive: ['drive', 'драйв', 'хранилище', 'storage'],
-          cctv: ['cctv', 'камера', 'видеонаблюдение'],
-          vps: ['vps', 'впс', 'виртуальный'],
-          'vps-new': ['vps new', 'vps-new', 'новый vps', 'новый впс'],
-          colocation: ['colocation', 'колокация', 'колокейшн'],
-          ssl: ['ssl', 'сертификат', 'certificate'],
-          temp: ['temp', 'временный', 'temporary'],
-          nvr: ['nvr', 'нвр', 'видеорегистратор'],
-        };
-        const searchTerms = categoryMap[selectedCategory] || [];
-        return searchTerms.some((term) => 
-          groupName.includes(term) || 
-          groupNameUz.includes(term) || 
-          groupSlug.includes(term)
-        );
-      })
-    : serviceGroups;
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
 
-  // Категории с иконками и цветами
-  const categories = [
-    { id: 'video', name: 'Video', icon: 'videocam', color: '#EF4444' },
-    { id: 'drive', name: 'Drive', icon: 'folder', color: '#3B82F6' },
-    { id: 'cctv', name: 'CCTV', icon: 'camera', color: '#10B981' },
-    { id: 'vps', name: 'VPS', icon: 'cloud', color: '#8B5CF6' },
-    { id: 'vps-new', name: 'Vps new', icon: 'sparkles', color: '#06B6D4' },
-    { id: 'colocation', name: 'Colocation', icon: 'server', color: '#F59E0B' },
-    { id: 'ssl', name: 'SSL', icon: 'lock-closed', color: '#84CC16' },
-    { id: 'temp', name: 'Temp', icon: 'time', color: '#A78BFA' },
-    { id: 'nvr', name: 'NVR', icon: 'tv', color: '#EC4899' },
-  ];
+    if (diffMins < 60) {
+      return `${diffMins} минут назад`;
+    } else if (diffHours < 24) {
+      return `${diffHours} ${diffHours === 1 ? 'час' : 'часа'} назад`;
+    } else if (diffDays === 1) {
+      return 'Вчера';
+    } else if (diffDays < 7) {
+      return `${diffDays} ${diffDays === 1 ? 'день' : 'дня'} назад`;
+    } else {
+      return date.toLocaleDateString('ru-RU');
+    }
+  };
 
-  // Компонент карточки группы сервисов с анимацией
-  const ServiceGroupCard = React.memo(({ item, index }: { item: ServiceGroup; index: number }) => {
-    const cardAnim = React.useRef(new Animated.Value(0)).current;
-    const scaleAnim = React.useRef(new Animated.Value(1)).current;
-    
-    React.useEffect(() => {
-      Animated.parallel([
-        Animated.timing(cardAnim, {
-          toValue: 1,
-          duration: 400,
-          delay: index * 50,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          delay: index * 50,
-          tension: 50,
-          friction: 7,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }, []);
-    
-    const handlePressIn = () => {
-      Animated.spring(scaleAnim, {
-        toValue: 0.98,
-        useNativeDriver: true,
-      }).start();
-    };
-    
-    const handlePressOut = () => {
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        useNativeDriver: true,
-      }).start();
-    };
-    
-    const opacity = cardAnim;
-    const translateY = cardAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [20, 0],
-    });
-    
-    return (
-      <Animated.View
-        style={{
-          opacity,
-          transform: [{ translateY }, { scale: scaleAnim }],
-        }}
-      >
-        <TouchableOpacity
-          style={styles.groupCard}
-          onPress={() => handleOpenServiceGroup(item)}
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}
-          activeOpacity={0.9}
-        >
-      <View style={styles.groupHeader}>
-        <View style={styles.groupIconContainer}>
-          <Ionicons name="apps" size={24} color="#6366F1" />
-        </View>
-        <View style={styles.groupInfo}>
-          <Text style={styles.groupName}>{item.name_ru}</Text>
-          <Text style={styles.groupDescription} numberOfLines={2}>
-            {item.description_ru || item.name_uz || 'Доступные тарифы и услуги'}
-          </Text>
-          <View style={styles.plansCountBadge}>
-            <Text style={styles.plansCountText}>
-              {item.plans_count} {item.plans_count === 1 ? 'тариф' : 'тарифов'}
-            </Text>
-          </View>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-      </View>
-        </TouchableOpacity>
-      </Animated.View>
-    );
-  });
+  // Получаем последние заказы
+  const recentOrders = orders
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 2);
 
-  // Функция рендеринга для FlatList
-  const renderServiceGroupCard = ({ item, index }: { item: ServiceGroup; index: number }) => (
-    <ServiceGroupCard item={item} index={index} />
-  );
+  // Подсчитываем статистику
+  const activeServices = orders.filter(o => o.status === 'active' || o.payment_status === 'paid').length;
+  const pendingServices = orders.filter(o => o.status === 'pending' || o.payment_status === 'pending').length;
 
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#6366F1" />
+        <ActivityIndicator size="large" color="#4F46E5" />
       </View>
     );
   }
 
+  const userName = user?.full_name?.split(' ')[0] || 'Пользователь';
+
   return (
-    <Animated.View 
-      style={[
-        styles.container,
-        {
-          opacity: fadeAnim,
-          transform: [{ translateY: slideAnim }],
-        }
-      ]}
-    >
-      {/* Professional Header */}
+    <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <View style={styles.headerLeft}>
-            <View style={styles.headerIconContainer}>
-              <Ionicons name="home" size={28} color="#6366F1" />
+          <View style={styles.headerLeft} />
+          <Text style={styles.headerTitle}>Главная</Text>
+          <TouchableOpacity style={styles.profileButton} onPress={() => {/* TODO: открыть уведомления */}}>
+            <View style={styles.avatar}>
+              <Ionicons name="notifications-outline" size={20} color="#111827" />
             </View>
-            {user?.role === 'legal_entity' && user?.company_name && (
-              <View style={styles.companyBadge}>
-                <Ionicons name="business" size={12} color="#6366F1" />
-                <Text style={styles.companyName}>{user.company_name}</Text>
-              </View>
-            )}
-          </View>
-          <TouchableOpacity 
-            onPress={() => router.push('/(user)/orders')} 
-            style={styles.iconButton}
-            activeOpacity={0.6}
-          >
-            <Ionicons name="cart-outline" size={24} color="#1F2937" />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Category Buttons */}
-      <View style={styles.categoriesContainer}>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoriesScrollContent}
-        >
+      <Animated.ScrollView
+        style={[
+          styles.content,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#4F46E5']} />
+        }
+      >
+        {/* Welcome Section */}
+        <View style={styles.welcomeSection}>
+          <View style={styles.welcomeText}>
+            <Text style={styles.welcomeTitle}>Добро пожаловать, {userName}</Text>
+            <Text style={styles.welcomeSubtitle}>Управляйте подключёнными сервисами и заказами</Text>
+          </View>
+          <View style={styles.avatarLarge}>
+            <Ionicons name="person" size={24} color="#111827" />
+          </View>
+        </View>
+
+        {/* Segment Control */}
+        <View style={styles.segmentContainer}>
           <TouchableOpacity
-            style={[
-              styles.categoryButton,
-              selectedCategory === null && styles.categoryButtonActive
-            ]}
-            onPress={() => handleCategorySelect(null)}
+            style={[styles.segmentButton, activeSegment === 'servers' && styles.segmentButtonActive]}
+            onPress={() => setActiveSegment('servers')}
             activeOpacity={0.7}
           >
-            <View style={[
-              styles.categoryIconContainer,
-              selectedCategory === null && styles.categoryIconContainerActive
-            ]}>
-              <Ionicons 
-                name="apps" 
-                size={20} 
-                color={selectedCategory === null ? '#4F46E5' : '#6B7280'} 
-              />
+            <View style={styles.segmentIconContainer}>
+              <Ionicons name="server" size={18} color={activeSegment === 'servers' ? '#111827' : '#9CA3AF'} />
             </View>
-            <Text style={[
-              styles.categoryText,
-              selectedCategory === null && styles.categoryTextActive
-            ]}>
-              Все
+            <Text style={[styles.segmentText, activeSegment === 'servers' && styles.segmentTextActive]}>
+              Мои серверы
             </Text>
           </TouchableOpacity>
-          {categories.map((category) => (
-            <TouchableOpacity
-              key={category.id}
-              style={[
-                styles.categoryButton,
-                selectedCategory === category.id && styles.categoryButtonActive
-              ]}
-              onPress={() => handleCategorySelect(category.id)}
-              activeOpacity={0.7}
-            >
-              <View style={[
-                styles.categoryIconContainer,
-                selectedCategory === category.id && styles.categoryIconContainerActive
-              ]}>
-                <Ionicons 
-                  name={category.icon as any} 
-                  size={20} 
-                  color={selectedCategory === category.id ? '#4F46E5' : '#6B7280'} 
-                />
+          <TouchableOpacity
+            style={[styles.segmentButton, activeSegment === 'storage' && styles.segmentButtonActive]}
+            onPress={() => setActiveSegment('storage')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.segmentIconContainer}>
+              <Ionicons name="cube" size={18} color={activeSegment === 'storage' ? '#111827' : '#9CA3AF'} />
+            </View>
+            <Text style={[styles.segmentText, activeSegment === 'storage' && styles.segmentTextActive]}>
+              Моё{'\n'}хранилище
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Subscription Card */}
+        <View style={styles.subscriptionCard}>
+          <View style={styles.subscriptionHeader}>
+            <View style={styles.subscriptionInfo}>
+              <View style={styles.subscriptionIconContainer}>
+                <Ionicons name="star" size={18} color="#111827" />
               </View>
-              <Text style={[
-                styles.categoryText,
-                selectedCategory === category.id && styles.categoryTextActive
-              ]}>
-                {category.name}
-              </Text>
+              <View>
+                <Text style={styles.subscriptionTitle}>Подписка</Text>
+                <Text style={styles.subscriptionPeriod}>Pro • помесячно</Text>
+              </View>
+            </View>
+            <TouchableOpacity>
+              <Text style={styles.subscriptionLink}>Изменить план</Text>
             </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* Content */}
-      <View style={styles.contentSection}>
-        <FlatList
-          ListHeaderComponent={
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Сервисы</Text>
+          </View>
+          <View style={styles.subscriptionDivider} />
+          <View style={styles.subscriptionStats}>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{activeServices}</Text>
+              <Text style={styles.statLabel}>Активные сервисы</Text>
             </View>
-          }
-          data={filteredServiceGroups}
-          renderItem={renderServiceGroupCard}
-          keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#6366F1']} />
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Ionicons name="apps-outline" size={64} color="#D1D5DB" />
-              <Text style={styles.emptyText}>Нет доступных сервисов</Text>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{pendingServices}</Text>
+              <Text style={styles.statLabel}>Ожидают</Text>
             </View>
-          }
-        />
-      </View>
+          </View>
+        </View>
 
-      {/* Bottom Navigation Bar */}
+        {/* My Services Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Мои сервисы</Text>
+          
+          <View style={styles.serviceCard}>
+            <View style={styles.serviceCardContent}>
+              <View style={styles.serviceIconContainer}>
+                <Ionicons name="server" size={18} color="#111827" />
+              </View>
+              <View style={styles.serviceInfo}>
+                <Text style={styles.serviceName}>Серверы</Text>
+                <Text style={styles.serviceDescription}>
+                  {activeServices} активных • средняя загрузка 28%
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity style={styles.serviceButton}>
+              <Text style={styles.serviceButtonText}>Открыть</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.serviceCard}>
+            <View style={styles.serviceCardContent}>
+              <View style={styles.serviceIconContainer}>
+                <Ionicons name="cube" size={18} color="#111827" />
+              </View>
+              <View style={styles.serviceInfo}>
+                <Text style={styles.serviceName}>Объектное хранилище</Text>
+                <Text style={styles.serviceDescription}>1 бакет • 40 ГБ</Text>
+              </View>
+            </View>
+            <TouchableOpacity style={styles.serviceButton}>
+              <Text style={styles.serviceButtonText}>Открыть</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Recent Orders Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Последние заказы</Text>
+          
+          {recentOrders.length > 0 ? (
+            recentOrders.map((order) => (
+              <View key={order.order_id} style={styles.orderCard}>
+                <View style={styles.orderCardContent}>
+                  <View style={styles.orderIconContainer}>
+                    <Ionicons name="document-text" size={18} color="#111827" />
+                  </View>
+                  <View style={styles.orderInfo}>
+                    <Text style={styles.orderTitle}>{order.plan_name}</Text>
+                    <Text style={styles.orderSubtitle}>
+                      Заказ №{order.order_number || order.order_id} • {formatTimeAgo(order.created_at)}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.orderStatusBadge}>
+                  <Text style={styles.orderStatusText}>
+                    {getStatusLabel(order.status || order.payment_status || 'pending')}
+                  </Text>
+                </View>
+              </View>
+            ))
+          ) : (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyText}>Нет заказов</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Support Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Поддержка</Text>
+          
+          <TouchableOpacity style={styles.supportCard}>
+            <View style={styles.supportCardContent}>
+              <View style={styles.supportIconContainer}>
+                <Ionicons name="chatbubble-ellipses" size={18} color="#111827" />
+              </View>
+              <View style={styles.supportInfo}>
+                <Text style={styles.supportTitle}>Открыть тикет</Text>
+                <Text style={styles.supportDescription}>Поможем решить вопрос</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.supportCard}>
+            <View style={styles.supportCardContent}>
+              <View style={styles.supportIconContainer}>
+                <Ionicons name="receipt" size={18} color="#111827" />
+              </View>
+              <View style={styles.supportInfo}>
+                <Text style={styles.supportTitle}>Оплата и счета</Text>
+                <Text style={styles.supportDescription}>Способы оплаты и история</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.bottomSpacer} />
+      </Animated.ScrollView>
+
+      {/* Bottom Navigation */}
       <View style={styles.bottomNav}>
         <TouchableOpacity 
           style={styles.bottomNavItem}
-          onPress={() => {}}
+          onPress={() => router.push('/(user)/home')}
           activeOpacity={0.7}
         >
-          <Ionicons name="home" size={24} color="#6366F1" />
+          <View style={styles.bottomNavContent}>
+            <View style={pathname === '/(user)/home' ? styles.bottomNavIconActive : styles.bottomNavIcon}>
+              <Ionicons name="home" size={20} color={pathname === '/(user)/home' ? '#FFFFFF' : '#9CA3AF'} />
+            </View>
+            <Text style={pathname === '/(user)/home' ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Главная</Text>
+            {pathname === '/(user)/home' && <View style={styles.bottomNavIndicator} />}
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.bottomNavItem}
+          onPress={() => router.push('/(user)/services' as any)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.bottomNavContent}>
+            <View style={pathname === '/(user)/services' ? styles.bottomNavIconActive : styles.bottomNavIcon}>
+              <Ionicons name="grid" size={20} color={pathname === '/(user)/services' ? '#FFFFFF' : '#9CA3AF'} />
+            </View>
+            <Text style={pathname === '/(user)/services' ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Сервисы</Text>
+            {pathname === '/(user)/services' && <View style={styles.bottomNavIndicator} />}
+          </View>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.bottomNavItem}
           onPress={() => router.push('/(user)/orders')}
           activeOpacity={0.7}
         >
-          <Ionicons name="cart-outline" size={24} color="#9CA3AF" />
+          <View style={styles.bottomNavContent}>
+            <View style={pathname === '/(user)/orders' ? styles.bottomNavIconActive : styles.bottomNavIcon}>
+              <Ionicons name="cart" size={20} color={pathname === '/(user)/orders' ? '#FFFFFF' : '#9CA3AF'} />
+            </View>
+            <Text style={pathname === '/(user)/orders' ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Заказы</Text>
+            {pathname === '/(user)/orders' && <View style={styles.bottomNavIndicator} />}
+          </View>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.bottomNavItem}
-          onPress={handleLogout}
+          onPress={() => router.push('/(user)/profile' as any)}
           activeOpacity={0.7}
         >
-          <Ionicons name="person-outline" size={24} color="#9CA3AF" />
+          <View style={styles.bottomNavContent}>
+            <View style={pathname === '/(user)/profile' ? styles.bottomNavIconActive : styles.bottomNavIcon}>
+              <Ionicons name="person" size={20} color={pathname === '/(user)/profile' ? '#FFFFFF' : '#9CA3AF'} />
+            </View>
+            <Text style={pathname === '/(user)/profile' ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Профиль</Text>
+            {pathname === '/(user)/profile' && <View style={styles.bottomNavIndicator} />}
+          </View>
         </TouchableOpacity>
       </View>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -415,402 +464,456 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F9FAFB',
   },
   header: {
     paddingTop: Platform.OS === 'ios' ? 60 : 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    paddingBottom: 12,
+    paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
   headerContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   headerLeft: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  headerIconContainer: {
     width: 40,
     height: 40,
-    borderRadius: 10,
-    backgroundColor: '#F9FAFB',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#111827',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "SF Pro Display"' : 'Roboto, sans-serif',
-    letterSpacing: -0.5,
-    lineHeight: 34,
-  },
-  companyBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 6,
-    backgroundColor: '#EEF2FF',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
-    gap: 4,
-  },
-  companyName: {
-    fontSize: 11,
-    color: '#6366F1',
-    fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
-  },
-  iconButton: {
-    padding: 6,
-    marginLeft: 8,
-  },
-  tabsContainer: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  tabsWrapper: {
-    flexDirection: 'row',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    padding: 4,
-    gap: 4,
-  },
-  tab: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    gap: 6,
-  },
-  tabActive: {
-    backgroundColor: '#6366F1',
-    shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-    transform: [{ scale: 1.02 }],
-  },
-  tabText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6B7280',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "SF Pro Display"' : 'Roboto, sans-serif',
-    letterSpacing: 0.1,
-  },
-  tabTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  contentSection: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    backgroundColor: '#F9FAFB',
-  },
-  sectionHeader: {
-    marginBottom: 16,
-    paddingHorizontal: 0,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 0,
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "SF Pro Display"' : 'Roboto, sans-serif',
-    letterSpacing: -0.5,
-  },
-  sectionSubtitle: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: '#94A3B8',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
-    letterSpacing: 0,
-  },
-  listContent: {
-    paddingBottom: 20,
-  },
-  // VPS Plan Card Styles
-  planCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 24,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  planHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 20,
-  },
-  providerName: {
-    fontSize: 11,
-    color: '#9CA3AF',
-    textTransform: 'uppercase',
-    fontWeight: '600',
-    letterSpacing: 0.8,
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
-    marginBottom: 4,
-  },
-  planName: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#111827',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "SF Pro Display"' : 'Roboto, sans-serif',
-    letterSpacing: -0.5,
-  },
-  regionBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    gap: 4,
-  },
-  regionText: {
-    fontSize: 11,
-    color: '#6B7280',
-    fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
-  },
-  specsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 20,
-    gap: 8,
-  },
-  specItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 6,
-  },
-  specText: {
-    fontSize: 13,
-    color: '#374151',
-    fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
-  },
-  priceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-  },
-  priceText: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#111827',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "SF Pro Display"' : 'Roboto, sans-serif',
-    letterSpacing: -0.6,
-    lineHeight: 34,
-  },
-  priceLabel: {
-    fontSize: 13,
-    color: '#6B7280',
-    marginTop: 2,
-    fontWeight: '500',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
-  },
-  // Service Group Card Styles
-  groupCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 12,
-    borderWidth: 0,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  groupHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 18,
-  },
-  groupIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: '#F9FAFB',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 0,
-  },
-  groupInfo: {
-    flex: 1,
-  },
-  groupName: {
     fontSize: 18,
     fontWeight: '600',
     color: '#111827',
-    marginBottom: 4,
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "SF Pro Display"' : 'Roboto, sans-serif',
-    letterSpacing: -0.3,
-    lineHeight: 24,
-  },
-  groupDescription: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 10,
-    lineHeight: 20,
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
     letterSpacing: 0,
   },
-  plansCountBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-    borderWidth: 0,
-  },
-  plansCountText: {
-    fontSize: 12,
-    color: '#4B5563',
-    fontWeight: '500',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
-    letterSpacing: 0,
-  },
-  orderButton: {
-    backgroundColor: '#6366F1',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 10,
-    shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  orderButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "SF Pro Display"' : 'Roboto, sans-serif',
-    letterSpacing: 0.2,
-  },
-  emptyContainer: {
-    alignItems: 'center',
+  profileButton: {
+    width: 40,
+    height: 40,
     justifyContent: 'center',
-    paddingVertical: 80,
+    alignItems: 'center',
   },
-  emptyText: {
-    fontSize: 16,
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 24,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  avatarLarge: {
+    width: 40,
+    height: 40,
+    borderRadius: 24,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  content: {
+    flex: 1,
+  },
+  welcomeSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    gap: 11,
+  },
+  welcomeText: {
+    flex: 1,
+  },
+  welcomeTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 4,
+    letterSpacing: 0,
+    lineHeight: 21.78,
+  },
+  welcomeSubtitle: {
+    fontSize: 12,
+    fontWeight: '400',
     color: '#9CA3AF',
-    marginTop: 16,
-    fontWeight: '500',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    lineHeight: 14.52,
   },
-  categoriesContainer: {
-    paddingTop: 20,
-    paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  categoriesScrollContent: {
-    paddingHorizontal: 20,
+  segmentContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginHorizontal: 16,
+    marginBottom: 12,
     gap: 8,
   },
-  categoryButton: {
+  segmentButton: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+    paddingVertical: 13,
+    paddingHorizontal: 13,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    minWidth: 175,
+  },
+  segmentButtonActive: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
+  },
+  segmentIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 24,
+    backgroundColor: '#F3F4F6',
     justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  segmentText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#9CA3AF',
+    lineHeight: 15.73,
+  },
+  segmentTextActive: {
+    color: '#111827',
+  },
+  subscriptionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 17,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    elevation: 3,
+  },
+  subscriptionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  subscriptionInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  subscriptionIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 24,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  subscriptionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+    lineHeight: 16.94,
+  },
+  subscriptionPeriod: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#9CA3AF',
+    lineHeight: 14.52,
+  },
+  subscriptionLink: {
+    fontSize: 16,
+    fontWeight: '400',
+    color: '#111827',
+    lineHeight: 19.36,
+  },
+  subscriptionDivider: {
+    width: '100%',
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: 8,
+  },
+  subscriptionStats: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    paddingTop: 4,
+  },
+  statItem: {
+    flex: 1,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 24,
+    padding: 11,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 6,
+  },
+  statValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+    lineHeight: 16.94,
+  },
+  statLabel: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: '#9CA3AF',
+    lineHeight: 14.52,
+  },
+  section: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#9CA3AF',
+    marginBottom: 8,
+    lineHeight: 16.94,
+  },
+  serviceCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 13,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  serviceCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  serviceIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 24,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  serviceInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  serviceName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+    lineHeight: 16.94,
+  },
+  serviceDescription: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#9CA3AF',
+    lineHeight: 14.52,
+  },
+  serviceButton: {
+    paddingHorizontal: 11,
+    paddingVertical: 7,
     borderRadius: 12,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    minWidth: 84,
-    gap: 8,
   },
-  categoryButtonActive: {
-    backgroundColor: '#EEF2FF',
-    borderColor: '#4F46E5',
-    borderWidth: 1,
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  categoryIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#F9FAFB',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 0,
-  },
-  categoryIconContainerActive: {
-    backgroundColor: '#FFFFFF',
-  },
-  categoryText: {
+  serviceButtonText: {
     fontSize: 12,
     fontWeight: '500',
     color: '#374151',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "SF Pro Display"' : 'Roboto, sans-serif',
-    letterSpacing: 0,
+    lineHeight: 14.52,
   },
-  categoryTextActive: {
+  orderCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 13,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  orderCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  orderIconContainer: {
+    width: 40.73,
+    height: 44,
+    borderRadius: 24,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  orderInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  orderTitle: {
+    fontSize: 14,
     fontWeight: '600',
-    color: '#4F46E5',
+    color: '#111827',
+    lineHeight: 16.94,
   },
-  // Bottom Navigation
+  orderSubtitle: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#9CA3AF',
+    lineHeight: 14.52,
+  },
+  orderStatusBadge: {
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  orderStatusText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#9CA3AF',
+    lineHeight: 14.52,
+  },
+  emptyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#9CA3AF',
+  },
+  supportCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 13,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  supportCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  supportIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 24,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  supportInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  supportTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+    lineHeight: 16.94,
+  },
+  supportDescription: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#9CA3AF',
+    lineHeight: 14.52,
+  },
+  bottomSpacer: {
+    height: 20,
+  },
   bottomNav: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
-    borderTopWidth: 0,
-    paddingTop: 12,
-    paddingBottom: Platform.OS === 'ios' ? 28 : 16,
-    paddingHorizontal: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    paddingTop: 9,
+    paddingBottom: Platform.OS === 'ios' ? 15 : 15,
+    paddingHorizontal: 8,
+    justifyContent: 'center',
+    gap: 6,
   },
   bottomNavItem: {
-    flex: 1,
+    width: 89,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  bottomNavContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
+    position: 'relative',
+  },
+  bottomNavIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 24,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bottomNavIconActive: {
+    width: 28,
+    height: 28,
+    borderRadius: 24,
+    backgroundColor: '#4F46E5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bottomNavIndicator: {
+    position: 'absolute',
+    bottom: -12,
+    width: 32,
+    height: 3,
+    backgroundColor: '#4F46E5',
+    borderRadius: 2,
+  },
+  bottomNavLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#9CA3AF',
+    lineHeight: 14.52,
+  },
+  bottomNavLabelActive: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4F46E5',
+    lineHeight: 14.52,
   },
 });

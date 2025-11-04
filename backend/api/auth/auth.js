@@ -235,7 +235,8 @@ router.get('/google/callback',
         email: req.user.email,
         full_name: userFullName,
         role: req.user.role,
-        company_name: req.user.company_name
+        company_name: req.user.company_name,
+        oauth_provider: req.user.oauth_provider || 'google'
       };
       
       // Get redirect URI from state parameter (sent by mobile app)
@@ -258,18 +259,35 @@ router.get('/google/callback',
 // Get current user profile
 router.get('/me', authenticate, async (req, res) => {
   try {
-    const userFullName = `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim();
+    // Get full user data including oauth_provider and phone
+    await db.connect();
+    const users = await db.query(
+      'SELECT id, username, email, first_name, last_name, phone, role, company_name, status, oauth_provider FROM users WHERE id = ?',
+      [req.user.id]
+    );
+    
+    if (users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+    
+    const user = users[0];
+    const userFullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
     
     res.json({
       success: true,
       data: {
-        user_id: req.user.id,
-        username: req.user.username,
-        email: req.user.email,
+        user_id: user.id,
+        username: user.username,
+        email: user.email,
         full_name: userFullName,
-        role: req.user.role,
-        company_name: req.user.company_name,
-        status: req.user.status
+        role: user.role,
+        company_name: user.company_name,
+        status: user.status,
+        oauth_provider: user.oauth_provider,
+        phone: user.phone
       }
     });
   } catch (error) {

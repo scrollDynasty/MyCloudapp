@@ -16,7 +16,6 @@ import {
 import { API_URL } from '../../config/api';
 import { useAuth } from '../../lib/AuthContext';
 
-// Helper function to add required headers for ngrok
 const getHeaders = (token?: string) => {
   const headers: Record<string, string> = {
     'ngrok-skip-browser-warning': 'true',
@@ -183,7 +182,7 @@ export default function AdminDashboardScreen() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#5B5AFD" />
+        <ActivityIndicator size="large" color="#4F46E5" />
       </View>
     );
   }
@@ -195,13 +194,11 @@ export default function AdminDashboardScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <TouchableOpacity style={styles.menuButton} onPress={() => {}}>
-            <Ionicons name="reorder-three-outline" size={24} color="#1A1A1A" />
-          </TouchableOpacity>
+          <View style={styles.headerLeft} />
           <Text style={styles.headerTitle}>Главная</Text>
           <TouchableOpacity style={styles.profileButton} onPress={handleLogout}>
             <View style={styles.avatar}>
-              <Ionicons name="person" size={20} color="#5B5AFD" />
+              <Ionicons name="person" size={20} color="#111827" />
             </View>
           </TouchableOpacity>
         </View>
@@ -211,7 +208,7 @@ export default function AdminDashboardScreen() {
         style={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#5B5AFD']} />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#4F46E5']} />
         }
       >
         {/* Welcome Section */}
@@ -221,7 +218,7 @@ export default function AdminDashboardScreen() {
             <Text style={styles.welcomeSubtitle}>Управляйте подключёнными сервисами и заказами</Text>
           </View>
           <View style={styles.avatarLarge}>
-            <Ionicons name="person" size={32} color="#5B5AFD" />
+            <Ionicons name="person" size={24} color="#111827" />
           </View>
         </View>
 
@@ -232,6 +229,9 @@ export default function AdminDashboardScreen() {
             onPress={() => setActiveSegment('servers')}
             activeOpacity={0.7}
           >
+            <View style={styles.segmentIconContainer}>
+              <Ionicons name="server" size={18} color={activeSegment === 'servers' ? '#111827' : '#9CA3AF'} />
+            </View>
             <Text style={[styles.segmentText, activeSegment === 'servers' && styles.segmentTextActive]}>
               Мои серверы
             </Text>
@@ -241,8 +241,11 @@ export default function AdminDashboardScreen() {
             onPress={() => setActiveSegment('storage')}
             activeOpacity={0.7}
           >
+            <View style={styles.segmentIconContainer}>
+              <Ionicons name="cube" size={18} color={activeSegment === 'storage' ? '#111827' : '#9CA3AF'} />
+            </View>
             <Text style={[styles.segmentText, activeSegment === 'storage' && styles.segmentTextActive]}>
-              Моё хранилище
+              Моё{'\n'}хранилище
             </Text>
           </TouchableOpacity>
         </View>
@@ -250,17 +253,25 @@ export default function AdminDashboardScreen() {
         {/* Subscription Card */}
         <View style={styles.subscriptionCard}>
           <View style={styles.subscriptionHeader}>
-            <Text style={styles.subscriptionTitle}>Подписка Pro — помесячно</Text>
+            <View style={styles.subscriptionInfo}>
+              <View style={styles.subscriptionIconContainer}>
+                <Ionicons name="star" size={18} color="#111827" />
+              </View>
+              <View>
+                <Text style={styles.subscriptionTitle}>Подписка</Text>
+                <Text style={styles.subscriptionPeriod}>Pro • помесячно</Text>
+              </View>
+            </View>
             <TouchableOpacity>
               <Text style={styles.subscriptionLink}>Изменить план</Text>
             </TouchableOpacity>
           </View>
+          <View style={styles.subscriptionDivider} />
           <View style={styles.subscriptionStats}>
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{activeServices}</Text>
               <Text style={styles.statLabel}>Активные сервисы</Text>
             </View>
-            <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{pendingServices}</Text>
               <Text style={styles.statLabel}>Ожидают</Text>
@@ -273,14 +284,16 @@ export default function AdminDashboardScreen() {
           <Text style={styles.sectionTitle}>Мои сервисы</Text>
           
           <View style={styles.serviceCard}>
-            <View style={styles.serviceIconContainer}>
-              <Ionicons name="server" size={24} color="#5B5AFD" />
-            </View>
-            <View style={styles.serviceInfo}>
-              <Text style={styles.serviceName}>Серверы</Text>
-              <Text style={styles.serviceDescription}>
-                {activeServices} активных • средняя загрузка 28%
-              </Text>
+            <View style={styles.serviceCardContent}>
+              <View style={styles.serviceIconContainer}>
+                <Ionicons name="server" size={18} color="#111827" />
+              </View>
+              <View style={styles.serviceInfo}>
+                <Text style={styles.serviceName}>Серверы</Text>
+                <Text style={styles.serviceDescription}>
+                  {activeServices} активных • средняя загрузка 28%
+                </Text>
+              </View>
             </View>
             <TouchableOpacity style={styles.serviceButton}>
               <Text style={styles.serviceButtonText}>Открыть</Text>
@@ -288,12 +301,14 @@ export default function AdminDashboardScreen() {
           </View>
 
           <View style={styles.serviceCard}>
-            <View style={styles.serviceIconContainer}>
-              <Ionicons name="cloud" size={24} color="#5B5AFD" />
-            </View>
-            <View style={styles.serviceInfo}>
-              <Text style={styles.serviceName}>Объектное хранилище</Text>
-              <Text style={styles.serviceDescription}>1 бакет • 40 ГБ</Text>
+            <View style={styles.serviceCardContent}>
+              <View style={styles.serviceIconContainer}>
+                <Ionicons name="cube" size={18} color="#111827" />
+              </View>
+              <View style={styles.serviceInfo}>
+                <Text style={styles.serviceName}>Объектное хранилище</Text>
+                <Text style={styles.serviceDescription}>1 бакет • 40 ГБ</Text>
+              </View>
             </View>
             <TouchableOpacity style={styles.serviceButton}>
               <Text style={styles.serviceButtonText}>Открыть</Text>
@@ -308,16 +323,18 @@ export default function AdminDashboardScreen() {
           {recentOrders.length > 0 ? (
             recentOrders.map((order) => (
               <View key={order.order_id} style={styles.orderCard}>
-                <View style={styles.orderIconContainer}>
-                  <Ionicons name="document-text" size={20} color="#5B5AFD" />
+                <View style={styles.orderCardContent}>
+                  <View style={styles.orderIconContainer}>
+                    <Ionicons name="document-text" size={18} color="#111827" />
+                  </View>
+                  <View style={styles.orderInfo}>
+                    <Text style={styles.orderTitle}>{order.plan_name}</Text>
+                    <Text style={styles.orderSubtitle}>
+                      Заказ №{order.order_number || order.order_id} • {formatTimeAgo(order.created_at)}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.orderInfo}>
-                  <Text style={styles.orderTitle}>{order.plan_name}</Text>
-                  <Text style={styles.orderSubtitle}>
-                    Заказ №{order.order_number || order.order_id} • {formatTimeAgo(order.created_at)}
-                  </Text>
-                </View>
-                <View style={[styles.orderStatusBadge, { backgroundColor: getStatusColor(order.status || order.payment_status || 'pending') }]}>
+                <View style={[styles.orderStatusBadge]}>
                   <Text style={styles.orderStatusText}>
                     {getStatusLabel(order.status || order.payment_status || 'pending')}
                   </Text>
@@ -336,25 +353,29 @@ export default function AdminDashboardScreen() {
           <Text style={styles.sectionTitle}>Поддержка</Text>
           
           <TouchableOpacity style={styles.supportCard}>
-            <View style={styles.supportIconContainer}>
-              <Ionicons name="chatbubble-ellipses" size={24} color="#5B5AFD" />
+            <View style={styles.supportCardContent}>
+              <View style={styles.supportIconContainer}>
+                <Ionicons name="chatbubble-ellipses" size={18} color="#111827" />
+              </View>
+              <View style={styles.supportInfo}>
+                <Text style={styles.supportTitle}>Открыть тикет</Text>
+                <Text style={styles.supportDescription}>Поможем решить вопрос</Text>
+              </View>
             </View>
-            <View style={styles.supportInfo}>
-              <Text style={styles.supportTitle}>Открыть тикет</Text>
-              <Text style={styles.supportDescription}>Поможем решить вопрос</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#7A7A7A" />
+            <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.supportCard}>
-            <View style={styles.supportIconContainer}>
-              <Ionicons name="receipt" size={24} color="#5B5AFD" />
+            <View style={styles.supportCardContent}>
+              <View style={styles.supportIconContainer}>
+                <Ionicons name="receipt" size={18} color="#111827" />
+              </View>
+              <View style={styles.supportInfo}>
+                <Text style={styles.supportTitle}>Оплата и счета</Text>
+                <Text style={styles.supportDescription}>Способы оплаты и история</Text>
+              </View>
             </View>
-            <View style={styles.supportInfo}>
-              <Text style={styles.supportTitle}>Оплата и счета</Text>
-              <Text style={styles.supportDescription}>Способы оплаты и история</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#7A7A7A" />
+            <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
           </TouchableOpacity>
         </View>
 
@@ -365,26 +386,36 @@ export default function AdminDashboardScreen() {
       <View style={styles.bottomNav}>
         <TouchableOpacity style={styles.bottomNavItem}>
           <View style={styles.bottomNavIconActive}>
-            <Ionicons name="home" size={24} color="#5B5AFD" />
+            <Ionicons name="home" size={20} color="#4F46E5" />
           </View>
+          <Text style={styles.bottomNavLabelActive}>Главная</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.bottomNavItem}
           onPress={() => router.push('/(user)/home')}
         >
-          <Ionicons name="grid" size={24} color="#7A7A7A" />
+          <View style={styles.bottomNavIcon}>
+            <Ionicons name="grid" size={20} color="#9CA3AF" />
+          </View>
+          <Text style={styles.bottomNavLabel}>Сервисы</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.bottomNavItem}
           onPress={() => router.push('/(user)/orders')}
         >
-          <Ionicons name="cart" size={24} color="#7A7A7A" />
+          <View style={styles.bottomNavIcon}>
+            <Ionicons name="cart" size={20} color="#9CA3AF" />
+          </View>
+          <Text style={styles.bottomNavLabel}>Заказы</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.bottomNavItem}
           onPress={handleLogout}
         >
-          <Ionicons name="person" size={24} color="#7A7A7A" />
+          <View style={styles.bottomNavIcon}>
+            <Ionicons name="person" size={20} color="#9CA3AF" />
+          </View>
+          <Text style={styles.bottomNavLabel}>Профиль</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -394,18 +425,18 @@ export default function AdminDashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FB',
+    backgroundColor: '#F9FAFB',
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8F9FB',
+    backgroundColor: '#F9FAFB',
   },
   header: {
     paddingTop: Platform.OS === 'ios' ? 60 : 50,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
+    paddingBottom: 12,
+    paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
@@ -415,18 +446,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  menuButton: {
+  headerLeft: {
     width: 40,
     height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "SF Pro Display"' : 'Roboto, sans-serif',
-    letterSpacing: -0.3,
+    fontWeight: '600',
+    color: '#111827',
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : 'Roboto',
+    letterSpacing: 0,
   },
   profileButton: {
     width: 40,
@@ -435,20 +464,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F0F0FF',
+    width: 40,
+    height: 40,
+    borderRadius: 24,
+    backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   avatarLarge: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#F0F0FF',
+    width: 40,
+    height: 40,
+    borderRadius: 24,
+    backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   content: {
     flex: 1,
@@ -457,267 +490,353 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 20,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    gap: 11,
   },
   welcomeText: {
     flex: 1,
   },
   welcomeTitle: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: '#111827',
     marginBottom: 4,
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "SF Pro Display"' : 'Roboto, sans-serif',
-    letterSpacing: -0.5,
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : 'Roboto',
+    letterSpacing: 0,
+    lineHeight: 21.78,
   },
   welcomeSubtitle: {
-    fontSize: 14,
-    color: '#7A7A7A',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
-    lineHeight: 20,
+    fontSize: 12,
+    fontWeight: '400',
+    color: '#9CA3AF',
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : 'Roboto',
+    lineHeight: 14.52,
   },
   segmentContainer: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 20,
-    marginBottom: 16,
-    borderRadius: 12,
-    padding: 4,
-    gap: 4,
+    justifyContent: 'center',
+    marginHorizontal: 16,
+    marginBottom: 12,
+    gap: 8,
   },
   segmentButton: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 13,
+    paddingHorizontal: 13,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    minWidth: 175,
   },
   segmentButtonActive: {
-    backgroundColor: '#5B5AFD',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
+  },
+  segmentIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 24,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   segmentText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#7A7A7A',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    color: '#9CA3AF',
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : 'Roboto',
+    lineHeight: 15.73,
   },
   segmentTextActive: {
-    color: '#FFFFFF',
+    color: '#111827',
   },
   subscriptionCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    marginHorizontal: 20,
-    marginBottom: 24,
+    borderRadius: 24,
+    padding: 17,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
     elevation: 3,
   },
   subscriptionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
+  },
+  subscriptionInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  subscriptionIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 24,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   subscriptionTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A1A',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    color: '#111827',
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : 'Roboto',
+    lineHeight: 16.94,
+  },
+  subscriptionPeriod: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#9CA3AF',
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : 'Roboto',
+    lineHeight: 14.52,
   },
   subscriptionLink: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#5B5AFD',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    fontSize: 16,
+    fontWeight: '400',
+    color: '#111827',
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : 'Roboto',
+    lineHeight: 19.36,
+  },
+  subscriptionDivider: {
+    width: '100%',
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: 8,
   },
   subscriptionStats: {
     flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingTop: 4,
   },
   statItem: {
     flex: 1,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 24,
+    padding: 11,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 6,
   },
   statValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 4,
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : 'Roboto',
+    lineHeight: 16.94,
   },
   statLabel: {
     fontSize: 12,
-    color: '#7A7A7A',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
-  },
-  statDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: '#E5E7EB',
-    marginHorizontal: 20,
+    fontWeight: '400',
+    color: '#9CA3AF',
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : 'Roboto',
+    lineHeight: 14.52,
   },
   section: {
-    paddingHorizontal: 20,
-    marginBottom: 24,
+    paddingHorizontal: 16,
+    marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 12,
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "SF Pro Display"' : 'Roboto, sans-serif',
-    letterSpacing: -0.3,
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#9CA3AF',
+    marginBottom: 8,
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : 'Roboto',
+    lineHeight: 16.94,
   },
   serviceCard: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    borderRadius: 24,
+    padding: 13,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  serviceCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
   },
   serviceIconContainer: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: 24,
-    backgroundColor: '#F0F0FF',
+    backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   serviceInfo: {
     flex: 1,
+    gap: 2,
   },
   serviceName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A1A',
-    marginBottom: 4,
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    color: '#111827',
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : 'Roboto',
+    lineHeight: 16.94,
   },
   serviceDescription: {
-    fontSize: 14,
-    color: '#7A7A7A',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#9CA3AF',
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : 'Roboto',
+    lineHeight: 14.52,
   },
   serviceButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#5B5AFD',
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   serviceButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#374151',
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : 'Roboto',
+    lineHeight: 14.52,
   },
   orderCard: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    borderRadius: 24,
+    padding: 13,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  orderCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
   },
   orderIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F0F0FF',
+    width: 40.73,
+    height: 44,
+    borderRadius: 24,
+    backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   orderInfo: {
     flex: 1,
+    gap: 2,
   },
   orderTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A1A',
-    marginBottom: 4,
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    color: '#111827',
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : 'Roboto',
+    lineHeight: 16.94,
   },
   orderSubtitle: {
     fontSize: 12,
-    color: '#7A7A7A',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    fontWeight: '500',
+    color: '#9CA3AF',
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : 'Roboto',
+    lineHeight: 14.52,
   },
   orderStatusBadge: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 11,
     paddingVertical: 6,
     borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   orderStatusText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    fontWeight: '500',
+    color: '#9CA3AF',
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : 'Roboto',
+    lineHeight: 14.52,
   },
   emptyCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 24,
     padding: 24,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   emptyText: {
     fontSize: 14,
-    color: '#7A7A7A',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    color: '#9CA3AF',
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : 'Roboto',
   },
   supportCard: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    borderRadius: 24,
+    padding: 13,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  supportCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
   },
   supportIconContainer: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: 24,
-    backgroundColor: '#F0F0FF',
+    backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   supportInfo: {
     flex: 1,
+    gap: 2,
   },
   supportTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A1A',
-    marginBottom: 4,
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    color: '#111827',
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : 'Roboto',
+    lineHeight: 16.94,
   },
   supportDescription: {
-    fontSize: 14,
-    color: '#7A7A7A',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#9CA3AF',
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : 'Roboto',
+    lineHeight: 14.52,
   },
   bottomSpacer: {
     height: 20,
@@ -727,29 +846,49 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
-    paddingTop: 8,
-    paddingBottom: Platform.OS === 'ios' ? 28 : 16,
-    paddingHorizontal: 20,
-    justifyContent: 'space-around',
-    alignItems: 'center',
+    paddingTop: 9,
+    paddingBottom: Platform.OS === 'ios' ? 10 : 10,
+    paddingHorizontal: 8,
+    justifyContent: 'center',
+    gap: 6,
   },
   bottomNavItem: {
-    flex: 1,
+    width: 89,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
+    gap: 4,
   },
-  bottomNavIconActive: {
-    width: 48,
-    height: 48,
+  bottomNavIcon: {
+    width: 28,
+    height: 28,
     borderRadius: 24,
-    backgroundColor: '#F0F0FF',
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#5B5AFD',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  bottomNavIconActive: {
+    width: 28,
+    height: 28,
+    borderRadius: 24,
+    backgroundColor: '#4F46E5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bottomNavLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#9CA3AF',
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : 'Roboto',
+    lineHeight: 14.52,
+  },
+  bottomNavLabelActive: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#EEF2FF',
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : 'Roboto',
+    lineHeight: 14.52,
   },
 });

@@ -7,6 +7,8 @@ interface User {
   email: string;
   role: string;
   company_name?: string;
+  oauth_provider?: string | null;
+  phone?: string | null;
 }
 
 interface AuthContextType {

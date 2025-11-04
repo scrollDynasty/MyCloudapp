@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Animated,
+  Dimensions,
   FlatList,
   Platform,
   RefreshControl,
@@ -15,6 +17,9 @@ import {
 } from 'react-native';
 import { API_URL } from '../../config/api';
 import { getHeaders } from '../../config/fetch';
+import { useAuth } from '../../lib/AuthContext';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface Order {
   order_id: number;
@@ -29,9 +34,20 @@ interface Order {
 
 export default function OrdersScreen() {
   const router = useRouter();
+  const pathname = usePathname();
+  const { signOut } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      router.replace('/auth/login');
+    } catch (error) {
+      Alert.alert('Ошибка', 'Не удалось выйти. Попробуйте еще раз.');
+    }
+  };
   
   // Анимации
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -205,7 +221,7 @@ export default function OrdersScreen() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#6366F1" />
+        <ActivityIndicator size="large" color="#4F46E5" />
       </View>
     );
   }
@@ -233,7 +249,7 @@ export default function OrdersScreen() {
             style={styles.browseButton}
             onPress={() => router.replace('/(user)/home')}
           >
-            <Text style={styles.browseButtonText}>Выбрать VPS план</Text>
+            <Text style={styles.browseButtonText}>Выбрать сервис</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -243,33 +259,64 @@ export default function OrdersScreen() {
           keyExtractor={(item, index) => item?.order_id?.toString() || `order-${index}`}
           contentContainerStyle={styles.listContent}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#6366F1']} />
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#4F46E5']} />
           }
         />
       )}
 
-      {/* Bottom Navigation Bar */}
+      {/* Bottom Navigation */}
       <View style={styles.bottomNav}>
         <TouchableOpacity 
           style={styles.bottomNavItem}
-          onPress={() => router.replace('/(user)/home')}
+          onPress={() => router.push('/(user)/home')}
           activeOpacity={0.7}
         >
-          <Ionicons name="home-outline" size={24} color="#9CA3AF" />
+          <View style={styles.bottomNavContent}>
+            <View style={pathname === '/(user)/home' ? styles.bottomNavIconActive : styles.bottomNavIcon}>
+              <Ionicons name="home" size={20} color={pathname === '/(user)/home' ? '#FFFFFF' : '#9CA3AF'} />
+            </View>
+            <Text style={pathname === '/(user)/home' ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Главная</Text>
+            {pathname === '/(user)/home' && <View style={styles.bottomNavIndicator} />}
+          </View>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.bottomNavItem}
-          onPress={() => {}}
+          onPress={() => router.push('/(user)/services' as any)}
           activeOpacity={0.7}
         >
-          <Ionicons name="cart" size={24} color="#6366F1" />
+          <View style={styles.bottomNavContent}>
+            <View style={pathname === '/(user)/services' ? styles.bottomNavIconActive : styles.bottomNavIcon}>
+              <Ionicons name="grid" size={20} color={pathname === '/(user)/services' ? '#FFFFFF' : '#9CA3AF'} />
+            </View>
+            <Text style={pathname === '/(user)/services' ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Сервисы</Text>
+            {pathname === '/(user)/services' && <View style={styles.bottomNavIndicator} />}
+          </View>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.bottomNavItem}
-          onPress={() => {}}
+          onPress={() => router.push('/(user)/orders')}
           activeOpacity={0.7}
         >
-          <Ionicons name="person-outline" size={24} color="#9CA3AF" />
+          <View style={styles.bottomNavContent}>
+            <View style={pathname === '/(user)/orders' ? styles.bottomNavIconActive : styles.bottomNavIcon}>
+              <Ionicons name="cart" size={20} color={pathname === '/(user)/orders' ? '#FFFFFF' : '#9CA3AF'} />
+            </View>
+            <Text style={pathname === '/(user)/orders' ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Заказы</Text>
+            {pathname === '/(user)/orders' && <View style={styles.bottomNavIndicator} />}
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.bottomNavItem}
+          onPress={() => router.push('/(user)/profile' as any)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.bottomNavContent}>
+            <View style={pathname === '/(user)/profile' ? styles.bottomNavIconActive : styles.bottomNavIcon}>
+              <Ionicons name="person" size={20} color={pathname === '/(user)/profile' ? '#FFFFFF' : '#9CA3AF'} />
+            </View>
+            <Text style={pathname === '/(user)/profile' ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Профиль</Text>
+            {pathname === '/(user)/profile' && <View style={styles.bottomNavIndicator} />}
+          </View>
         </TouchableOpacity>
       </View>
     </Animated.View>
@@ -279,160 +326,186 @@ export default function OrdersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F9FAFB',
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F9FAFB',
   },
   header: {
     paddingTop: Platform.OS === 'ios' ? 60 : 50,
-    paddingBottom: 24,
-    paddingHorizontal: 24,
+    paddingBottom: 12,
+    paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: '#E5E7EB',
   },
   headerTitle: {
-    fontSize: 32,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '600',
     color: '#111827',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "SF Pro Display"' : 'Roboto, sans-serif',
-    letterSpacing: -0.8,
-    lineHeight: 38,
+    letterSpacing: 0,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 40,
+    backgroundColor: '#F9FAFB',
   },
   emptyText: {
-    fontSize: 18,
-    color: '#94A3B8',
-    marginTop: 20,
+    fontSize: 14,
+    color: '#9CA3AF',
+    marginTop: 16,
     marginBottom: 24,
-    fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    fontWeight: '500',
+    lineHeight: 14.52,
   },
   browseButton: {
-    backgroundColor: '#6366F1',
-    paddingHorizontal: 28,
-    paddingVertical: 14,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
     borderRadius: 12,
     marginTop: 24,
-    shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 3,
   },
   browseButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
-    letterSpacing: 0.2,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+    letterSpacing: 0,
   },
   listContent: {
-    padding: 20,
+    padding: 16,
+    paddingBottom: 80,
   },
   orderCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    borderRadius: 24,
+    padding: 13,
+    marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: '#E5E7EB',
   },
   orderHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   planName: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 6,
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "SF Pro Display"' : 'Roboto, sans-serif',
-    letterSpacing: -0.3,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 4,
+    lineHeight: 16.94,
+    flex: 1,
   },
   providerName: {
-    fontSize: 14,
-    color: '#3B82F6',
-    fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontWeight: '500',
+    lineHeight: 14.52,
   },
   statusBadge: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 11,
     paddingVertical: 6,
     borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   statusText: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    fontWeight: '500',
+    color: '#9CA3AF',
+    lineHeight: 14.52,
   },
   orderDetails: {
     flexDirection: 'row',
-    gap: 20,
-    paddingTop: 12,
+    gap: 16,
+    paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: '#E5E7EB',
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   detailText: {
-    fontSize: 14,
-    color: '#64748B',
+    fontSize: 12,
+    color: '#9CA3AF',
     fontWeight: '500',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
+    lineHeight: 14.52,
   },
-  // Bottom Navigation
   bottomNav: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    paddingTop: 8,
-    paddingBottom: Platform.OS === 'ios' ? 28 : 16,
-    paddingHorizontal: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 8,
+    borderTopColor: '#E5E7EB',
+    paddingTop: 9,
+    paddingBottom: Platform.OS === 'ios' ? 15 : 15,
+    paddingHorizontal: 8,
+    justifyContent: 'center',
+    gap: 6,
   },
   bottomNavItem: {
-    flex: 1,
+    width: 89,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  bottomNavContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
+    position: 'relative',
+  },
+  bottomNavIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 24,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bottomNavIconActive: {
+    width: 28,
+    height: 28,
+    borderRadius: 24,
+    backgroundColor: '#4F46E5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bottomNavIndicator: {
+    position: 'absolute',
+    bottom: -12,
+    width: 32,
+    height: 3,
+    backgroundColor: '#4F46E5',
+    borderRadius: 2,
   },
   bottomNavLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#6366F1',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system, BlinkMacSystemFont, "SF Pro Display"' : 'Roboto, sans-serif',
-    marginTop: 2,
-    letterSpacing: 0.2,
-  },
-  bottomNavLabelInactive: {
-    color: '#9CA3AF',
+    fontSize: 12,
     fontWeight: '500',
+    color: '#9CA3AF',
+    lineHeight: 14.52,
+  },
+  bottomNavLabelActive: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4F46E5',
+    lineHeight: 14.52,
   },
 });

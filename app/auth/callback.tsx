@@ -39,6 +39,10 @@ export default function CallbackScreen() {
       userStr = userStr.replace(/#.*$/, '');
       
       const user = JSON.parse(userStr);
+      
+      if (!user.oauth_provider && params.token) {
+        user.oauth_provider = 'google';
+      }
 
       // Использовать signIn из AuthContext
       await signIn(token, user);
