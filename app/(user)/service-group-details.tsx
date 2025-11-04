@@ -66,11 +66,61 @@ export default function ServiceGroupDetailsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [dimensions, setDimensions] = useState(Dimensions.get('window'));
   const [processingOrder, setProcessingOrder] = useState<number | null>(null);
+
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setDimensions(window);
+    });
+    return () => subscription?.remove();
+  }, []);
 
   // Анимации
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
+  
+  // Анимации для нижней панели навигации - используем useRef с правильным обновлением
+  const navAnimationsRef = useRef({
+    home: {
+      bg: new Animated.Value(pathname === '/(user)/home' ? 1 : 0),
+      label: new Animated.Value(pathname === '/(user)/home' ? 1 : 0),
+    },
+    services: {
+      bg: new Animated.Value(pathname === '/(user)/services' ? 1 : 0),
+      label: new Animated.Value(pathname === '/(user)/services' ? 1 : 0),
+    },
+    orders: {
+      bg: new Animated.Value(pathname === '/(user)/orders' ? 1 : 0),
+      label: new Animated.Value(pathname === '/(user)/orders' ? 1 : 0),
+    },
+    profile: {
+      bg: new Animated.Value(pathname === '/(user)/profile' ? 1 : 0),
+      label: new Animated.Value(pathname === '/(user)/profile' ? 1 : 0),
+    },
+  });
+
+  // Анимация навигации при изменении pathname
+  useEffect(() => {
+    const navAnimations = navAnimationsRef.current;
+    const routes = ['home', 'services', 'orders', 'profile'] as const;
+    
+    routes.forEach((route) => {
+      const isActive = pathname === `/(user)/${route}`;
+      Animated.parallel([
+        Animated.timing(navAnimations[route].bg, {
+          toValue: isActive ? 1 : 0,
+          duration: 200,
+          useNativeDriver: false,
+        }),
+        Animated.timing(navAnimations[route].label, {
+          toValue: isActive ? 1 : 0,
+          duration: 200,
+          useNativeDriver: false,
+        }),
+      ]).start();
+    });
+  }, [pathname]);
 
   useEffect(() => {
     loadPlans();
@@ -225,12 +275,12 @@ export default function ServiceGroupDetailsScreen() {
   };
 
   const handleViewDetails = (plan: ServicePlan) => {
-    // Можно открыть модальное окно с деталями или перейти на отдельный экран
-    Alert.alert(
-      plan.name_ru,
-      plan.description_ru || 'Подробная информация о тарифе',
-      [{ text: 'OK' }]
-    );
+    router.push({
+      pathname: '/(user)/service-details',
+      params: {
+        planId: plan.id.toString(),
+      },
+    } as any);
   };
 
   const getBillingPeriodText = (period: string) => {
@@ -365,7 +415,6 @@ export default function ServiceGroupDetailsScreen() {
         {/* Available Services Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Доступные сервисы</Text>
-          
           {filteredPlans.map((plan) => {
             const specs = formatPlanSpecs(plan);
             const badges = getPlanBadges(plan);
@@ -373,42 +422,57 @@ export default function ServiceGroupDetailsScreen() {
 
             return (
               <View key={plan.id} style={styles.planCard}>
-                <View style={styles.planCardContent}>
+                <View style={[styles.planCardContent, { flexDirection: dimensions.width < 375 ? 'column' : 'row' }]}>
                   <View style={styles.planMainInfo}>
                     <View style={styles.planIconContainer}>
                       <Ionicons name="server" size={18} color="#111827" />
                     </View>
                     <View style={styles.planDetails}>
-                      <Text style={styles.planName}>{plan.name_ru}</Text>
-                      {specs && (
-                        <Text style={styles.planSpecs}>{specs}</Text>
-                      )}
-                      {badges.length > 0 && (
+                      <Text style={styles.planName} numberOfLines={1} ellipsizeMode="tail">{plan.name_ru}</Text>
+                      {specs ? (
+                        <Text style={styles.planSpecs} numberOfLines={2} ellipsizeMode="tail">{specs}</Text>
+                      ) : null}
+                      {badges.length > 0 ? (
                         <View style={styles.badgesContainer}>
                           {badges.map((badge, index) => (
                             <View key={index} style={styles.badge}>
-                              <Text style={styles.badgeText}>{badge}</Text>
+                              <Text style={styles.badgeText} numberOfLines={1}>{badge}</Text>
                             </View>
                           ))}
                         </View>
-                      )}
+                      ) : null}
                     </View>
                   </View>
-                  <View style={styles.planActions}>
-                    <Text style={styles.priceText}>
+                  <View style={[styles.planActions, { 
+                    alignItems: dimensions.width < 375 ? 'flex-start' : 'flex-end',
+                    marginTop: dimensions.width < 375 ? 12 : 0,
+                  }]}>
+                    <Text style={styles.priceText} numberOfLines={1}>
                       {displayPrice(plan)}{getBillingPeriodText(plan.billing_period)}
                     </Text>
-                    <View style={styles.buttonsRow}>
+                    <View style={[styles.buttonsRow, { 
+                      flexDirection: dimensions.width < 375 ? 'column' : 'row',
+                      width: dimensions.width < 375 ? '100%' : 'auto',
+                      gap: dimensions.width < 375 ? 8 : 8,
+                    }]}>
                       <TouchableOpacity
-                        style={styles.detailsButton}
+                        style={[styles.detailsButton, {
+                          flex: dimensions.width < 375 ? 1 : 0,
+                          width: dimensions.width < 375 ? '100%' : 'auto',
+                          minWidth: dimensions.width < 375 ? '100%' : 0,
+                        }]}
                         onPress={() => handleViewDetails(plan)}
                         activeOpacity={0.7}
                       >
                         <Ionicons name="information-circle-outline" size={16} color="#374151" />
-                        <Text style={styles.detailsButtonText}>Детали</Text>
+                        <Text style={styles.detailsButtonText} numberOfLines={1}>Детали</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        style={styles.buyButton}
+                        style={[styles.buyButton, {
+                          flex: dimensions.width < 375 ? 1 : 0,
+                          width: dimensions.width < 375 ? '100%' : 'auto',
+                          minWidth: dimensions.width < 375 ? '100%' : 0,
+                        }]}
                         onPress={() => handleOrderPlan(plan)}
                         disabled={isProcessing}
                         activeOpacity={0.7}
@@ -416,21 +480,21 @@ export default function ServiceGroupDetailsScreen() {
                         {isProcessing ? (
                           <ActivityIndicator size="small" color="#FFFFFF" />
                         ) : (
-                          <>
+                          <React.Fragment>
                             <Ionicons name="cart" size={16} color="#FFFFFF" />
-                            <Text style={styles.buyButtonText}>Купить</Text>
-                          </>
+                            <Text style={styles.buyButtonText} numberOfLines={1}>Купить</Text>
+                          </React.Fragment>
                         )}
                       </TouchableOpacity>
                     </View>
                   </View>
                 </View>
-                {plan.description_ru && (
-                  <>
+                {plan.description_ru ? (
+                  <React.Fragment>
                     <View style={styles.divider} />
-                    <Text style={styles.planDescription}>{plan.description_ru}</Text>
-                  </>
-                )}
+                    <Text style={styles.planDescription} numberOfLines={3} ellipsizeMode="tail">{plan.description_ru}</Text>
+                  </React.Fragment>
+                ) : null}
               </View>
             );
           })}
@@ -468,11 +532,41 @@ export default function ServiceGroupDetailsScreen() {
           activeOpacity={0.7}
         >
           <View style={styles.bottomNavContent}>
-            <View style={pathname === '/(user)/home' ? styles.bottomNavIconActive : styles.bottomNavIcon}>
-              <Ionicons name="home" size={20} color={pathname === '/(user)/home' ? '#FFFFFF' : '#9CA3AF'} />
-            </View>
-            <Text style={pathname === '/(user)/home' ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Главная</Text>
-            {pathname === '/(user)/home' && <View style={styles.bottomNavIndicator} />}
+            <Animated.View 
+              style={[
+                styles.bottomNavIcon,
+                {
+                  backgroundColor: navAnimationsRef.current.home.bg.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['transparent', '#4F46E5'],
+                  }),
+                }
+              ]}
+            >
+              <Ionicons 
+                name="home" 
+                size={20} 
+                color={pathname === '/(user)/home' ? '#FFFFFF' : '#9CA3AF'}
+              />
+            </Animated.View>
+            <Animated.Text 
+              style={[
+                styles.bottomNavLabel,
+                {
+                  color: navAnimationsRef.current.home.label.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['#9CA3AF', '#4F46E5'],
+                  }),
+                  fontWeight: navAnimationsRef.current.home.label.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['500', '600'],
+                  }) as any,
+                }
+              ]}
+            >
+              Главная
+            </Animated.Text>
+            {pathname === '/(user)/home' ? <View style={styles.bottomNavIndicator} /> : null}
           </View>
         </TouchableOpacity>
         <TouchableOpacity 
@@ -481,11 +575,41 @@ export default function ServiceGroupDetailsScreen() {
           activeOpacity={0.7}
         >
           <View style={styles.bottomNavContent}>
-            <View style={pathname === '/(user)/services' ? styles.bottomNavIconActive : styles.bottomNavIcon}>
-              <Ionicons name="grid" size={20} color={pathname === '/(user)/services' ? '#FFFFFF' : '#9CA3AF'} />
-            </View>
-            <Text style={pathname === '/(user)/services' ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Сервисы</Text>
-            {pathname === '/(user)/services' && <View style={styles.bottomNavIndicator} />}
+            <Animated.View 
+              style={[
+                styles.bottomNavIcon,
+                {
+                  backgroundColor: navAnimationsRef.current.services.bg.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['transparent', '#4F46E5'],
+                  }),
+                }
+              ]}
+            >
+              <Ionicons 
+                name="grid" 
+                size={20} 
+                color={pathname === '/(user)/services' ? '#FFFFFF' : '#9CA3AF'}
+              />
+            </Animated.View>
+            <Animated.Text 
+              style={[
+                styles.bottomNavLabel,
+                {
+                  color: navAnimationsRef.current.services.label.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['#9CA3AF', '#4F46E5'],
+                  }),
+                  fontWeight: navAnimationsRef.current.services.label.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['500', '600'],
+                  }) as any,
+                }
+              ]}
+            >
+              Сервисы
+            </Animated.Text>
+            {pathname === '/(user)/services' ? <View style={styles.bottomNavIndicator} /> : null}
           </View>
         </TouchableOpacity>
         <TouchableOpacity 
@@ -494,11 +618,41 @@ export default function ServiceGroupDetailsScreen() {
           activeOpacity={0.7}
         >
           <View style={styles.bottomNavContent}>
-            <View style={pathname === '/(user)/orders' ? styles.bottomNavIconActive : styles.bottomNavIcon}>
-              <Ionicons name="cart" size={20} color={pathname === '/(user)/orders' ? '#FFFFFF' : '#9CA3AF'} />
-            </View>
-            <Text style={pathname === '/(user)/orders' ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Заказы</Text>
-            {pathname === '/(user)/orders' && <View style={styles.bottomNavIndicator} />}
+            <Animated.View 
+              style={[
+                styles.bottomNavIcon,
+                {
+                  backgroundColor: navAnimationsRef.current.orders.bg.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['transparent', '#4F46E5'],
+                  }),
+                }
+              ]}
+            >
+              <Ionicons 
+                name="cart" 
+                size={20} 
+                color={pathname === '/(user)/orders' ? '#FFFFFF' : '#9CA3AF'}
+              />
+            </Animated.View>
+            <Animated.Text 
+              style={[
+                styles.bottomNavLabel,
+                {
+                  color: navAnimationsRef.current.orders.label.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['#9CA3AF', '#4F46E5'],
+                  }),
+                  fontWeight: navAnimationsRef.current.orders.label.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['500', '600'],
+                  }) as any,
+                }
+              ]}
+            >
+              Заказы
+            </Animated.Text>
+            {pathname === '/(user)/orders' ? <View style={styles.bottomNavIndicator} /> : null}
           </View>
         </TouchableOpacity>
         <TouchableOpacity 
@@ -507,11 +661,41 @@ export default function ServiceGroupDetailsScreen() {
           activeOpacity={0.7}
         >
           <View style={styles.bottomNavContent}>
-            <View style={pathname === '/(user)/profile' ? styles.bottomNavIconActive : styles.bottomNavIcon}>
-              <Ionicons name="person" size={20} color={pathname === '/(user)/profile' ? '#FFFFFF' : '#9CA3AF'} />
-            </View>
-            <Text style={pathname === '/(user)/profile' ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Профиль</Text>
-            {pathname === '/(user)/profile' && <View style={styles.bottomNavIndicator} />}
+            <Animated.View 
+              style={[
+                styles.bottomNavIcon,
+                {
+                  backgroundColor: navAnimationsRef.current.profile.bg.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['transparent', '#4F46E5'],
+                  }),
+                }
+              ]}
+            >
+              <Ionicons 
+                name="person" 
+                size={20} 
+                color={pathname === '/(user)/profile' ? '#FFFFFF' : '#9CA3AF'}
+              />
+            </Animated.View>
+            <Animated.Text 
+              style={[
+                styles.bottomNavLabel,
+                {
+                  color: navAnimationsRef.current.profile.label.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['#9CA3AF', '#4F46E5'],
+                  }),
+                  fontWeight: navAnimationsRef.current.profile.label.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['500', '600'],
+                  }) as any,
+                }
+              ]}
+            >
+              Профиль
+            </Animated.Text>
+            {pathname === '/(user)/profile' ? <View style={styles.bottomNavIndicator} /> : null}
           </View>
         </TouchableOpacity>
       </View>
@@ -537,11 +721,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
+    minHeight: Platform.OS === 'ios' ? 72 : 62,
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    position: 'relative',
+    width: '100%',
+    minHeight: 36,
   },
   backButton: {
     width: 36,
@@ -552,12 +740,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    position: 'absolute',
+    left: 0,
+    zIndex: 1,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 1,
+      },
+    }),
   },
   headerTitle: {
-    fontSize: 18,
     fontWeight: '600',
     color: '#111827',
     letterSpacing: 0,
+    flex: 1,
+    textAlign: 'center',
+    paddingHorizontal: 40,
+    ...Platform.select({
+      ios: {
+        fontSize: Dimensions.get('window').width < 375 ? 16 : 18,
+      },
+      android: {
+        fontSize: Dimensions.get('window').width < 375 ? 15 : 17,
+      },
+    }),
   },
   headerRight: {
     width: 36,
@@ -644,11 +856,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     gap: 12,
+    flexWrap: 'wrap',
   },
   planMainInfo: {
     flexDirection: 'row',
     gap: 10,
     flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
   },
   planIconContainer: {
     width: 44,
@@ -663,6 +878,8 @@ const styles = StyleSheet.create({
   planDetails: {
     flex: 1,
     gap: 2,
+    minWidth: 0,
+    flexShrink: 1,
   },
   planName: {
     fontSize: 14,
@@ -700,6 +917,8 @@ const styles = StyleSheet.create({
   planActions: {
     alignItems: 'flex-end',
     gap: 8,
+    flexShrink: 0,
+    minWidth: 0,
   },
   priceText: {
     fontSize: 14,
@@ -710,6 +929,7 @@ const styles = StyleSheet.create({
   buttonsRow: {
     flexDirection: 'row',
     gap: 8,
+    flexWrap: 'wrap',
   },
   detailsButton: {
     flexDirection: 'row',

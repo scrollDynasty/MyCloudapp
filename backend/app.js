@@ -40,19 +40,7 @@ setupGoogleOAuth();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Performance monitoring
-app.use(monitor.trackRequest());
-
-// Security headers middleware
-app.use(securityHeaders);
-
-// Rate limiting для всех запросов
-app.use(rateLimit(100, 15 * 60 * 1000)); // 100 запросов в 15 минут
-
-// Request timeout to prevent hanging requests
-app.use(requestTimeout(30000)); // 30 second timeout
-
-// CORS configuration - allow multiple origins for development
+// CORS configuration - MUST be before security headers
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:8081',
@@ -61,32 +49,78 @@ const allowedOrigins = [
   'exp://localhost:8081',
   'https://crm.mycloud.uz', // CRM Production
   'https://billing.mycloud.uz', // Mobile App
-  process.env.CORS_ORIGIN
+  ...(process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : [])
 ].filter(Boolean);
 
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps, Postman)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      return callback(null, true);
+    }
     
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      callback(null, true); // Allow all origins in development
+      // In production, check if it's a development origin pattern
+      if (process.env.NODE_ENV === 'production') {
+        // Allow localhost origins even in production for development
+        if (origin.includes('localhost') || origin.includes('127.0.0.1') || origin.includes('exp://')) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      } else {
+        callback(null, true);
+      }
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: [
     'Content-Type', 
     'Authorization',
+    'X-Requested-With',
+    'Accept',
+    'Origin',
     'Cache-Control',
     'Pragma',
     'Expires',
-    'ngrok-skip-browser-warning',  // Allow ngrok header
-    'User-Agent'  // Allow custom user agent
-  ]
+    'ngrok-skip-browser-warning',
+    'User-Agent',
+    'X-CSRF-Token',
+    'X-Session-Id'
+  ],
+  exposedHeaders: ['X-CSRF-Token', 'X-Session-Id'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
+
+// Handle preflight requests explicitly for all routes
+app.options('*', (req, res) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.indexOf(origin) !== -1 || !origin || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma, Expires, ngrok-skip-browser-warning, User-Agent, X-CSRF-Token, X-Session-Id');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.sendStatus(204);
+  } else {
+    res.sendStatus(403);
+  }
+});
+
+// Performance monitoring
+app.use(monitor.trackRequest());
+
+// Security headers middleware (after CORS to not override CORS headers)
+app.use(securityHeaders);
+
+// Rate limiting для всех запросов
+app.use(rateLimit(100, 15 * 60 * 1000)); // 100 запросов в 15 минут
+
+// Request timeout to prevent hanging requests
+app.use(requestTimeout(30000)); // 30 second timeout
 
 // Reduced payload size limits to prevent memory issues
 app.use(bodyParser.json({ limit: '2mb' }));

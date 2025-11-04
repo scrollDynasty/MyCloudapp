@@ -110,6 +110,14 @@ class PerformanceMonitor {
         this.metrics.requests.averageResponseTime = 
           this.requestTimings.reduce((a, b) => a + b, 0) / this.requestTimings.length;
 
+        // Log HTTP status codes (skip OPTIONS requests)
+        if (req.method !== 'OPTIONS') {
+          const statusEmoji = res.statusCode >= 200 && res.statusCode < 300 ? '✅' : 
+                              res.statusCode >= 300 && res.statusCode < 400 ? '↩️' : 
+                              res.statusCode >= 400 && res.statusCode < 500 ? '⚠️' : '❌';
+          console.log(`${statusEmoji} ${req.method} ${req.originalUrl} - ${res.statusCode}`);
+        }
+
         // Only log extremely slow requests (over 10 seconds)
         if (duration > 10000 && process.env.NODE_ENV === 'development') {
           console.warn(`Very slow request: ${req.method} ${req.originalUrl} took ${duration}ms`);

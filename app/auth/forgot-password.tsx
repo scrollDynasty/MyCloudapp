@@ -235,10 +235,10 @@ const ForgotPasswordScreen: React.FC = () => {
         colors={['#F9FAFB', '#FFFFFF']}
         style={styles.gradientBackground}
       >
-        <KeyboardAvoidingView
-          style={styles.container}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
@@ -259,12 +259,12 @@ const ForgotPasswordScreen: React.FC = () => {
               ]}
             >
               {!emailSent ? (
-                <Animated.View
-                  style={[
-                    styles.formContainer,
-                    { transform: [{ translateX: shakeAnim }] },
-                  ]}
-                >
+                  <Animated.View
+                    style={[
+                      styles.formContainer,
+                      { transform: [{ translateX: shakeAnim }] },
+                    ]}
+                  >
                   <View style={styles.formInner}>
                     {/* Header */}
                     <View style={styles.header}>
@@ -289,34 +289,34 @@ const ForgotPasswordScreen: React.FC = () => {
                         <Text style={styles.sectionTitle}>Контакты</Text>
                         
                         {/* Email Field */}
-                        <View style={styles.inputWrapper}>
+                    <View style={styles.inputWrapper}>
                           <Text style={styles.inputLabel}>Email аккаунта *</Text>
                           <View style={[
                             styles.inputContainer,
                             errors.email && touched.email && styles.inputError,
                           ]}>
                             <Ionicons name="mail-outline" size={20} color="#9CA3AF" />
-                            <TextInput
-                              style={styles.input}
-                              placeholder="your@email.com"
+                        <TextInput
+                          style={styles.input}
+                          placeholder="your@email.com"
                               placeholderTextColor="#9CA3AF"
-                              value={email}
-                              onChangeText={handleEmailChange}
-                              onBlur={handleBlur}
-                              keyboardType="email-address"
-                              autoCapitalize="none"
-                              autoCorrect={false}
-                              editable={!loading}
-                              returnKeyType="send"
-                              onSubmitEditing={handleResetPassword}
-                              accessibilityLabel="Поле ввода email"
-                            />
-                          </View>
-                          {errors.email && touched.email && (
+                          value={email}
+                          onChangeText={handleEmailChange}
+                          onBlur={handleBlur}
+                          keyboardType="email-address"
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          editable={!loading}
+                          returnKeyType="send"
+                          onSubmitEditing={handleResetPassword}
+                          accessibilityLabel="Поле ввода email"
+                        />
+                      </View>
+                      {errors.email && touched.email && (
                             <View style={styles.errorContainer}>
-                              <Text style={styles.errorText}>{errors.email}</Text>
+                        <Text style={styles.errorText}>{errors.email}</Text>
                             </View>
-                          )}
+                      )}
                         </View>
                       </View>
 
@@ -329,24 +329,24 @@ const ForgotPasswordScreen: React.FC = () => {
                             Если ваша учетная запись принадлежит компании, письмо придет на корпоративную почту администратора.
                           </Text>
                         </View>
-                      </View>
+                    </View>
 
                       {/* Submit Button */}
-                      <TouchableOpacity
+                    <TouchableOpacity
                         style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-                        onPress={handleResetPassword}
-                        disabled={loading}
+                      onPress={handleResetPassword}
+                      disabled={loading}
                         accessibilityLabel="Отправить ссылку для сброса"
-                      >
-                        {loading ? (
+                    >
+                      {loading ? (
                           <ActivityIndicator color="#FFFFFF" size="small" />
-                        ) : (
+                      ) : (
                           <>
                             <Ionicons name="send-outline" size={16} color="#FFFFFF" />
                             <Text style={styles.submitButtonText}>Отправить ссылку для сброса</Text>
                           </>
-                        )}
-                      </TouchableOpacity>
+                      )}
+                    </TouchableOpacity>
 
                       {/* Divider */}
                       <View style={styles.divider}>
@@ -372,8 +372,8 @@ const ForgotPasswordScreen: React.FC = () => {
                         </Text>
                       </View>
                     </View>
-                  </View>
-                </Animated.View>
+                    </View>
+                  </Animated.View>
               ) : (
                 // Экран успешной отправки
                 <Animated.View
@@ -433,7 +433,7 @@ const ForgotPasswordScreen: React.FC = () => {
               )}
             </Animated.View>
           </ScrollView>
-        </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
       </LinearGradient>
     </SafeAreaView>
   );

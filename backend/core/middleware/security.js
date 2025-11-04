@@ -157,11 +157,20 @@ function validateInput(rules) {
  * Security headers middleware
  */
 function securityHeaders(req, res, next) {
+  // Не устанавливаем заголовки, которые могут конфликтовать с CORS
+  // CORS middleware уже установил Access-Control-Allow-Origin
+  
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  res.setHeader('Content-Security-Policy', "default-src 'self'");
+  
+  // Strict-Transport-Security только для HTTPS
+  if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  
+  // Content-Security-Policy более мягкий для API
+  res.setHeader('Content-Security-Policy', "default-src 'self'; connect-src 'self' https://api.paycom.uz https://checkout.paycom.uz");
   
   next();
 }

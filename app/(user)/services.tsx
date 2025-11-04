@@ -3,17 +3,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePathname, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Animated,
-    Dimensions,
-    Platform,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Dimensions,
+  Platform,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { API_URL } from '../../config/api';
 import { getHeaders } from '../../config/fetch';
@@ -318,7 +318,7 @@ export default function ServicesScreen() {
               <Ionicons name="home" size={20} color={pathname === '/(user)/home' ? '#FFFFFF' : '#9CA3AF'} />
             </View>
             <Text style={pathname === '/(user)/home' ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Главная</Text>
-            {pathname === '/(user)/home' && <View style={styles.bottomNavIndicator} />}
+            {pathname === '/(user)/home' ? <View style={styles.bottomNavIndicator} /> : null}
           </View>
         </TouchableOpacity>
         <TouchableOpacity 
@@ -331,7 +331,7 @@ export default function ServicesScreen() {
               <Ionicons name="grid" size={20} color={pathname === '/(user)/services' ? '#FFFFFF' : '#9CA3AF'} />
             </View>
             <Text style={pathname === '/(user)/services' ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Сервисы</Text>
-            {pathname === '/(user)/services' && <View style={styles.bottomNavIndicator} />}
+            {pathname === '/(user)/services' ? <View style={styles.bottomNavIndicator} /> : null}
           </View>
         </TouchableOpacity>
         <TouchableOpacity 
@@ -344,7 +344,7 @@ export default function ServicesScreen() {
               <Ionicons name="cart" size={20} color={pathname === '/(user)/orders' ? '#FFFFFF' : '#9CA3AF'} />
             </View>
             <Text style={pathname === '/(user)/orders' ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Заказы</Text>
-            {pathname === '/(user)/orders' && <View style={styles.bottomNavIndicator} />}
+            {pathname === '/(user)/orders' ? <View style={styles.bottomNavIndicator} /> : null}
           </View>
         </TouchableOpacity>
         <TouchableOpacity 
@@ -357,7 +357,7 @@ export default function ServicesScreen() {
               <Ionicons name="person" size={20} color={pathname === '/(user)/profile' ? '#FFFFFF' : '#9CA3AF'} />
             </View>
             <Text style={pathname === '/(user)/profile' ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Профиль</Text>
-            {pathname === '/(user)/profile' && <View style={styles.bottomNavIndicator} />}
+            {pathname === '/(user)/profile' ? <View style={styles.bottomNavIndicator} /> : null}
           </View>
         </TouchableOpacity>
       </View>
