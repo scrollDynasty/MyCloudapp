@@ -7,6 +7,9 @@ const passport = require('passport');
 const session = require('express-session');
 require('dotenv').config();
 
+const { securityHeaders, rateLimit, validateInput } = require('./core/middleware/security');
+const securityUtils = require('./core/utils/security');
+
 // Import core utilities
 const db = require('./core/db/connection');
 const { initializeDatabase } = require('./core/middleware/db-init');
@@ -40,10 +43,11 @@ const PORT = process.env.PORT || 5000;
 // Performance monitoring
 app.use(monitor.trackRequest());
 
-// Security and optimization middleware
-app.use(helmet()); // Security headers
-app.use(compression()); // Compress responses
-// Removed morgan middleware to reduce logging overhead
+// Security headers middleware
+app.use(securityHeaders);
+
+// Rate limiting для всех запросов
+app.use(rateLimit(100, 15 * 60 * 1000)); // 100 запросов в 15 минут
 
 // Request timeout to prevent hanging requests
 app.use(requestTimeout(30000)); // 30 second timeout

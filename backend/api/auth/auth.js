@@ -4,31 +4,34 @@ const bcrypt = require('bcryptjs');
 const db = require('../../core/db/connection');
 const { generateToken, authenticate, adminOnly, adminOrSelf } = require('../../core/utils/auth');
 const SQL = require('../../core/db/queries');
+const securityUtils = require('../../core/utils/security');
+const { validateInput } = require('../../core/middleware/security');
 
 const router = express.Router();
 
 // Register new user
-router.post('/register', async (req, res) => {
+router.post('/register', validateInput({
+  email: { required: true, type: 'email', maxLength: 254 },
+  password: { required: true, type: 'string', minLength: 6, maxLength: 128 },
+  full_name: { required: true, type: 'string', maxLength: 200 }
+}), async (req, res) => {
   try {
     // Database is already initialized at startup
     
-    const {
-      email,
-      password,
-      full_name,
-      phone,
-      role,
-      company_name,
-      tax_id,
-      legal_address
-    } = req.body;
-
-    // Validation
+    // Санитизация входных данных
+    const email = securityUtils.sanitizeEmail(req.body.email);
+    const password = securityUtils.sanitizePassword(req.body.password);
+    const full_name = securityUtils.sanitizeString(req.body.full_name);
+    const phone = req.body.phone ? securityUtils.sanitizeString(req.body.phone) : null;
+    const role = req.body.role ? securityUtils.sanitizeString(req.body.role) : 'individual';
+    const company_name = req.body.company_name ? securityUtils.sanitizeString(req.body.company_name) : null;
+    const tax_id = req.body.tax_id ? securityUtils.sanitizeString(req.body.tax_id) : null;
+    const legal_address = req.body.legal_address ? securityUtils.sanitizeString(req.body.legal_address) : null;
+    
     if (!email || !password || !full_name) {
       return res.status(400).json({
         success: false,
-        error: 'Missing required fields',
-        required: ['email', 'password', 'full_name']
+        error: 'Invalid input data'
       });
     }
     
@@ -93,18 +96,21 @@ router.post('/register', async (req, res) => {
     // Generate JWT token
     const token = generateToken(user);
 
+    // Санитизация ответа (удаление чувствительных данных)
+    const sanitizedUser = securityUtils.sanitizeResponse({
+      user_id: user.id,
+      username: user.username,
+      email: user.email,
+      full_name: userFullName,
+      role: user.role,
+      company_name: user.company_name,
+      status: user.status
+    });
+
     res.status(201).json({
       success: true,
       data: {
-        user: {
-          user_id: user.id,
-          username: user.username,
-          email: user.email,
-          full_name: userFullName,
-          role: user.role,
-          company_name: user.company_name,
-          status: user.status
-        },
+        user: sanitizedUser,
         token: token,
         expires_in: process.env.JWT_EXPIRES_IN || '7d'
       }
@@ -121,11 +127,23 @@ router.post('/register', async (req, res) => {
 });
 
 // Login with email and password
-router.post('/login', async (req, res) => {
+router.post('/login', validateInput({
+  email: { required: true, type: 'email', maxLength: 254 },
+  password: { required: true, type: 'string', maxLength: 128 }
+}), async (req, res) => {
   try {
     // Database is already initialized at startup
     
-    const { email, password } = req.body;
+    // Санитизация входных данных
+    const email = securityUtils.sanitizeEmail(req.body.email);
+    const password = securityUtils.sanitizePassword(req.body.password);
+    
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid credentials'
+      });
+    }
 
     if (!email || !password) {
       return res.status(400).json({

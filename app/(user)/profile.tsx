@@ -1,21 +1,22 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePathname, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Animated,
-    Platform,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Platform,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { API_URL } from '../../config/api';
 import { getHeaders } from '../../config/fetch';
 import { useAuth } from '../../lib/AuthContext';
+import { getCachedOrFetch } from '../../lib/cache';
 
 interface UserProfile {
   user_id: number;
@@ -40,7 +41,7 @@ interface Order {
   created_at: string;
 }
 
-export default function ProfileScreen() {
+export default React.memo(function ProfileScreen() {
   const router = useRouter();
   const pathname = usePathname();
   const { user: authUser, signOut } = useAuth();
@@ -53,12 +54,92 @@ export default function ProfileScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
 
+  const loadProfileData = useCallback(async (forceRefresh = false) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      
+      if (!token) {
+        Alert.alert('Ошибка', 'Токен авторизации не найден. Пожалуйста, войдите снова.');
+        router.replace('/auth/login');
+        return;
+      }
+
+      // Используем кэш для профиля пользователя
+      const profileData = await getCachedOrFetch<UserProfile>(
+        'user_profile',
+        async () => {
+          const profileResponse = await fetch(`${API_URL}/api/auth/me`, {
+            headers: getHeaders(token || undefined),
+          });
+          
+          if (!profileResponse.ok) {
+            throw new Error('Failed to fetch profile');
+          }
+
+          const data = await profileResponse.json();
+          if (data.success && data.data) {
+            return {
+              user_id: data.data.user_id,
+              full_name: data.data.full_name,
+              email: data.data.email,
+              role: data.data.role,
+              company_name: data.data.company_name,
+              oauth_provider: data.data.oauth_provider,
+              phone: data.data.phone,
+            };
+          }
+          throw new Error('Invalid profile data');
+        },
+        forceRefresh
+      );
+
+      if (profileData) {
+        setUser(profileData);
+      }
+
+      // Используем кэш для заказов
+      const ordersData = await getCachedOrFetch<Order[]>(
+        'user_orders',
+        async () => {
+          const ordersResponse = await fetch(`${API_URL}/api/orders`, {
+            headers: getHeaders(token || undefined),
+          });
+          
+          if (!ordersResponse.ok) {
+            throw new Error('Failed to fetch orders');
+          }
+
+          const data = await ordersResponse.json();
+          if (data.success && Array.isArray(data.data)) {
+            return data.data || [];
+          }
+          return [];
+        },
+        forceRefresh
+      );
+
+      if (ordersData) {
+        setOrders(ordersData);
+      }
+    } catch (error: any) {
+      console.error('Error loading profile data:', error);
+      // Не показываем ошибку, если данные загружены из кэша
+      if (forceRefresh) {
+        Alert.alert('Ошибка', 'Не удалось загрузить данные профиля');
+      }
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [router]);
+
   useEffect(() => {
     if (authUser) {
       setUser(authUser);
+      // Загружаем данные только если их нет в кэше или они устарели
+      loadProfileData(false);
     }
-    loadProfileData();
-  }, [authUser]);
+  }, [authUser, loadProfileData]);
 
   // Анимация появления контента
   useEffect(() => {
@@ -79,60 +160,10 @@ export default function ProfileScreen() {
     }
   }, [loading]);
 
-  const loadProfileData = async () => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      
-      if (!token) {
-        Alert.alert('Ошибка', 'Токен авторизации не найден. Пожалуйста, войдите снова.');
-        router.replace('/auth/login');
-        return;
-      }
-
-      // Загрузить профиль пользователя
-      const profileResponse = await fetch(`${API_URL}/api/auth/me`, {
-        headers: getHeaders(token || undefined),
-      });
-      
-      if (profileResponse.ok) {
-        const profileData = await profileResponse.json();
-        if (profileData.success && profileData.data) {
-          setUser({
-            user_id: profileData.data.user_id,
-            full_name: profileData.data.full_name,
-            email: profileData.data.email,
-            role: profileData.data.role,
-            company_name: profileData.data.company_name,
-            oauth_provider: profileData.data.oauth_provider,
-            phone: profileData.data.phone,
-          });
-        }
-      }
-
-      // Загрузить заказы для статистики
-      const ordersResponse = await fetch(`${API_URL}/api/orders`, {
-        headers: getHeaders(token || undefined),
-      });
-      const ordersData = await ordersResponse.json();
-
-      if (ordersData.success && Array.isArray(ordersData.data)) {
-        setOrders(ordersData.data || []);
-      } else {
-        setOrders([]);
-      }
-    } catch (error: any) {
-      console.error('Error loading profile data:', error);
-      Alert.alert('Ошибка', 'Не удалось загрузить данные профиля');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     setRefreshing(true);
-    loadProfileData();
-  };
+    loadProfileData(true); // Принудительное обновление
+  }, [loadProfileData]);
 
   const handleLogout = async () => {
     try {
@@ -146,9 +177,11 @@ export default function ProfileScreen() {
   // Проверка, зарегистрирован ли пользователь через Google
   const isGoogleUser = user?.oauth_provider === 'google';
 
-  // Подсчитываем статистику
-  const activeServices = orders.filter(o => o.status === 'active' || o.payment_status === 'paid').length;
-  const pendingOrders = orders.filter(o => o.status === 'pending' || o.payment_status === 'pending').length;
+  // Подсчитываем статистику (мемоизировано для оптимизации)
+  const { activeServices, pendingOrders } = useMemo(() => ({
+    activeServices: orders.filter(o => o.status === 'active' || o.payment_status === 'paid').length,
+    pendingOrders: orders.filter(o => o.status === 'pending' || o.payment_status === 'pending').length,
+  }), [orders]);
 
   if (loading) {
     return (
@@ -398,7 +431,7 @@ export default function ProfileScreen() {
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
