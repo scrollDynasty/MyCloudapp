@@ -26,17 +26,24 @@ export default function RootLayout() {
     // Парсим URL
     const { hostname, path, queryParams } = Linking.parse(url);
     
-    // Проверяем, что это действительно deep link для платежей или верификации email
+    // Проверяем, что это действительно deep link для платежей, верификации email или логина
     const isPaymentSuccess = path === 'payment-success' || hostname === 'payment-success' || url.includes('payment-success');
     const isPaymentCancel = path === 'payment-cancel' || hostname === 'payment-cancel' || url.includes('payment-cancel');
     const isVerifyEmail = path === 'verify-email' || hostname === 'verify-email' || url.includes('verify-email');
+    const isLogin = path === 'login' || path === 'auth/login' || hostname === 'login' || url.includes('/login') || url.includes('auth/login');
 
-    if (!isPaymentSuccess && !isPaymentCancel && !isVerifyEmail) {
+    if (!isPaymentSuccess && !isPaymentCancel && !isVerifyEmail && !isLogin) {
       return; // Игнорируем все остальные URL
     }
 
     // Помечаем URL как обработанный
     processedUrls.current.add(url);
+
+    // Обработка логина (после подтверждения email)
+    if (isLogin && !isPaymentSuccess && !isPaymentCancel && !isVerifyEmail) {
+      router.replace('/auth/login');
+      return;
+    }
 
     // Обработка verify-email
     if (isVerifyEmail && queryParams?.token) {
@@ -86,8 +93,8 @@ export default function RootLayout() {
 
     // Слушаем URL изменения только для внешних deep links
     const subscription = Linking.addEventListener('url', ({ url }) => {
-      // Игнорируем обычные навигационные URL
-      if (url && (url.includes('payment-success') || url.includes('payment-cancel'))) {
+      // Обрабатываем deep links для платежей, верификации email и логина
+      if (url && (url.includes('payment-success') || url.includes('payment-cancel') || url.includes('verify-email') || url.includes('/login') || url.includes('auth/login'))) {
         handleDeepLink(url);
       }
     });

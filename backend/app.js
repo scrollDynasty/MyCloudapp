@@ -219,25 +219,405 @@ app.get('/auth/verify-email', async (req, res) => {
     const result = await emailUtil.confirmEmail(token);
     
     if (result.success) {
+      const mobileDeepLink = process.env.FRONTEND_URL || 'mycloud://auth';
+      const webLoginUrl = `${process.env.FRONTEND_WEB_URL || 'https://billing.mycloud.uz'}/auth/login`;
+      
       return res.send(`
-        <html>
-          <head><title>Email подтверждён</title></head>
-          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-            <div style="background: white; color: #333; padding: 40px; border-radius: 12px; max-width: 500px; margin: 0 auto; box-shadow: 0 12px 40px rgba(0,0,0,0.24);">
-              <h1 style="color: #10B981;">✅ Email подтверждён!</h1>
-              <p>Добро пожаловать, ${result.name}!</p>
-              <p>Ваш email успешно подтверждён. Теперь вы можете войти в приложение.</p>
-              <p style="margin-top: 30px;">
-                <a href="${process.env.FRONTEND_WEB_URL || 'https://billing.mycloud.uz'}/auth/login" 
-                   style="display: inline-block; padding: 12px 24px; background: #667eea; color: white; text-decoration: none; border-radius: 8px;">
-                  Войти в приложение
-                </a>
-              </p>
-              <p style="margin-top: 20px; font-size: 12px; color: #9ca3af;">
-                Если приложение установлено, откройте его для входа.
-              </p>
+        <!DOCTYPE html>
+        <html lang="ru">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Email подтверждён</title>
+          <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', Oxygen, Ubuntu, Cantarell, sans-serif;
+              margin: 0;
+              min-height: 100vh;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              padding: 24px;
+              background: rgba(0, 0, 0, 0.6);
+            }
+            
+            .overlay {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              width: 100%;
+              max-width: 1152px;
+              height: 100%;
+            }
+            
+            .card {
+              background: #FFFFFF;
+              border: 1px solid #E5E7EB;
+              border-radius: 48px;
+              padding: 21px;
+              max-width: 420px;
+              width: 100%;
+              box-shadow: 0px 12px 40px rgba(0, 0, 0, 0.24);
+              display: flex;
+              flex-direction: column;
+              gap: 16px;
+            }
+            
+            .header {
+              display: flex;
+              align-items: center;
+            }
+            
+            .header-title {
+              font-family: 'Inter', sans-serif;
+              font-size: 18px;
+              font-weight: 600;
+              line-height: 21.78px;
+              color: #111827;
+            }
+            
+            .content {
+              display: flex;
+              flex-direction: column;
+              gap: 12px;
+            }
+            
+            .success-banner {
+              display: flex;
+              flex-direction: row;
+              align-items: center;
+              gap: 12px;
+              background: #10B981;
+              border: 1px solid #E5E7EB;
+              border-radius: 24px;
+              padding: 13px;
+            }
+            
+            .success-icon {
+              width: 18px;
+              height: 18px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              background: rgba(255, 255, 255, 0.3);
+              border-radius: 9px;
+            }
+            
+            .success-icon svg {
+              width: 15px;
+              height: 15px;
+              stroke: #FFFFFF;
+              stroke-width: 1.5px;
+            }
+            
+            .success-text {
+              flex: 1;
+              font-family: 'Inter', sans-serif;
+              font-size: 14px;
+              font-weight: 500;
+              line-height: 16.94px;
+              color: #FFFFFF;
+            }
+            
+            .info-card {
+              display: flex;
+              flex-direction: column;
+              gap: 8px;
+              background: #FFFFFF;
+              border: 1px solid #E5E7EB;
+              border-radius: 24px;
+              padding: 13px;
+            }
+            
+            .info-row {
+              display: flex;
+              flex-direction: row;
+              align-items: center;
+              gap: 12px;
+            }
+            
+            .icon-box {
+              width: 36px;
+              height: 36px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              background: #F3F4F6;
+              border-radius: 24px;
+              flex-shrink: 0;
+            }
+            
+            .icon-box svg {
+              width: 18px;
+              height: 18px;
+              fill: #374151;
+            }
+            
+            .info-text-container {
+              flex: 1;
+              display: flex;
+              flex-direction: column;
+              gap: 6px;
+            }
+            
+            .info-title {
+              font-family: 'Inter', sans-serif;
+              font-size: 14px;
+              font-weight: 500;
+              line-height: 16.94px;
+              color: #111827;
+            }
+            
+            .info-description {
+              font-family: 'Inter', sans-serif;
+              font-size: 12px;
+              font-weight: 400;
+              line-height: 14.52px;
+              color: #9CA3AF;
+            }
+            
+            .divider {
+              height: 1px;
+              background: #E5E7EB;
+              margin: 4px 0;
+            }
+            
+            .note-row {
+              display: flex;
+              flex-direction: row;
+              align-items: flex-start;
+              gap: 8px;
+            }
+            
+            .note-row svg {
+              width: 16px;
+              height: 16px;
+              margin-top: 2px;
+              flex-shrink: 0;
+            }
+            
+            .note-text {
+              flex: 1;
+              font-family: 'Inter', sans-serif;
+              font-size: 13px;
+              font-weight: 400;
+              line-height: 15.73px;
+              color: #9CA3AF;
+            }
+            
+            .redirect-banner {
+              display: flex;
+              flex-direction: row;
+              align-items: center;
+              gap: 8px;
+              background: #F3F4F6;
+              border: 1px dashed #E5E7EB;
+              border-radius: 24px;
+              padding: 11px 13px;
+            }
+            
+            .redirect-banner svg {
+              width: 16px;
+              height: 16px;
+              flex-shrink: 0;
+            }
+            
+            .redirect-text {
+              flex: 1;
+              font-family: 'Inter', sans-serif;
+              font-size: 12px;
+              font-weight: 500;
+              line-height: 14.52px;
+              color: #374151;
+            }
+            
+            .buttons-container {
+              display: flex;
+              flex-direction: row;
+              gap: 8px;
+            }
+            
+            .btn {
+              flex: 1;
+              display: flex;
+              flex-direction: row;
+              align-items: center;
+              justify-content: center;
+              gap: 8px;
+              padding: 11px 13px;
+              border-radius: 24px;
+              border: 1px solid;
+              cursor: pointer;
+              text-decoration: none;
+              font-family: 'Inter', sans-serif;
+              font-size: 14px;
+              font-weight: 500;
+              line-height: 16.94px;
+              transition: all 0.2s;
+              text-align: center;
+            }
+            
+            .btn-primary {
+              background: #6366F1;
+              border-color: #6366F1;
+              color: #FFFFFF;
+            }
+            
+            .btn-primary:hover {
+              background: #5568d3;
+              border-color: #5568d3;
+            }
+            
+            .btn-secondary {
+              background: #F3F4F6;
+              border-color: #E5E7EB;
+              color: #374151;
+            }
+            
+            .btn-secondary:hover {
+              background: #E5E7EB;
+            }
+            
+            .btn svg {
+              width: 18px;
+              height: 18px;
+              flex-shrink: 0;
+            }
+            
+            .footer {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              margin-top: 8px;
+            }
+            
+            .footer-text {
+              font-family: 'Inter', sans-serif;
+              font-size: 12px;
+              font-weight: 400;
+              line-height: 14.52px;
+              color: #9CA3AF;
+              text-align: center;
+            }
+            
+            @media (max-width: 480px) {
+              .card {
+                border-radius: 32px;
+                padding: 20px;
+              }
+              
+              .buttons-container {
+                flex-direction: column;
+              }
+            }
+          </style>
+          <script>
+            const deepLink = 'mycloud://auth/login';
+            const webLoginUrl = '${webLoginUrl}';
+            
+            function tryOpenApp() {
+              const iframe = document.createElement('iframe');
+              iframe.style.display = 'none';
+              iframe.src = deepLink;
+              document.body.appendChild(iframe);
+              setTimeout(() => document.body.removeChild(iframe), 2000);
+            }
+            
+            function openMobileApp() {
+              window.location.href = deepLink;
+              setTimeout(() => {
+                if (document.hasFocus && document.hasFocus()) {
+                  window.location.href = webLoginUrl;
+                }
+              }, 1000);
+            }
+            
+            function openWebApp() {
+              window.location.href = webLoginUrl;
+            }
+            
+            window.onload = tryOpenApp;
+          </script>
+        </head>
+        <body>
+          <div class="overlay">
+            <div class="card">
+              <div class="header">
+                <h1 class="header-title">Email подтверждён</h1>
+              </div>
+              
+              <div class="content">
+                <div class="success-banner">
+                  <div class="success-icon">
+                    <svg viewBox="0 0 15 15" fill="none">
+                      <path d="M11.25 3.75L6 9L3.75 6.75" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                  <div class="success-text">Адрес электронной почты успешно подтверждён</div>
+                </div>
+                
+                <div class="info-card">
+                  <div class="info-row">
+                    <div class="icon-box">
+                      <svg viewBox="0 0 18 18" fill="none">
+                        <path d="M3 3H15C15.825 3 16.5 3.675 16.5 4.5V13.5C16.5 14.325 15.825 15 15 15H3C2.175 15 1.5 14.325 1.5 13.5V4.5C1.5 3.675 2.175 3 3 3Z" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M16.5 4.5L9 9.75L1.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </div>
+                    <div class="info-text-container">
+                      <div class="info-title">Почта подтверждена</div>
+                      <div class="info-description">Спасибо! Ссылка из письма сработала, и ваш аккаунт активирован.</div>
+                    </div>
+                  </div>
+                  
+                  <div class="divider"></div>
+                  
+                  <div class="note-row">
+                    <svg viewBox="0 0 16 16" fill="none">
+                      <path d="M8 14C11.3137 14 14 11.3137 14 8C14 4.68629 11.3137 2 8 2C4.68629 2 2 4.68629 2 8C2 11.3137 4.68629 14 8 14Z" stroke="currentColor" stroke-width="1.33"/>
+                      <path d="M8 5.33V8M8 10.67H8.00667" stroke="currentColor" stroke-width="1.33" stroke-linecap="round"/>
+                    </svg>
+                    <div class="note-text">Ввод email не требуется — мы перенаправим вас автоматически.</div>
+                  </div>
+                </div>
+                
+                <div class="redirect-banner">
+                  <svg viewBox="0 0 16 16" fill="none">
+                    <path d="M8 2V8M8 8L11 5M8 8L5 5M13 8C13 10.7614 10.7614 13 8 13C5.23858 13 3 10.7614 3 8C3 5.23858 5.23858 3 8 3C10.7614 3 13 5.23858 13 8Z" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <div class="redirect-text">Через пару секунд вы будете перенаправлены на экран входа…</div>
+                </div>
+                
+                <div class="buttons-container">
+                  <a href="javascript:void(0)" onclick="openWebApp(); return false;" class="btn btn-primary">
+                    <svg viewBox="0 0 18 18" fill="none">
+                      <path d="M11.25 6.75L9 9L6.75 6.75" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M9 3V9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    <span>Перейти к входу</span>
+                  </a>
+                  <a href="javascript:void(0)" onclick="openMobileApp(); return false;" class="btn btn-secondary">
+                    <svg viewBox="0 0 18 18" fill="none">
+                      <path d="M12 4.5H6C4.34315 4.5 3 5.84315 3 7.5V12C3 13.6569 4.34315 15 6 15H12C13.6569 15 15 13.6569 15 12V7.5C15 5.84315 13.6569 4.5 12 4.5Z" stroke="currentColor" stroke-width="1.5"/>
+                      <path d="M7.5 9H10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    <span>Открыть приложение</span>
+                  </a>
+                </div>
+                
+                <div class="footer">
+                  <div class="footer-text">Если перенаправление не началось, вернитесь в приложение и выполните вход вручную.</div>
+                </div>
+              </div>
             </div>
-          </body>
+          </div>
+        </body>
         </html>
       `);
     } else {
