@@ -74,7 +74,7 @@ router.post('/register', validateInput({
       `INSERT INTO users 
       (username, email, password_hash, first_name, last_name, phone, role, 
        company_name, tax_id, legal_address, oauth_provider, status, email_verified, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', FALSE, NOW())`,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_verification', FALSE, NOW())`,
       [
         username,
         email,
@@ -192,7 +192,7 @@ router.post('/login', validateInput({
     }
 
     // Check user status
-    if (user.status !== 'active' && user.status !== 'pending') {
+    if (user.status !== 'active' && user.status !== 'pending_verification') {
       return res.status(401).json({
         success: false,
         error: 'Account is not active',
