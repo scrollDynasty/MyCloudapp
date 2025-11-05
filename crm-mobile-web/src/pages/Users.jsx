@@ -99,7 +99,7 @@ export default function Users() {
         if (!updateData.password) {
           delete updateData.password
         }
-        await api.put(`/auth/users/${editingUser.id}`, updateData)
+        await api.put(`/auth/users/${editingUser.user_id || editingUser.id}`, updateData)
         alert('Пользователь успешно обновлён!')
       } else {
         // При создании - пароль обязателен
@@ -124,6 +124,10 @@ export default function Users() {
 
   const handleDelete = async (userId) => {
     if (!confirm('Are you sure you want to delete this user?')) return
+    if (!userId) {
+      alert('Error: User ID not found')
+      return
+    }
     try {
       await api.delete(`/auth/users/${userId}`)
       alert('User deleted successfully!')
@@ -258,7 +262,7 @@ export default function Users() {
                 </tr>
               ) : (
                 filteredUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
+                  <tr key={user.user_id || user.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="h-10 w-10 flex-shrink-0">
@@ -309,7 +313,7 @@ export default function Users() {
                         Edit
                       </button>
                       <button
-                        onClick={() => handleDelete(user.id)}
+                        onClick={() => handleDelete(user.user_id || user.id)}
                         className="text-red-600 hover:text-red-900"
                       >
                         Delete
