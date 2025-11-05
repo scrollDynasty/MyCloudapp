@@ -31,6 +31,7 @@ const paymentsRoutes = require('./api/payments/payme');
 const paymentRedirectRoutes = require('./api/payments/redirect');
 const ordersRoutes = require('./api/orders/orders');
 const authRoutes = require('./api/auth/auth');
+const emailVerificationRoutes = require('./api/auth/email-verification');
 
 // Setup Google OAuth
 const setupGoogleOAuth = require('./core/config/google-oauth');
@@ -181,6 +182,7 @@ app.get('/metrics', (req, res) => {
 
 // API Routes with rate limiting
 app.use('/api/auth', rateLimiters.auth.middleware(), authRoutes);
+app.use('/api/auth/verify-email', rateLimiters.auth.middleware(), emailVerificationRoutes);
 app.use('/api/vps', rateLimiters.api.middleware(), vpsRoutes);
 app.use('/api/vps-admin', rateLimiters.api.middleware(), vpsAdminRoutes);
 app.use('/api/providers', rateLimiters.api.middleware(), providersRoutes);

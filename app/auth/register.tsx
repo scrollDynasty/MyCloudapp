@@ -571,21 +571,30 @@ const RegisterScreen: React.FC = () => {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
 
-        // Используем signIn из AuthContext
-        await signIn(data.data.token, data.data.user);
+        // Проверяем, требуется ли подтверждение email
+        if (data.data.requires_verification) {
+          // Перенаправляем на экран "Email отправлен"
+          router.replace({
+            pathname: '/auth/email-sent' as any,
+            params: { email: sanitizedEmail }
+          });
+        } else {
+          // Google OAuth или старая логика - автоматический вход
+          await signIn(data.data.token, data.data.user);
 
-        Alert.alert('Успешно', 'Регистрация прошла успешно!', [
-          {
-            text: 'OK',
-            onPress: () => {
-              if (data.data.user.role === 'admin') {
-                router.replace('/(admin)/dashboard');
-              } else {
-                router.replace('/(user)/home');
-              }
+          Alert.alert('Успешно', 'Регистрация прошла успешно!', [
+            {
+              text: 'OK',
+              onPress: () => {
+                if (data.data.user.role === 'admin') {
+                  router.replace('/(admin)/dashboard');
+                } else {
+                  router.replace('/(user)/home');
+                }
+              },
             },
-          },
-        ]);
+          ]);
+        }
       } else {
         shakeAnimation();
         if (Platform.OS !== 'web') {

@@ -6,6 +6,7 @@ const { generateToken, authenticate, adminOnly, adminOrSelf } = require('../../c
 const SQL = require('../../core/db/queries');
 const securityUtils = require('../../core/utils/security');
 const { validateInput } = require('../../core/middleware/security');
+const emailUtil = require('../../core/utils/email');
 
 const router = express.Router();
 
@@ -68,51 +69,58 @@ router.post('/register', validateInput({
     // Generate username from email
     const username = email.split('@')[0] + '_' + Date.now();
 
-    // Create user
-    const result = await db.query(SQL.CREATE_USER, [
-      username,
-      email,
-      passwordHash,
-      first_name,
-      last_name,
-      phone || null,
-      userRole,
-      company_name || null,
-      tax_id || null,
-      legal_address || null,
-      null // oauth_provider - NULL для локальных пользователей
-    ]);
+    // Create user with unverified status (for email verification)
+    const result = await db.query(
+      `INSERT INTO users 
+      (username, email, password_hash, first_name, last_name, phone, role, 
+       company_name, tax_id, legal_address, oauth_provider, status, email_verified, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', FALSE, NOW())`,
+      [
+        username,
+        email,
+        passwordHash,
+        first_name,
+        last_name,
+        phone || null,
+        userRole,
+        company_name || null,
+        tax_id || null,
+        legal_address || null,
+        null // oauth_provider - NULL для локальных пользователей
+      ]
+    );
 
     const userId = result.insertId;
 
     // Get created user
     const newUser = await db.query(SQL.GET_USER_BY_ID, [userId]);
-
     const user = newUser[0];
     
     // Combine first_name and last_name into full_name for response
     const userFullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
 
-    // Generate JWT token
-    const token = generateToken(user);
+    // Генерируем verification token
+    const verificationToken = await emailUtil.generateVerificationToken(userId);
+    
+    // Отправляем verification email
+    const emailSent = await emailUtil.sendVerificationEmail(
+      email,
+      userFullName,
+      verificationToken
+    );
 
-    // Санитизация ответа (удаление чувствительных данных)
-    const sanitizedUser = securityUtils.sanitizeResponse({
-      user_id: user.id,
-      username: user.username,
-      email: user.email,
-      full_name: userFullName,
-      role: user.role,
-      company_name: user.company_name,
-      status: user.status
-    });
+    if (!emailSent) {
+      console.error('Failed to send verification email, but user was created');
+    }
 
+    // Возвращаем успех БЕЗ токена авторизации - пользователь должен подтвердить email
     res.status(201).json({
       success: true,
+      message: 'Регистрация успешна! Проверьте вашу почту для подтверждения.',
       data: {
-        user: sanitizedUser,
-        token: token,
-        expires_in: process.env.JWT_EXPIRES_IN || '7d'
+        email: email,
+        requires_verification: true,
+        verification_sent: emailSent
       }
     });
 
@@ -174,8 +182,17 @@ router.post('/login', validateInput({
       });
     }
 
+    // Check if email is verified (только для не-OAuth пользователей)
+    if (!user.oauth_provider && !user.email_verified) {
+      return res.status(401).json({
+        success: false,
+        error: 'Email не подтверждён. Проверьте вашу почту.',
+        requires_verification: true
+      });
+    }
+
     // Check user status
-    if (user.status !== 'active') {
+    if (user.status !== 'active' && user.status !== 'pending') {
       return res.status(401).json({
         success: false,
         error: 'Account is not active',
