@@ -12,8 +12,6 @@ const dbConfig = {
   waitForConnections: true,
   // Timeout configurations to prevent hanging connections
   connectTimeout: 10000, // 10 seconds
-  acquireTimeout: 10000, // 10 seconds to acquire connection from pool
-  timeout: 60000, // 60 seconds query timeout
   // Idle connection management
   enableKeepAlive: true,
   keepAliveInitialDelay: 10000, // 10 seconds

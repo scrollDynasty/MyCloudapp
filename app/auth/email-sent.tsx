@@ -1,19 +1,24 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Animated,
     Dimensions,
+    KeyboardAvoidingView,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
     View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isSmallScreen = SCREEN_WIDTH < 375;
+const isMediumScreen = SCREEN_WIDTH >= 375 && SCREEN_WIDTH < 768;
 
 export default function EmailSentScreen() {
   const router = useRouter();
@@ -24,8 +29,8 @@ export default function EmailSentScreen() {
   const [canResend, setCanResend] = useState(false);
   
   // Анимации
-  const fadeAnim = new Animated.Value(0);
-  const scaleAnim = new Animated.Value(0.95);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
 
   useEffect(() => {
     Animated.parallel([
@@ -66,21 +71,32 @@ export default function EmailSentScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.overlay}>
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <LinearGradient
+        colors={['#F9FAFB', '#FFFFFF']}
+        style={styles.gradientBackground}
+      >
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
-          <Animated.View
-            style={[
-              styles.card,
-              {
-                opacity: fadeAnim,
-                transform: [{ scale: scaleAnim }],
-              },
-            ]}
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
+            <Animated.View
+              style={[
+                styles.card,
+                {
+                  opacity: fadeAnim,
+                  transform: [{ scale: scaleAnim }],
+                  paddingHorizontal: isSmallScreen ? 20 : 21,
+                  paddingVertical: isSmallScreen ? 20 : 21,
+                },
+              ]}
+            >
             {/* Header */}
             <View style={styles.header}>
               <Text style={styles.headerTitle}>Проверьте почту</Text>
@@ -176,36 +192,37 @@ export default function EmailSentScreen() {
             </View>
           </Animated.View>
         </ScrollView>
-      </View>
-    </View>
+      </KeyboardAvoidingView>
+    </LinearGradient>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: '#F9FAFB',
   },
-  overlay: {
+  gradientBackground: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: '#F9FAFB',
+  },
+  container: {
+    flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: isSmallScreen ? 16 : 24,
+    paddingVertical: Platform.OS === 'ios' ? 30 : 20,
+    paddingHorizontal: 0,
   },
   card: {
     width: '100%',
-    maxWidth: 392,
+    maxWidth: isMediumScreen ? '100%' : 392,
     backgroundColor: '#FFFFFF',
-    borderRadius: 48,
-    padding: 21,
-    gap: 16,
+    borderRadius: isSmallScreen ? 32 : 48,
+    gap: isSmallScreen ? 14 : 16,
     borderWidth: 1,
     borderColor: '#E5E7EB',
     shadowColor: '#000',
@@ -213,13 +230,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.24,
     shadowRadius: 40,
     elevation: 12,
+    alignSelf: 'center',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: isSmallScreen ? 16 : 18,
     fontWeight: '600',
     color: '#111827',
     lineHeight: 22,
@@ -229,9 +247,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     backgroundColor: '#6366F1',
-    borderRadius: 24,
-    paddingVertical: 13,
-    paddingHorizontal: 13,
+    borderRadius: isSmallScreen ? 20 : 24,
+    paddingVertical: isSmallScreen ? 11 : 13,
+    paddingHorizontal: isSmallScreen ? 12 : 13,
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
@@ -245,17 +263,17 @@ const styles = StyleSheet.create({
   },
   infoText: {
     flex: 1,
-    fontSize: 14,
+    fontSize: isSmallScreen ? 13 : 14,
     fontWeight: '500',
     color: '#FFFFFF',
     lineHeight: 17,
   },
   infoCard: {
-    gap: 12,
+    gap: isSmallScreen ? 10 : 12,
     backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    paddingVertical: 13,
-    paddingHorizontal: 13,
+    borderRadius: isSmallScreen ? 20 : 24,
+    paddingVertical: isSmallScreen ? 12 : 13,
+    paddingHorizontal: isSmallScreen ? 12 : 13,
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
@@ -264,9 +282,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   iconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 24,
+    width: isSmallScreen ? 32 : 36,
+    height: isSmallScreen ? 32 : 36,
+    borderRadius: isSmallScreen ? 20 : 24,
     backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
@@ -276,13 +294,13 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   infoTitle: {
-    fontSize: 14,
+    fontSize: isSmallScreen ? 13 : 14,
     fontWeight: '500',
     color: '#111827',
     lineHeight: 17,
   },
   infoDescription: {
-    fontSize: 12,
+    fontSize: isSmallScreen ? 11 : 12,
     fontWeight: '400',
     color: '#9CA3AF',
     lineHeight: 15,
@@ -292,7 +310,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E7EB',
   },
   stepsContainer: {
-    gap: 12,
+    gap: isSmallScreen ? 10 : 12,
   },
   stepRow: {
     flexDirection: 'row',
@@ -300,21 +318,21 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   stepNumber: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: isSmallScreen ? 22 : 24,
+    height: isSmallScreen ? 22 : 24,
+    borderRadius: isSmallScreen ? 11 : 12,
     backgroundColor: '#6366F1',
     justifyContent: 'center',
     alignItems: 'center',
   },
   stepNumberText: {
-    fontSize: 12,
+    fontSize: isSmallScreen ? 11 : 12,
     fontWeight: '700',
     color: '#FFFFFF',
   },
   stepText: {
     flex: 1,
-    fontSize: 13,
+    fontSize: isSmallScreen ? 12 : 13,
     fontWeight: '400',
     color: '#374151',
     lineHeight: 16,
@@ -324,15 +342,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     backgroundColor: '#FEF3C7',
-    borderRadius: 24,
-    paddingVertical: 11,
-    paddingHorizontal: 13,
+    borderRadius: isSmallScreen ? 20 : 24,
+    paddingVertical: isSmallScreen ? 10 : 11,
+    paddingHorizontal: isSmallScreen ? 12 : 13,
     borderWidth: 1,
     borderColor: '#F59E0B',
   },
   warningText: {
     flex: 1,
-    fontSize: 12,
+    fontSize: isSmallScreen ? 11 : 12,
     fontWeight: '500',
     color: '#92400E',
     lineHeight: 15,
@@ -343,9 +361,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
+    borderRadius: isSmallScreen ? 14 : 16,
+    paddingVertical: isSmallScreen ? 12 : 14,
+    paddingHorizontal: isSmallScreen ? 20 : 24,
     borderWidth: 1,
     borderColor: '#6366F1',
   },
@@ -354,12 +372,12 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   resendButtonText: {
-    fontSize: 14,
+    fontSize: isSmallScreen ? 13 : 14,
     fontWeight: '600',
     color: '#6366F1',
   },
   resendButtonTextDisabled: {
-    fontSize: 14,
+    fontSize: isSmallScreen ? 13 : 14,
     fontWeight: '600',
     color: '#9CA3AF',
   },
@@ -368,10 +386,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 12,
+    paddingVertical: isSmallScreen ? 10 : 12,
   },
   backButtonText: {
-    fontSize: 14,
+    fontSize: isSmallScreen ? 13 : 14,
     fontWeight: '500',
     color: '#6366F1',
   },
@@ -382,7 +400,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#E5E7EB',
   },
   footerText: {
-    fontSize: 12,
+    fontSize: isSmallScreen ? 11 : 12,
     fontWeight: '400',
     color: '#9CA3AF',
     lineHeight: 15,

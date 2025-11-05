@@ -196,6 +196,77 @@ app.use('/api/orders', rateLimiters.api.middleware(), ordersRoutes);
 // Payment redirect routes (без /api префикса)
 app.use('/', paymentRedirectRoutes);
 
+// Email verification web route (для браузера)
+app.get('/auth/verify-email', async (req, res) => {
+  try {
+    const { token } = req.query;
+    
+    if (!token) {
+      return res.status(400).send(`
+        <html>
+          <head><title>Ошибка подтверждения</title></head>
+          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+            <h1>Ошибка</h1>
+            <p>Токен подтверждения не найден.</p>
+            <p><a href="${process.env.FRONTEND_WEB_URL || 'https://billing.mycloud.uz'}/auth/login">Вернуться на страницу входа</a></p>
+          </body>
+        </html>
+      `);
+    }
+
+    // Проверяем токен через API
+    const emailUtil = require('./core/utils/email');
+    const result = await emailUtil.confirmEmail(token);
+    
+    if (result.success) {
+      return res.send(`
+        <html>
+          <head><title>Email подтверждён</title></head>
+          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+            <div style="background: white; color: #333; padding: 40px; border-radius: 12px; max-width: 500px; margin: 0 auto; box-shadow: 0 12px 40px rgba(0,0,0,0.24);">
+              <h1 style="color: #10B981;">✅ Email подтверждён!</h1>
+              <p>Добро пожаловать, ${result.name}!</p>
+              <p>Ваш email успешно подтверждён. Теперь вы можете войти в приложение.</p>
+              <p style="margin-top: 30px;">
+                <a href="${process.env.FRONTEND_WEB_URL || 'https://billing.mycloud.uz'}/auth/login" 
+                   style="display: inline-block; padding: 12px 24px; background: #667eea; color: white; text-decoration: none; border-radius: 8px;">
+                  Войти в приложение
+                </a>
+              </p>
+              <p style="margin-top: 20px; font-size: 12px; color: #9ca3af;">
+                Если приложение установлено, откройте его для входа.
+              </p>
+            </div>
+          </body>
+        </html>
+      `);
+    } else {
+      return res.status(400).send(`
+        <html>
+          <head><title>Ошибка подтверждения</title></head>
+          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+            <h1 style="color: #EF4444;">❌ Ошибка</h1>
+            <p>${result.error || 'Не удалось подтвердить email'}</p>
+            <p><a href="${process.env.FRONTEND_WEB_URL || 'https://billing.mycloud.uz'}/auth/login">Вернуться на страницу входа</a></p>
+          </body>
+        </html>
+      `);
+    }
+  } catch (error) {
+    console.error('Email verification web route error:', error);
+    return res.status(500).send(`
+      <html>
+        <head><title>Ошибка сервера</title></head>
+        <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+          <h1>Ошибка сервера</h1>
+          <p>Произошла ошибка при подтверждении email.</p>
+          <p><a href="${process.env.FRONTEND_WEB_URL || 'https://billing.mycloud.uz'}/auth/login">Вернуться на страницу входа</a></p>
+        </body>
+      </html>
+    `);
+  }
+});
+
 // Default route
 app.get('/', (req, res) => {
   res.json({

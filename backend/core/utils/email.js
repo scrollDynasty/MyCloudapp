@@ -10,7 +10,7 @@ const db = require('../db/connection');
 // Конфигурация email транспорта
 const createTransporter = () => {
   // Используем SMTP настройки из .env
-  return nodemailer.createTransporter({
+  return nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: process.env.SMTP_PORT || 587,
     secure: process.env.SMTP_SECURE === 'true', // true для 465, false для других портов
@@ -106,8 +106,11 @@ async function sendVerificationEmail(email, name, token) {
   try {
     const transporter = createTransporter();
     
-    // URL для подтверждения (для мобильного приложения используем deep link)
-    const verificationUrl = `${process.env.FRONTEND_URL || 'mycloud://auth'}/verify-email?token=${token}`;
+
+    const webUrl = process.env.FRONTEND_WEB_URL || 'https://billing.mycloud.uz';
+    const mobileUrl = process.env.FRONTEND_URL || 'mycloud://auth';
+    const verificationUrl = `${webUrl}/auth/verify-email?token=${token}`;
+    const verificationMobileUrl = `${mobileUrl}/verify-email?token=${token}`;
     
     const mailOptions = {
       from: `"MyCloud" <${process.env.SMTP_USER}>`,
@@ -225,7 +228,17 @@ async function sendVerificationEmail(email, name, token) {
               
               <div class="button-container">
                 <a href="${verificationUrl}" class="button">
-                  Подтвердить Email
+                  Подтвердить Email (Веб)
+                </a>
+              </div>
+              
+              <div style="margin-top: 20px; text-align: center;">
+                <p style="font-size: 13px; color: #6b7280;">
+                  Или используйте мобильное приложение:
+                </p>
+                <a href="${verificationMobileUrl}" 
+                   style="display: inline-block; padding: 10px 20px; background: #F3F4F6; color: #374151; text-decoration: none; border-radius: 8px; margin-top: 10px; font-size: 13px;">
+                  Открыть в приложении
                 </a>
               </div>
               
@@ -237,6 +250,10 @@ async function sendVerificationEmail(email, name, token) {
                 Если кнопка не работает, скопируйте и вставьте следующую ссылку в ваш браузер:
                 <br>
                 <a href="${verificationUrl}" style="color: #667eea; word-break: break-all;">${verificationUrl}</a>
+                <br><br>
+                Или для мобильного приложения:
+                <br>
+                <span style="color: #667eea; word-break: break-all; font-family: monospace; font-size: 12px;">${verificationMobileUrl}</span>
               </div>
               
               <div class="security-notice">
@@ -263,6 +280,9 @@ async function sendVerificationEmail(email, name, token) {
 
 Перейдите по ссылке для подтверждения:
 ${verificationUrl}
+
+Или для мобильного приложения:
+${verificationMobileUrl}
 
 ⏰ Важно: Эта ссылка действительна только в течение 10 минут.
 

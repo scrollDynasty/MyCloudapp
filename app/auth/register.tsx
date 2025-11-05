@@ -9,13 +9,14 @@ import {
   Animated,
   Dimensions,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { API_URL } from '../../config/api';
@@ -226,6 +227,8 @@ const RegisterScreen: React.FC = () => {
     taxId: false,
   });
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successUserData, setSuccessUserData] = useState<any>(null);
 
   // Debounced значения для валидации (оптимизация производительности)
   const debouncedEmail = useDebounce(email, 300);
@@ -236,8 +239,31 @@ const RegisterScreen: React.FC = () => {
   const slideAnim = useRef(new Animated.Value(50)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const modalFadeAnim = useRef(new Animated.Value(0)).current;
+  const modalScaleAnim = useRef(new Animated.Value(0.8)).current;
 
-  // Запуск анимации появления при монтировании
+  // Анимация модального окна
+  useEffect(() => {
+    if (showSuccessModal) {
+      modalFadeAnim.setValue(0);
+      modalScaleAnim.setValue(0.8);
+      Animated.parallel([
+        Animated.timing(modalFadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(modalScaleAnim, {
+          toValue: 1,
+          tension: 50,
+          friction: 7,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [showSuccessModal]);
+
+  // Запуск анимации появления формы при монтировании
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -582,18 +608,9 @@ const RegisterScreen: React.FC = () => {
           // Google OAuth или старая логика - автоматический вход
           await signIn(data.data.token, data.data.user);
 
-          Alert.alert('Успешно', 'Регистрация прошла успешно!', [
-            {
-              text: 'OK',
-              onPress: () => {
-                if (data.data.user.role === 'admin') {
-                  router.replace('/(admin)/dashboard');
-                } else {
-                  router.replace('/(user)/home');
-                }
-              },
-            },
-          ]);
+          // Показываем красивое модальное окно успеха
+          setSuccessUserData(data.data.user);
+          setShowSuccessModal(true);
         }
       } else {
         shakeAnimation();
@@ -1035,6 +1052,68 @@ const RegisterScreen: React.FC = () => {
           </ScrollView>
         </KeyboardAvoidingView>
       </LinearGradient>
+
+      {/* Модальное окно успешной регистрации */}
+      <Modal
+        visible={showSuccessModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          if (successUserData) {
+            if (successUserData.role === 'admin') {
+              router.replace('/(admin)/dashboard');
+            } else {
+              router.replace('/(user)/home');
+            }
+          }
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <Animated.View 
+            style={[
+              styles.modalContent, 
+              { 
+                opacity: modalFadeAnim,
+                transform: [{ scale: modalScaleAnim }]
+              }
+            ]}
+          >
+            <LinearGradient
+              colors={['#10B981', '#059669']}
+              style={styles.modalIconContainer}
+            >
+              <Ionicons name="checkmark-circle" size={64} color="#FFFFFF" />
+            </LinearGradient>
+            
+            <Text style={styles.modalTitle}>Регистрация успешна!</Text>
+            <Text style={styles.modalMessage}>
+              Добро пожаловать в MyCloud!{'\n'}Ваш аккаунт успешно создан.
+            </Text>
+
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={() => {
+                setShowSuccessModal(false);
+                if (successUserData) {
+                  if (successUserData.role === 'admin') {
+                    router.replace('/(admin)/dashboard');
+                  } else {
+                    router.replace('/(user)/home');
+                  }
+                }
+              }}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['#FFFFFF', '#F9FAFB']}
+                style={styles.modalButtonGradient}
+              >
+                <Text style={styles.modalButtonText}>Продолжить</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -1289,5 +1368,74 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     lineHeight: 15.73,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: isSmallScreen ? 20 : 32,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: isSmallScreen ? 24 : 32,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.24,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  modalIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: isSmallScreen ? 24 : 28,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: isSmallScreen ? 14 : 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 32,
+    paddingHorizontal: 8,
+  },
+  modalButton: {
+    width: '100%',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  modalButtonGradient: {
+    paddingVertical: isSmallScreen ? 14 : 16,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalButtonText: {
+    fontSize: isSmallScreen ? 15 : 16,
+    fontWeight: '600',
+    color: '#6366F1',
   },
 });

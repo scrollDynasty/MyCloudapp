@@ -26,16 +26,26 @@ export default function RootLayout() {
     // Парсим URL
     const { hostname, path, queryParams } = Linking.parse(url);
     
-    // Проверяем, что это действительно deep link для платежей
+    // Проверяем, что это действительно deep link для платежей или верификации email
     const isPaymentSuccess = path === 'payment-success' || hostname === 'payment-success' || url.includes('payment-success');
     const isPaymentCancel = path === 'payment-cancel' || hostname === 'payment-cancel' || url.includes('payment-cancel');
+    const isVerifyEmail = path === 'verify-email' || hostname === 'verify-email' || url.includes('verify-email');
 
-    if (!isPaymentSuccess && !isPaymentCancel) {
+    if (!isPaymentSuccess && !isPaymentCancel && !isVerifyEmail) {
       return; // Игнорируем все остальные URL
     }
 
     // Помечаем URL как обработанный
     processedUrls.current.add(url);
+
+    // Обработка verify-email
+    if (isVerifyEmail && queryParams?.token) {
+      router.replace({
+        pathname: '/auth/verify-email',
+        params: { token: queryParams.token as string }
+      });
+      return;
+    }
 
     // Обработка payment-success
     if (isPaymentSuccess) {
