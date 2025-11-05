@@ -3,17 +3,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Animated,
-    Dimensions,
-    Linking,
-    Platform,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Dimensions,
+  Linking,
+  Platform,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { API_URL } from '../../config/api';
 import { getHeaders } from '../../config/fetch';
@@ -275,12 +275,6 @@ export default React.memo(function ServiceDetailsScreen() {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.errorText}>План не найден</Text>
-        <TouchableOpacity 
-          style={styles.backButtonContainer}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.backButtonText}>Назад</Text>
-        </TouchableOpacity>
       </View>
     );
   }
@@ -290,17 +284,10 @@ export default React.memo(function ServiceDetailsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <TouchableOpacity 
-            onPress={() => router.back()} 
-            style={styles.backButtonContainer}
-            activeOpacity={0.7}
-          >
-            <View style={styles.backButtonIcon}>
-              <Ionicons name="arrow-back" size={16} color="#374151" />
-            </View>
-            <Text style={styles.backButtonText}>Назад</Text>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={20} color="#111827" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Детали сервиса</Text>
+          <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">Детали сервиса</Text>
           <View style={styles.headerRight} />
         </View>
       </View>
@@ -537,46 +524,38 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingTop: Platform.OS === 'ios' ? 60 : 50,
-    paddingBottom: 17,
+    paddingBottom: 13,
     paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
-    minHeight: Platform.OS === 'ios' ? 95 : 85,
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     position: 'relative',
-    minHeight: 50,
+    width: '100%',
+    minHeight: 36,
   },
-  backButtonContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    padding: 9,
-    paddingHorizontal: 11,
+  backButton: {
+    width: 36,
+    height: 36,
     borderRadius: 24,
     backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E5E7EB',
     position: 'absolute',
-    left: 12,
-    top: Platform.OS === 'ios' ? -48 : -38,
-    zIndex: 10,
-  },
-  backButtonIcon: {
-    width: 16,
-    height: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backButtonText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#374151',
-    lineHeight: 15.73,
+    left: 0,
+    top: 0,
+    zIndex: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
   headerTitle: {
     fontSize: 18,
@@ -585,9 +564,10 @@ const styles = StyleSheet.create({
     lineHeight: 21.78,
     flex: 1,
     textAlign: 'center',
+    paddingHorizontal: 44,
   },
   headerRight: {
-    width: 100,
+    width: 36,
   },
   errorText: {
     fontSize: 16,

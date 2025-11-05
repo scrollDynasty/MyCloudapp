@@ -80,47 +80,6 @@ export default function ServiceGroupDetailsScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   
-  // Анимации для нижней панели навигации - используем useRef с правильным обновлением
-  const navAnimationsRef = useRef({
-    home: {
-      bg: new Animated.Value(pathname === '/(user)/home' ? 1 : 0),
-      label: new Animated.Value(pathname === '/(user)/home' ? 1 : 0),
-    },
-    services: {
-      bg: new Animated.Value(pathname === '/(user)/services' ? 1 : 0),
-      label: new Animated.Value(pathname === '/(user)/services' ? 1 : 0),
-    },
-    orders: {
-      bg: new Animated.Value(pathname === '/(user)/orders' ? 1 : 0),
-      label: new Animated.Value(pathname === '/(user)/orders' ? 1 : 0),
-    },
-    profile: {
-      bg: new Animated.Value(pathname === '/(user)/profile' ? 1 : 0),
-      label: new Animated.Value(pathname === '/(user)/profile' ? 1 : 0),
-    },
-  });
-
-  // Анимация навигации при изменении pathname
-  useEffect(() => {
-    const navAnimations = navAnimationsRef.current;
-    const routes = ['home', 'services', 'orders', 'profile'] as const;
-    
-    routes.forEach((route) => {
-      const isActive = pathname === `/(user)/${route}`;
-      Animated.parallel([
-        Animated.timing(navAnimations[route].bg, {
-          toValue: isActive ? 1 : 0,
-          duration: 200,
-          useNativeDriver: false,
-        }),
-        Animated.timing(navAnimations[route].label, {
-          toValue: isActive ? 1 : 0,
-          duration: 200,
-          useNativeDriver: false,
-        }),
-      ]).start();
-    });
-  }, [pathname]);
 
   useEffect(() => {
     loadPlans();
@@ -372,7 +331,7 @@ export default function ServiceGroupDetailsScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={20} color="#111827" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Группа: {groupName}</Text>
+          <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">Группа: {groupName}</Text>
           <View style={styles.headerRight} />
         </View>
       </View>
@@ -528,173 +487,69 @@ export default function ServiceGroupDetailsScreen() {
       <View style={styles.bottomNav}>
         <TouchableOpacity 
           style={styles.bottomNavItem}
-          onPress={() => router.push('/(user)/home')}
+          onPress={() => {
+            if (pathname !== '/(user)/home') {
+              router.replace('/(user)/home');
+            }
+          }}
           activeOpacity={0.7}
         >
           <View style={styles.bottomNavContent}>
-            <Animated.View 
-              style={[
-                styles.bottomNavIcon,
-                {
-                  backgroundColor: navAnimationsRef.current.home.bg.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['transparent', '#4F46E5'],
-                  }),
-                }
-              ]}
-            >
-              <Ionicons 
-                name="home" 
-                size={20} 
-                color={pathname === '/(user)/home' ? '#FFFFFF' : '#9CA3AF'}
-              />
-            </Animated.View>
-            <Animated.Text 
-              style={[
-                styles.bottomNavLabel,
-                {
-                  color: navAnimationsRef.current.home.label.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['#9CA3AF', '#4F46E5'],
-                  }),
-                  fontWeight: navAnimationsRef.current.home.label.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['500', '600'],
-                  }) as any,
-                }
-              ]}
-            >
-              Главная
-            </Animated.Text>
+            <View style={pathname === '/(user)/home' ? styles.bottomNavIconActive : styles.bottomNavIcon}>
+              <Ionicons name="home" size={20} color={pathname === '/(user)/home' ? '#FFFFFF' : '#9CA3AF'} />
+            </View>
+            <Text style={pathname === '/(user)/home' ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Главная</Text>
             {pathname === '/(user)/home' ? <View style={styles.bottomNavIndicator} /> : null}
           </View>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.bottomNavItem}
-          onPress={() => router.push('/(user)/services' as any)}
+          onPress={() => {
+            if (pathname !== '/(user)/services') {
+              router.replace('/(user)/services');
+            }
+          }}
           activeOpacity={0.7}
         >
           <View style={styles.bottomNavContent}>
-            <Animated.View 
-              style={[
-                styles.bottomNavIcon,
-                {
-                  backgroundColor: navAnimationsRef.current.services.bg.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['transparent', '#4F46E5'],
-                  }),
-                }
-              ]}
-            >
-              <Ionicons 
-                name="grid" 
-                size={20} 
-                color={pathname === '/(user)/services' ? '#FFFFFF' : '#9CA3AF'}
-              />
-            </Animated.View>
-            <Animated.Text 
-              style={[
-                styles.bottomNavLabel,
-                {
-                  color: navAnimationsRef.current.services.label.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['#9CA3AF', '#4F46E5'],
-                  }),
-                  fontWeight: navAnimationsRef.current.services.label.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['500', '600'],
-                  }) as any,
-                }
-              ]}
-            >
-              Сервисы
-            </Animated.Text>
+            <View style={pathname === '/(user)/services' ? styles.bottomNavIconActive : styles.bottomNavIcon}>
+              <Ionicons name="grid" size={20} color={pathname === '/(user)/services' ? '#FFFFFF' : '#9CA3AF'} />
+            </View>
+            <Text style={pathname === '/(user)/services' ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Сервисы</Text>
             {pathname === '/(user)/services' ? <View style={styles.bottomNavIndicator} /> : null}
           </View>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.bottomNavItem}
-          onPress={() => router.push('/(user)/orders')}
+          onPress={() => {
+            if (pathname !== '/(user)/orders') {
+              router.replace('/(user)/orders');
+            }
+          }}
           activeOpacity={0.7}
         >
           <View style={styles.bottomNavContent}>
-            <Animated.View 
-              style={[
-                styles.bottomNavIcon,
-                {
-                  backgroundColor: navAnimationsRef.current.orders.bg.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['transparent', '#4F46E5'],
-                  }),
-                }
-              ]}
-            >
-              <Ionicons 
-                name="cart" 
-                size={20} 
-                color={pathname === '/(user)/orders' ? '#FFFFFF' : '#9CA3AF'}
-              />
-            </Animated.View>
-            <Animated.Text 
-              style={[
-                styles.bottomNavLabel,
-                {
-                  color: navAnimationsRef.current.orders.label.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['#9CA3AF', '#4F46E5'],
-                  }),
-                  fontWeight: navAnimationsRef.current.orders.label.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['500', '600'],
-                  }) as any,
-                }
-              ]}
-            >
-              Заказы
-            </Animated.Text>
+            <View style={pathname === '/(user)/orders' ? styles.bottomNavIconActive : styles.bottomNavIcon}>
+              <Ionicons name="cart" size={20} color={pathname === '/(user)/orders' ? '#FFFFFF' : '#9CA3AF'} />
+            </View>
+            <Text style={pathname === '/(user)/orders' ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Заказы</Text>
             {pathname === '/(user)/orders' ? <View style={styles.bottomNavIndicator} /> : null}
           </View>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.bottomNavItem}
-          onPress={() => router.push('/(user)/profile' as any)}
+          onPress={() => {
+            if (pathname !== '/(user)/profile') {
+              router.replace('/(user)/profile');
+            }
+          }}
           activeOpacity={0.7}
         >
           <View style={styles.bottomNavContent}>
-            <Animated.View 
-              style={[
-                styles.bottomNavIcon,
-                {
-                  backgroundColor: navAnimationsRef.current.profile.bg.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['transparent', '#4F46E5'],
-                  }),
-                }
-              ]}
-            >
-              <Ionicons 
-                name="person" 
-                size={20} 
-                color={pathname === '/(user)/profile' ? '#FFFFFF' : '#9CA3AF'}
-              />
-            </Animated.View>
-            <Animated.Text 
-              style={[
-                styles.bottomNavLabel,
-                {
-                  color: navAnimationsRef.current.profile.label.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['#9CA3AF', '#4F46E5'],
-                  }),
-                  fontWeight: navAnimationsRef.current.profile.label.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['500', '600'],
-                  }) as any,
-                }
-              ]}
-            >
-              Профиль
-            </Animated.Text>
+            <View style={pathname === '/(user)/profile' ? styles.bottomNavIconActive : styles.bottomNavIcon}>
+              <Ionicons name="person" size={20} color={pathname === '/(user)/profile' ? '#FFFFFF' : '#9CA3AF'} />
+            </View>
+            <Text style={pathname === '/(user)/profile' ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Профиль</Text>
             {pathname === '/(user)/profile' ? <View style={styles.bottomNavIndicator} /> : null}
           </View>
         </TouchableOpacity>
@@ -716,12 +571,11 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingTop: Platform.OS === 'ios' ? 60 : 50,
-    paddingBottom: 12,
+    paddingBottom: 13,
     paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
-    minHeight: Platform.OS === 'ios' ? 72 : 62,
   },
   headerContent: {
     flexDirection: 'row',
@@ -729,7 +583,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     position: 'relative',
     width: '100%',
-    minHeight: 36,
+    minHeight: 40,
   },
   backButton: {
     width: 36,
@@ -742,6 +596,7 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     position: 'absolute',
     left: 0,
+    top: 2,
     zIndex: 1,
     ...Platform.select({
       ios: {

@@ -526,12 +526,13 @@ const LoginScreen: React.FC = () => {
 
   // Мемоизированные адаптивные стили (оптимизация производительности)
   const adaptiveStyles = useMemo(() => ({
-    titleSize: isSmallScreen ? 32 : isMediumScreen ? 36 : 40,
-    subtitleSize: isSmallScreen ? 14 : 15,
-    inputHeight: isSmallScreen ? 52 : 56,
-    buttonHeight: isSmallScreen ? 52 : 56,
-    padding: isSmallScreen ? 24 : 28,
+    titleSize: isSmallScreen ? 28 : isMediumScreen ? 32 : 40,
+    subtitleSize: isSmallScreen ? 13 : 15,
+    inputHeight: isSmallScreen ? 48 : 56,
+    buttonHeight: isSmallScreen ? 48 : 56,
+    padding: isSmallScreen ? 16 : Platform.OS === 'ios' ? 24 : 20,
     maxWidth: isMediumScreen ? ('100%' as `${number}%`) : 440,
+    formPadding: isSmallScreen ? 16 : 20,
   }), [isSmallScreen, isMediumScreen]);
 
   // Мемоизация обработчиков для предотвращения лишних ре-рендеров
@@ -553,7 +554,7 @@ const LoginScreen: React.FC = () => {
         <KeyboardAvoidingView
           style={styles.container}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
           <ScrollView
             contentContainerStyle={styles.scrollContent}
@@ -582,6 +583,8 @@ const LoginScreen: React.FC = () => {
                 style={[
                   styles.formContainer,
                   { transform: [{ translateX: shakeAnim }] },
+                  { paddingHorizontal: adaptiveStyles.padding },
+                  { borderRadius: adaptiveStyles.formPadding === 16 ? 32 : 48 },
                 ]}
               >
                 <View style={styles.formInner}>
@@ -774,15 +777,15 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingVertical: 30,
-    paddingHorizontal: 24,
+    paddingVertical: Platform.OS === 'ios' ? 30 : 20,
+    paddingHorizontal: 0,
     justifyContent: 'center',
   },
   content: {
     flex: 1,
     justifyContent: 'center',
-    minHeight: SCREEN_HEIGHT - 100,
-    paddingTop: 20,
+    minHeight: Math.max(SCREEN_HEIGHT - 150, 400),
+    paddingTop: Platform.OS === 'ios' ? 20 : 10,
   },
   formContainer: {
     backgroundColor: '#FFFFFF',
@@ -799,7 +802,8 @@ const styles = StyleSheet.create({
   },
   formInner: {
     backgroundColor: '#FFFFFF',
-    paddingBottom: 16,
+    paddingBottom: Platform.OS === 'ios' ? 20 : 16,
+    paddingTop: Platform.OS === 'ios' ? 0 : 4,
   },
   header: {
     paddingHorizontal: 16,

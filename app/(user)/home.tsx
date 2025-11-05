@@ -84,7 +84,7 @@ export default function UserHomeScreen() {
       const token = await AsyncStorage.getItem('token');
       
       if (!token) {
-        Alert.alert('Ошибка', 'Токен авторизации не найден. Пожалуйста, войдите снова.');
+        // Тихо перенаправляем на логин без показа алерта
         router.replace('/auth/login');
         return;
       }
@@ -391,7 +391,11 @@ export default function UserHomeScreen() {
       <View style={styles.bottomNav}>
         <TouchableOpacity 
           style={styles.bottomNavItem}
-          onPress={() => router.push('/(user)/home')}
+          onPress={() => {
+            if (pathname !== '/(user)/home') {
+              router.replace('/(user)/home');
+            }
+          }}
           activeOpacity={0.7}
         >
           <View style={styles.bottomNavContent}>
@@ -404,7 +408,11 @@ export default function UserHomeScreen() {
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.bottomNavItem}
-          onPress={() => router.push('/(user)/services' as any)}
+          onPress={() => {
+            if (pathname !== '/(user)/services') {
+              router.replace('/(user)/services');
+            }
+          }}
           activeOpacity={0.7}
         >
           <View style={styles.bottomNavContent}>
@@ -417,7 +425,11 @@ export default function UserHomeScreen() {
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.bottomNavItem}
-          onPress={() => router.push('/(user)/orders')}
+          onPress={() => {
+            if (pathname !== '/(user)/orders') {
+              router.replace('/(user)/orders');
+            }
+          }}
           activeOpacity={0.7}
         >
           <View style={styles.bottomNavContent}>
@@ -430,7 +442,11 @@ export default function UserHomeScreen() {
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.bottomNavItem}
-          onPress={() => router.push('/(user)/profile' as any)}
+          onPress={() => {
+            if (pathname !== '/(user)/profile') {
+              router.replace('/(user)/profile');
+            }
+          }}
           activeOpacity={0.7}
         >
           <View style={styles.bottomNavContent}>
@@ -459,7 +475,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingTop: Platform.OS === 'ios' ? 60 : 50,
-    paddingBottom: 12,
+    paddingBottom: 13,
     paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,

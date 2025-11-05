@@ -59,7 +59,7 @@ export default React.memo(function ProfileScreen() {
       const token = await AsyncStorage.getItem('token');
       
       if (!token) {
-        Alert.alert('Ошибка', 'Токен авторизации не найден. Пожалуйста, войдите снова.');
+        // Тихо перенаправляем на логин без показа алерта
         router.replace('/auth/login');
         return;
       }
@@ -138,6 +138,10 @@ export default React.memo(function ProfileScreen() {
       setUser(authUser);
       // Загружаем данные только если их нет в кэше или они устарели
       loadProfileData(false);
+    } else {
+      // Если пользователь вышел, сбрасываем состояние
+      setUser(null);
+      setLoading(false);
     }
   }, [authUser, loadProfileData]);
 
@@ -167,10 +171,16 @@ export default React.memo(function ProfileScreen() {
 
   const handleLogout = async () => {
     try {
+      // Сначала очищаем состояние
+      setUser(null);
+      // Затем выходим
       await signOut();
+      // Перенаправляем на страницу логина
       router.replace('/auth/login');
     } catch (error) {
-      Alert.alert('Ошибка', 'Не удалось выйти. Попробуйте еще раз.');
+      console.error('Logout error:', error);
+      // Все равно перенаправляем на логин, даже если произошла ошибка
+      router.replace('/auth/login');
     }
   };
 
@@ -379,7 +389,11 @@ export default React.memo(function ProfileScreen() {
       <View style={styles.bottomNav}>
         <TouchableOpacity 
           style={styles.bottomNavItem}
-          onPress={() => router.push('/(user)/home')}
+          onPress={() => {
+            if (pathname !== '/(user)/home') {
+              router.replace('/(user)/home');
+            }
+          }}
           activeOpacity={0.7}
         >
           <View style={styles.bottomNavContent}>
@@ -392,7 +406,11 @@ export default React.memo(function ProfileScreen() {
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.bottomNavItem}
-          onPress={() => router.push('/(user)/services' as any)}
+          onPress={() => {
+            if (pathname !== '/(user)/services') {
+              router.replace('/(user)/services');
+            }
+          }}
           activeOpacity={0.7}
         >
           <View style={styles.bottomNavContent}>
@@ -405,7 +423,11 @@ export default React.memo(function ProfileScreen() {
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.bottomNavItem}
-          onPress={() => router.push('/(user)/orders')}
+          onPress={() => {
+            if (pathname !== '/(user)/orders') {
+              router.replace('/(user)/orders');
+            }
+          }}
           activeOpacity={0.7}
         >
           <View style={styles.bottomNavContent}>
@@ -446,7 +468,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingTop: Platform.OS === 'ios' ? 60 : 50,
-    paddingBottom: 12,
+    paddingBottom: 13,
     paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
