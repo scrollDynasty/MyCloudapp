@@ -1,10 +1,62 @@
 const crypto = require('crypto');
+const axios = require('axios');
 
 class PaymeHelper {
   constructor() {
     this.merchantId = process.env.PAYME_MERCHANT_ID;
     this.secretKey = process.env.PAYME_SECRET_KEY;
     this.url = process.env.PAYME_URL || 'https://checkout.paycom.uz';
+  }
+
+  isConfigured() {
+    return Boolean(this.secretKey && this.secretKey.length > 0 && this.merchantId && this.merchantId.length === 24);
+  }
+
+  async callApi(method, params = {}) {
+    if (!this.isConfigured()) {
+      throw new Error('Payme merchant credentials are not configured');
+    }
+
+    const endpoint = `${this.url.replace(/\/$/, '')}/api`;
+    const payload = {
+      jsonrpc: '2.0',
+      method,
+      params,
+      id: Date.now()
+    };
+
+    const authHeader = 'Basic ' + Buffer.from(`Paycom:${this.secretKey}`).toString('base64');
+
+    try {
+      const response = await axios.post(endpoint, payload, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: authHeader
+        },
+        timeout: 5000
+      });
+
+      if (response.data?.error) {
+        const error = response.data.error;
+        throw new Error(`Payme API error (${error.code}): ${error.message?.ru || error.message || 'Unknown error'}`);
+      }
+
+      return response.data?.result;
+    } catch (error) {
+      if (error.response?.data?.error) {
+        const err = error.response.data.error;
+        throw new Error(`Payme API error (${err.code}): ${err.message?.ru || err.message || 'Unknown error'}`);
+      }
+
+      throw new Error(`Payme API request failed: ${error.message}`);
+    }
+  }
+
+  async cancelTransaction(transactionId, reason = PaymeHelper.CANCEL_REASONS.TIMEOUT) {
+    return this.callApi('CancelTransaction', {
+      id: transactionId,
+      reason
+    });
   }
 
   generateAuthHeader() {

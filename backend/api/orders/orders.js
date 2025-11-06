@@ -29,8 +29,8 @@ router.get('/', async (req, res) => {
       params.push(status);
     }
 
-    // Исключаем просроченные неоплаченные заказы (старше 10 минут)
-    whereConditions.push(`NOT (o.status = 'pending' AND (o.payment_status IS NULL OR o.payment_status = 'pending') AND o.created_at < DATE_SUB(NOW(), INTERVAL 10 MINUTE))`);
+    // Исключаем просроченные неоплаченные заказы (старше 1 часа)
+    whereConditions.push(`NOT (o.status = 'pending' AND (o.payment_status IS NULL OR o.payment_status = 'pending') AND o.created_at < DATE_SUB(NOW(), INTERVAL 1 HOUR))`);
 
     const whereClause = whereConditions.length > 0 
       ? `WHERE ${whereConditions.join(' AND ')}`

@@ -131,7 +131,27 @@ export default function OrdersScreen() {
   };
 
   const getOrderCurrency = (order: Order) => {
-    return order.currency_code || order.currency || 'UZS';
+    return (order.currency_code || order.currency || 'UZS').toUpperCase();
+  };
+
+  const formatOrderPrice = (order: Order) => {
+    const amount = getOrderPrice(order);
+    const currency = getOrderCurrency(order);
+
+    if (!amount) {
+      return '0 сум';
+    }
+
+    if (currency === 'USD') {
+      return `$${amount.toFixed(2)}`;
+    }
+
+    try {
+      const formatted = new Intl.NumberFormat('ru-RU').format(amount);
+      return `${formatted} сум`;
+    } catch (error) {
+      return `${amount.toLocaleString('ru-RU')} сум`;
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -196,8 +216,7 @@ export default function OrdersScreen() {
     const isActive = filterType === 'active';
     const isPending = filterType === 'pending';
     const isHistory = filterType === 'history';
-    const price = getOrderPrice(item);
-    const currency = getOrderCurrency(item);
+    const priceLabel = formatOrderPrice(item);
     const orderNumber = item.order_number || `A-${item.order_id.toString().padStart(5, '0')}`;
 
     return (
@@ -264,7 +283,7 @@ export default function OrdersScreen() {
             </View>
             <View style={styles.orderCardRight}>
               <Text style={styles.orderPrice}>
-                ${price.toFixed(2)}{isActive ? '/мес' : ''}
+                {priceLabel}{isActive ? ' / мес' : ''}
               </Text>
               {isHistory ? (
                 <TouchableOpacity
@@ -320,7 +339,7 @@ export default function OrdersScreen() {
             )}
             {isPending && (
               <Text style={styles.orderFooterText}>
-                Доступно к оплате в течение 5 дней
+                Доступно к оплате в течение 1 часа
               </Text>
             )}
           </View>

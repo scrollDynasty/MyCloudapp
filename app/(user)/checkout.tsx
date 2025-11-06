@@ -2,17 +2,21 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  Dimensions,
   Linking,
   Platform,
+  SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import { API_URL } from '../../config/api';
 import { getHeaders } from '../../config/fetch';
@@ -45,23 +49,51 @@ interface OrderDetails {
   currency: string;
   full_name: string;
   email: string;
+  order_number?: string;
 }
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function CheckoutScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const orderId = params.orderId as string;
+  const orderIdParam = (params.orderId || params.order_id) as string | undefined;
+  const orderId = orderIdParam ?? '';
 
   const [order, setOrder] = useState<OrderDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
-  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  const isSmallScreen = SCREEN_WIDTH < 375;
+  const isMediumScreen = SCREEN_WIDTH >= 375 && SCREEN_WIDTH < 768;
+
+  const adaptive = useMemo(() => {
+    return {
+      cardPadding: isSmallScreen ? 18 : 24,
+      cardRadius: isSmallScreen ? 20 : 28,
+      contentPadding: isSmallScreen ? 14 : 20,
+    } as const;
+  }, [isSmallScreen]);
 
   useEffect(() => {
     if (orderId) {
       loadOrderDetails();
     }
   }, [orderId]);
+
+  useEffect(() => {
+    if (!loading) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 450,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [loading, fadeAnim]);
 
   const loadOrderDetails = async () => {
     try {
@@ -85,21 +117,15 @@ export default function CheckoutScreen() {
     try {
       setProcessing(true);
       const token = await AsyncStorage.getItem('token');
-      
+
       if (!token) {
         Alert.alert('Ошибка', 'Токен авторизации не найден. Пожалуйста, войдите заново.');
         return;
       }
-      
-      console.log('🔑 Token exists:', token ? 'Yes (length: ' + token.length + ')' : 'No');
-      console.log('📍 API URL:', API_URL);
-      console.log('📦 Order ID:', orderId);
-      
+
       const paymentUrl = `${API_URL}/api/payments/payme`;
       const returnUrl = `${API_URL}/payment-success?order_id=${orderId}`;
-      
-      console.log('🌐 Full payment URL:', paymentUrl);
-      
+
       const response = await fetch(paymentUrl, {
         method: 'POST',
         headers: getHeaders(token),
@@ -109,38 +135,26 @@ export default function CheckoutScreen() {
         }),
       });
 
-      console.log('📡 Response status:', response.status);
-      console.log('📡 Response ok:', response.ok);
-
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ Error response:', errorText);
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
       const data = await response.json();
-      console.log('✅ Payment response:', JSON.stringify(data, null, 2));
-      
+
       if (data.success && data.data?.checkout_url) {
-        console.log('🔗 Checkout URL:', data.data.checkout_url);
-        console.log('📊 Merchant ID:', data.data.debug?.merchant_id);
-        console.log('💰 Amount (tiyin):', data.data.debug?.amount_tiyin);
-        
-        setCheckoutUrl(data.data.checkout_url);
-        
         if (Platform.OS === 'web') {
           const paymentWindow = window.open(data.data.checkout_url, '_blank');
-          
+
           if (!paymentWindow) {
             let message = 'Разрешите всплывающие окна или используйте одну из этих ссылок:\n\n';
             message += '1. Основная ссылка:\n' + data.data.checkout_url + '\n\n';
-            
+
             if (data.data.alternative_urls) {
               message += '2. Альтернативная (ac.account):\n' + data.data.alternative_urls.account + '\n\n';
               message += '3. Альтернативная (ac.id):\n' + data.data.alternative_urls.id + '\n\n';
-              message += '💡 Попробуйте каждую ссылку если первая не работает';
             }
-            
+
             Alert.alert('⚠️ Всплывающее окно заблокировано', message);
           }
         } else {
@@ -153,7 +167,7 @@ export default function CheckoutScreen() {
         }
       } else {
         let errorMessage = 'Неизвестная ошибка при создании платежа';
-        
+
         if (data.error) {
           if (typeof data.error === 'string') {
             errorMessage = data.error;
@@ -163,21 +177,20 @@ export default function CheckoutScreen() {
             errorMessage = JSON.stringify(data.error, null, 2);
           }
         }
-        
+
         if (data.message) {
           errorMessage += '\n\nДетали: ' + data.message;
         }
-        
-        errorMessage += '\n\n💡 Возможные причины:\n';
+
         errorMessage += '• Merchant ID не активирован в системе Payme\n';
         errorMessage += '• Account поля не настроены в личном кабинете\n';
         errorMessage += '• Неверная конфигурация кассы\n';
         errorMessage += '• Проверьте логи сервера для деталей';
-        
+
         if (data.data?.debug?.note) {
           errorMessage += '\n\n⚠️ ' + data.data.debug.note;
         }
-        
+
         Alert.alert('Ошибка оплаты Payme', errorMessage);
       }
     } catch (error: any) {
@@ -196,470 +209,502 @@ export default function CheckoutScreen() {
     }
   };
 
+  const formatAmount = useMemo(() => {
+    return (amount: number, currency: string) => {
+      if (!amount) {
+        return '0 сум';
+      }
+
+      const normalizedCurrency = (currency || 'UZS').toUpperCase();
+
+      if (normalizedCurrency === 'USD') {
+        return `$${amount.toFixed(2)}`;
+      }
+
+      try {
+        return `${new Intl.NumberFormat('ru-RU').format(amount)} сум`;
+      } catch (error) {
+        return `${amount.toLocaleString('ru-RU')} сум`;
+      }
+    };
+  }, []);
+
+  const infoRows = useMemo(() => {
+    if (!order) {
+      return [];
+    }
+
+    const rows = [
+      { label: 'Клиент', value: order.full_name },
+      { label: 'Email', value: order.email },
+      { label: 'Тариф', value: order.plan_name },
+    ];
+
+    if (order.order_type === 'service') {
+      rows.push({ label: 'Сервис', value: order.group_name || '—' });
+    } else {
+      rows.push({ label: 'Провайдер', value: order.provider_name || '—' });
+    }
+
+    return rows.filter(row => row.value);
+  }, [order]);
+
+  const paymentLabel = order ? formatAmount(order.amount, order.currency) : '';
+
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#667eea" />
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#6366F1" />
         <Text style={styles.loadingText}>Загрузка деталей заказа...</Text>
       </View>
     );
   }
 
   if (!order) {
-    return (
-      <View style={styles.centerContainer}>
-        <Ionicons name="alert-circle" size={64} color="#f44336" />
-        <Text style={styles.errorText}>Заказ не найден</Text>
-        <TouchableOpacity style={styles.backButton} onPress={handleCancel}>
-          <Text style={styles.backButtonText}>Вернуться назад</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
+     return (
+       <View style={styles.errorContainer}>
+         <Ionicons name="alert-circle" size={64} color="#f87171" />
+         <Text style={styles.errorTitle}>Заказ не найден</Text>
+         <Text style={styles.errorSubtitle}>Возможно, ссылка устарела или заказ был удалён.</Text>
+         <TouchableOpacity style={styles.errorButton} onPress={handleCancel}>
+           <Text style={styles.errorButtonText}>Вернуться назад</Text>
+         </TouchableOpacity>
+       </View>
+     );
+   }
+ 
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={['#3B82F6', '#2563EB', '#1D4ED8']}
-        style={styles.header}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <TouchableOpacity onPress={handleCancel} style={styles.closeButton}>
-          <Ionicons name="close" size={28} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Оформление заказа</Text>
-        <View style={{ width: 28 }} />
-      </LinearGradient>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
-
-      {/* Order Summary Card */}
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Ionicons name="server" size={32} color="#3B82F6" />
-          <Text style={styles.cardTitle}>
-            {order.order_type === 'vps' ? 'Детали VPS' : 'Детали тарифа'}
-          </Text>
-        </View>
-
-        <View style={styles.orderInfo}>
-          {order.provider_name && (
-            <Text style={styles.providerName}>{order.provider_name}</Text>
-          )}
-          {order.group_name && (
-            <Text style={styles.providerName}>{order.group_name}</Text>
-          )}
-          <Text style={styles.planName}>{order.plan_name}</Text>
-        </View>
-
-        {/* VPS Specs Grid */}
-        {order.order_type === 'vps' && order.cpu_cores !== undefined && (
-          <View style={styles.specsGrid}>
-            <View style={styles.specBox}>
-              <Ionicons name="hardware-chip" size={24} color="#667eea" />
-              <Text style={styles.specValue}>{order.cpu_cores}</Text>
-              <Text style={styles.specLabel}>CPU Cores</Text>
-            </View>
-            <View style={styles.specBox}>
-              <Ionicons name="server" size={24} color="#667eea" />
-              <Text style={styles.specValue}>{order.memory_gb} GB</Text>
-              <Text style={styles.specLabel}>RAM</Text>
-            </View>
-            <View style={styles.specBox}>
-              <Ionicons name="save" size={24} color="#667eea" />
-              <Text style={styles.specValue}>{order.storage_gb} GB</Text>
-              <Text style={styles.specLabel}>Storage</Text>
-            </View>
-            <View style={styles.specBox}>
-              <Ionicons name="swap-horizontal" size={24} color="#667eea" />
-              <Text style={styles.specValue}>{order.bandwidth_tb} TB</Text>
-              <Text style={styles.specLabel}>Bandwidth</Text>
+    <SafeAreaView style={styles.pageSafeArea}>
+      <StatusBar barStyle="dark-content" />
+      <View style={styles.pageContainer}>
+        <View style={styles.pageHeader}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity style={styles.headerBackButton} onPress={handleCancel} activeOpacity={0.8}>
+              <Ionicons name="arrow-back" size={20} color="#111827" />
+            </TouchableOpacity>
+            <Text style={styles.pageTitle}>Оплата заказа</Text>
+            <View style={styles.headerRight}>
+              <View style={styles.headerBadge}>
+                <Ionicons name="shield-checkmark" size={14} color="#4F46E5" />
+                <Text style={styles.headerBadgeText}>Безопасно</Text>
+              </View>
             </View>
           </View>
-        )}
+        </View>
 
-        {/* Service Plan Fields */}
-        {order.order_type === 'service' && order.fields && order.fields.length > 0 && (
-          <View style={styles.fieldsContainer}>
-            {order.fields.map((field, index) => (
-              <View key={index} style={styles.fieldRow}>
-                <Ionicons name="checkmark-circle" size={20} color="#667eea" />
-                <View style={styles.fieldContent}>
-                  <Text style={styles.fieldLabel}>{field.field_label_ru}</Text>
-                  {field.field_value_ru && (
-                    <Text style={styles.fieldValue}>{field.field_value_ru}</Text>
-                  )}
+        <ScrollView
+          style={styles.pageScroll}
+          contentContainerStyle={[
+            styles.pageContent,
+            {
+              paddingHorizontal: adaptive.contentPadding,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          <Animated.View
+            style={[
+              styles.pageCard,
+              {
+                opacity: fadeAnim,
+                padding: adaptive.cardPadding,
+                borderRadius: adaptive.cardRadius,
+              },
+            ]}
+          >
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionIcon}>
+                <Ionicons name="document-text-outline" size={18} color="#374151" />
+              </View>
+              <View style={styles.sectionTextContainer}>
+                <Text style={styles.sectionTitle}>Детали заказа</Text>
+                <Text style={styles.sectionSubtitle}>Проверьте данные перед оплатой.</Text>
+              </View>
+            </View>
+
+            <View style={styles.infoCard}>
+              {infoRows.map((row, index) => (
+                <View
+                  key={row.label}
+                  style={[styles.infoRow, index !== infoRows.length - 1 && styles.infoRowDivider]}
+                >
+                  <Text style={styles.infoLabel}>{row.label}</Text>
+                  <Text style={styles.infoValue}>{row.value}</Text>
+                </View>
+              ))}
+            </View>
+
+            {order.order_number && (
+              <View style={styles.summaryCard}>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Заказ</Text>
+                  <Text style={styles.summaryValue}>#{order.order_number}</Text>
+                </View>
+                <View style={styles.summaryDivider} />
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryTotalLabel}>Итого к оплате</Text>
+                  <Text style={styles.summaryTotalValue}>{paymentLabel}</Text>
                 </View>
               </View>
-            ))}
-          </View>
-        )}
+            )}
+
+            <View style={styles.actionsRow}>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.backButton]}
+                onPress={handleCancel}
+                disabled={processing}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="chevron-back" size={18} color="#374151" />
+                <Text style={styles.backButtonText}>Назад</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.actionButton, styles.payButton, processing && styles.payButtonDisabled]}
+                onPress={handlePayWithPayme}
+                disabled={processing}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={['#7C3AED', '#6366F1']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.payButtonGradient}
+                >
+                  {processing ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <>
+                      <Ionicons name="card-outline" size={18} color="#FFFFFF" />
+                      <Ionicons name="arrow-forward" size={16} color="#C7D2FE" />
+                      <Text style={styles.payButtonText}>{paymentLabel}</Text>
+                    </>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.termsText}>
+              Продолжая, вы соглашаетесь с условиями обслуживания и политикой возвратов.
+            </Text>
+          </Animated.View>
+        </ScrollView>
       </View>
-
-      {/* Customer Info */}
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Ionicons name="person" size={28} color="#3B82F6" />
-          <Text style={styles.cardTitle}>Данные клиента</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Ionicons name="person-outline" size={20} color="#666" />
-          <Text style={styles.infoText}>{order.full_name}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Ionicons name="mail-outline" size={20} color="#666" />
-          <Text style={styles.infoText}>{order.email}</Text>
-        </View>
-      </View>
-
-      {/* Price Summary */}
-      <View style={styles.priceCard}>
-        <View style={styles.priceRow}>
-          <Text style={styles.priceLabel}>
-            {order.billing_period === 'monthly' ? 'Подписка (ежемесячно)' :
-             order.billing_period === 'yearly' ? 'Подписка (ежегодно)' :
-             order.billing_period === 'quarterly' ? 'Подписка (ежеквартально)' :
-             order.billing_period === 'weekly' ? 'Подписка (еженедельно)' :
-             order.billing_period === 'one_time' ? 'Единоразовый платеж' :
-             'Подписка'}
-          </Text>
-          <Text style={styles.priceValue}>
-            {order.amount} {order.currency}
-          </Text>
-        </View>
-        <View style={styles.divider} />
-        <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>К оплате</Text>
-          <Text style={styles.totalValue}>
-            {order.amount} {order.currency}
-          </Text>
-        </View>
-      </View>
-
-      {/* Payment Instructions */}
-      <View style={styles.instructionsCard}>
-        <Ionicons name="information-circle" size={24} color="#2196f3" />
-        <Text style={styles.instructionsText}>
-          После нажатия кнопки оплаты вы будете перенаправлены на страницу Payme для завершения транзакции.
-        </Text>
-      </View>
-
-      {/* Action Buttons */}
-      <View style={styles.buttonsContainer}>
-        <TouchableOpacity
-          style={[styles.button, styles.cancelButton]}
-          onPress={handleCancel}
-          disabled={processing}
-        >
-          <Text style={styles.cancelButtonText}>Отменить</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.button, styles.payButton, processing && styles.payButtonDisabled]}
-          onPress={handlePayWithPayme}
-          disabled={processing}
-        >
-          {processing ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <>
-              <Ionicons name="card" size={24} color="#fff" />
-              <Text style={styles.payButtonText}>Оплатить через Payme</Text>
-            </>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      {checkoutUrl && (
-        <View style={styles.linkCard}>
-          <Text style={styles.linkLabel}>Ссылка на оплату:</Text>
-          <Text style={styles.linkText} numberOfLines={1}>
-            {checkoutUrl}
-          </Text>
-        </View>
-      )}
-      </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  pageSafeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F3F4F6',
   },
-  scrollView: {
+  pageContainer: {
     flex: 1,
+    backgroundColor: '#F3F4F6',
   },
-  contentContainer: {
-    padding: 20,
-    paddingBottom: 40,
+  pageHeader: {
+    paddingTop: Platform.OS === 'ios' ? 52 : 36,
+    paddingBottom: 10,
+    paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    shadowColor: '#000000',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 1,
+    marginBottom: 8,
   },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    padding: 20,
-  },
-  header: {
+  headerContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 8,
+    justifyContent: 'space-between',
+  },
+  headerBackButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  pageTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    textAlign: 'center',
+  },
+  headerRight: {
+    width: 72,
+    alignItems: 'flex-end',
+  },
+  headerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#EEF2FF',
+    borderRadius: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  headerBadgeText: {
+    fontSize: 10,
+    color: '#4F46E5',
+    fontWeight: '500',
+  },
+  pageScroll: {
+    flex: 1,
+  },
+  pageContent: {
+    paddingVertical: 20,
+    paddingBottom: 28,
+  },
+  pageCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000000',
+    shadowOpacity: 0.05,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
+    gap: 14,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  titleGroup: {
+    gap: 8,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  securityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 24,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  securityText: {
+    fontSize: 12,
+    color: '#4B5563',
+    fontWeight: '500',
   },
   closeButton: {
-    padding: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
-    letterSpacing: 0.3,
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+  sectionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#F5F6F9',
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
-  cardHeader: {
-    flexDirection: 'row',
+  sectionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 14,
+    backgroundColor: '#E5E7EB',
     alignItems: 'center',
-    marginBottom: 16,
+    justifyContent: 'center',
   },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginLeft: 12,
-  },
-  orderInfo: {
-    marginBottom: 20,
-  },
-  providerName: {
-    fontSize: 14,
-    color: '#667eea',
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  planName: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#333',
-  },
-  specsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  specBox: {
-    width: '48%',
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  specValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#333',
-    marginTop: 8,
-  },
-  specLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
-  },
-  fieldsContainer: {
-    gap: 12,
-  },
-  fieldRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  fieldContent: {
+  sectionTextContainer: {
     flex: 1,
+    gap: 4,
   },
-  fieldLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 2,
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#111827',
   },
-  fieldValue: {
-    fontSize: 14,
-    color: '#666',
+  sectionSubtitle: {
+    fontSize: 11,
+    color: '#6B7280',
+  },
+  infoCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 10,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    justifyContent: 'space-between',
   },
-  infoText: {
-    fontSize: 16,
-    color: '#333',
-    marginLeft: 12,
+  infoRowDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    paddingBottom: 10,
   },
-  priceCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+  infoLabel: {
+    fontSize: 12,
+    color: '#6B7280',
   },
-  priceRow: {
+  infoValue: {
+    fontSize: 13,
+    color: '#111827',
+    fontWeight: '500',
+    textAlign: 'right',
+    flexShrink: 1,
+  },
+  summaryCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
   },
-  priceLabel: {
-    fontSize: 16,
-    color: '#666',
+  summaryLabel: {
+    fontSize: 12,
+    color: '#374151',
   },
-  priceValue: {
-    fontSize: 16,
+  summaryValue: {
+    fontSize: 12,
+    color: '#374151',
     fontWeight: '600',
-    color: '#333',
   },
-  divider: {
+  summaryDivider: {
     height: 1,
-    backgroundColor: '#e0e0e0',
-    marginVertical: 12,
+    borderStyle: 'dashed',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 1,
   },
-  totalRow: {
+  summaryTotalLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  summaryTotalValue: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  actionsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    gap: 10,
+    marginTop: 10,
   },
-  totalLabel: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#333',
-  },
-  totalValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#3B82F6',
-    fontFamily: Platform.OS === 'ios' ? '-apple-system' : 'Roboto',
-    letterSpacing: 0.3,
-  },
-  instructionsCard: {
-    backgroundColor: '#e3f2fd',
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  instructionsText: {
+  actionButton: {
     flex: 1,
-    fontSize: 14,
-    color: '#1976d2',
-    marginLeft: 12,
-    lineHeight: 20,
   },
-  buttonsContainer: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  button: {
-    flex: 1,
+  backButton: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 16,
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
     borderRadius: 12,
-    gap: 8,
-  },
-  cancelButton: {
-    backgroundColor: '#fff',
-    borderWidth: 2,
-    borderColor: '#e0e0e0',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
-  },
-  payButton: {
-    backgroundColor: '#3B82F6',
-    shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  payButtonDisabled: {
-    backgroundColor: '#9e9e9e',
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  payButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  linkCard: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 16,
-  },
-  linkLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-  },
-  linkText: {
-    fontSize: 14,
-    color: '#3B82F6',
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 16,
-  },
-  errorText: {
-    fontSize: 18,
-    color: '#f44336',
-    marginTop: 16,
-    marginBottom: 24,
-  },
-  backButton: {
-    backgroundColor: '#667eea',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
   },
   backButtonText: {
-    fontSize: 16,
+    fontSize: 12,
+    color: '#1F2937',
     fontWeight: '600',
-    color: '#fff',
+  },
+  payButton: {
+    borderRadius: 16,
+  },
+  payButtonGradient: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
+    minHeight: 38,
+  },
+  payButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  payButtonDisabled: {
+    opacity: 0.7,
+  },
+  termsText: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    lineHeight: 16,
+    marginTop: 12,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F8FAFC',
+    padding: 24,
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 15,
+    color: '#4B5563',
+    fontWeight: '500',
+  },
+  errorContainer: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    gap: 16,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1F2937',
+    textAlign: 'center',
+  },
+  errorSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+  errorButton: {
+    backgroundColor: '#111827',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 16,
+  },
+  errorButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 });
