@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePathname, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Animated,
+  Dimensions,
   Platform,
   RefreshControl,
   StyleSheet,
@@ -48,6 +49,36 @@ export default function UserHomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeSegment, setActiveSegment] = useState<'servers' | 'storage'>('servers');
+
+  const [windowDimensions, setWindowDimensions] = useState(Dimensions.get('window'));
+
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setWindowDimensions(window);
+    });
+
+    return () => {
+      if (typeof subscription?.remove === 'function') {
+        subscription.remove();
+      }
+    };
+  }, []);
+
+  const isCompact = windowDimensions.width < 360;
+  const isTablet = windowDimensions.width >= 768;
+
+  const adaptive = useMemo(() => ({
+    horizontal: isTablet ? 24 : isCompact ? 12 : 18,
+    vertical: isTablet ? 20 : isCompact ? 12 : 16,
+    cardRadius: isTablet ? 28 : isCompact ? 18 : 22,
+    icon: isTablet ? 52 : isCompact ? 36 : 42,
+    heading: isTablet ? 24 : isCompact ? 18 : 20,
+    subtitle: isTablet ? 16 : isCompact ? 12 : 13,
+    body: isTablet ? 15 : isCompact ? 12 : 13,
+    small: isTablet ? 13 : isCompact ? 11 : 12,
+    micro: isTablet ? 12 : isCompact ? 10 : 11,
+    gap: isTablet ? 18 : isCompact ? 10 : 14,
+  }), [isCompact, isTablet]);
 
   // Анимации
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -178,6 +209,12 @@ export default function UserHomeScreen() {
   const activeServices = orders.filter(o => o.status === 'active' || o.payment_status === 'paid').length;
   const pendingServices = orders.filter(o => o.status === 'pending' || o.payment_status === 'pending').length;
 
+  const headerPaddingTop = Platform.OS === 'ios'
+    ? (isTablet ? 72 : isCompact ? 48 : 58)
+    : (isTablet ? 58 : isCompact ? 36 : 44);
+
+  const headerPaddingBottom = isCompact ? 10 : 14;
+
   if (loading) {
     return (
       <View style={styles.centerContainer}>
@@ -191,13 +228,19 @@ export default function UserHomeScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View
+        style={[styles.header, {
+          paddingHorizontal: adaptive.horizontal,
+          paddingTop: headerPaddingTop,
+          paddingBottom: headerPaddingBottom,
+        }]}
+      >
         <View style={styles.headerContent}>
-          <View style={styles.headerLeft} />
-          <Text style={styles.headerTitle}>Главная</Text>
+          <View style={[styles.headerLeft, { width: adaptive.icon, height: adaptive.icon }]} />
+          <Text style={[styles.headerTitle, { fontSize: adaptive.heading, lineHeight: adaptive.heading + 2 }]}>Главная</Text>
           <TouchableOpacity style={styles.profileButton} onPress={() => {/* TODO: открыть уведомления */}}>
-            <View style={styles.avatar}>
-              <Ionicons name="notifications-outline" size={20} color="#111827" />
+            <View style={[styles.avatar, { width: adaptive.icon, height: adaptive.icon, borderRadius: adaptive.icon / 2 }]}>
+              <Ionicons name="notifications-outline" size={adaptive.body + 6} color="#111827" />
             </View>
           </TouchableOpacity>
         </View>
@@ -217,174 +260,245 @@ export default function UserHomeScreen() {
         }
       >
         {/* Welcome Section */}
-        <View style={styles.welcomeSection}>
+        <View style={[styles.welcomeSection, { paddingHorizontal: adaptive.horizontal, paddingTop: adaptive.vertical, gap: adaptive.gap }]}>
           <View style={styles.welcomeText}>
-            <Text style={styles.welcomeTitle}>Добро пожаловать, {userName}</Text>
-            <Text style={styles.welcomeSubtitle}>Управляйте подключёнными сервисами и заказами</Text>
+            <Text style={[styles.welcomeTitle, { fontSize: adaptive.heading, lineHeight: adaptive.heading + 4 }]}>
+              Добро пожаловать, {userName}
+            </Text>
+            <Text style={[styles.welcomeSubtitle, { fontSize: adaptive.small, lineHeight: adaptive.small + 2 }]}>
+              Управляйте подключёнными сервисами и заказами
+            </Text>
           </View>
-          <View style={styles.avatarLarge}>
-            <Ionicons name="person" size={24} color="#111827" />
+          <View style={[styles.avatarLarge, { width: adaptive.icon, height: adaptive.icon, borderRadius: adaptive.icon / 2 }]}>
+            <Ionicons name="person" size={adaptive.body + 8} color="#111827" />
           </View>
         </View>
 
         {/* Segment Control */}
-        <View style={styles.segmentContainer}>
+        <View style={[styles.segmentContainer, { marginHorizontal: adaptive.horizontal, gap: isCompact ? 6 : 8 }]}> 
           <TouchableOpacity
-            style={[styles.segmentButton, activeSegment === 'servers' && styles.segmentButtonActive]}
+             style={[
+               styles.segmentButton,
+               {
+                borderRadius: 18,
+                padding: isCompact ? 8 : 10,
+                flex: 1,
+              },
+              activeSegment === 'servers' && styles.segmentButtonActive,
+            ]}
             onPress={() => setActiveSegment('servers')}
             activeOpacity={0.7}
           >
-            <View style={styles.segmentIconContainer}>
-              <Ionicons name="server" size={18} color={activeSegment === 'servers' ? '#111827' : '#9CA3AF'} />
+            <View style={[styles.segmentIconBox, { width: isCompact ? 28 : 32, height: isCompact ? 28 : 32, borderRadius: 18 }]}>
+              <Ionicons name="server-outline" size={isCompact ? 16 : 18} color="#111827" />
             </View>
-            <Text style={[styles.segmentText, activeSegment === 'servers' && styles.segmentTextActive]}>
+            <Text
+              style={[
+                styles.segmentText,
+                { fontSize: adaptive.small - 1 },
+                activeSegment === 'servers' && styles.segmentTextActive,
+              ]}
+            >
               Мои серверы
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.segmentButton, activeSegment === 'storage' && styles.segmentButtonActive]}
+            style={[
+              styles.segmentButton,
+              {
+                borderRadius: 18,
+                padding: isCompact ? 8 : 10,
+                flex: 1,
+              },
+              activeSegment === 'storage' && styles.segmentButtonActive,
+            ]}
             onPress={() => setActiveSegment('storage')}
             activeOpacity={0.7}
           >
-            <View style={styles.segmentIconContainer}>
-              <Ionicons name="cube" size={18} color={activeSegment === 'storage' ? '#111827' : '#9CA3AF'} />
+            <View style={[styles.segmentIconBox, { width: isCompact ? 28 : 32, height: isCompact ? 28 : 32, borderRadius: 18 }]}>
+              <Ionicons name="cube-outline" size={isCompact ? 16 : 18} color="#111827" />
             </View>
-            <Text style={[styles.segmentText, activeSegment === 'storage' && styles.segmentTextActive]}>
-              Моё{'\n'}хранилище
+            <Text
+              style={[
+                styles.segmentText,
+                { fontSize: adaptive.small - 1 },
+                activeSegment === 'storage' && styles.segmentTextActive,
+              ]}
+            >
+              Моё хранилище
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Subscription Card */}
-        <View style={styles.subscriptionCard}>
+        <View
+          style={[styles.subscriptionCard, {
+            marginHorizontal: adaptive.horizontal,
+            marginBottom: adaptive.gap,
+            borderRadius: adaptive.cardRadius,
+            padding: adaptive.vertical,
+          }]}
+        >
           <View style={styles.subscriptionHeader}>
             <View style={styles.subscriptionInfo}>
-              <View style={styles.subscriptionIconContainer}>
-                <Ionicons name="star" size={18} color="#111827" />
+              <View style={[styles.subscriptionIconContainer, {
+                width: adaptive.icon,
+                height: adaptive.icon,
+                borderRadius: adaptive.icon / 2,
+              }]}>
+                <Ionicons name="star" size={adaptive.body + 4} color="#111827" />
               </View>
               <View>
-                <Text style={styles.subscriptionTitle}>Подписка</Text>
-                <Text style={styles.subscriptionPeriod}>Pro • помесячно</Text>
+                <Text style={[styles.subscriptionTitle, { fontSize: adaptive.body }]}>
+                  Подписка
+                </Text>
+                <Text style={[styles.subscriptionPeriod, { fontSize: adaptive.small }]}>
+                  Pro • помесячно
+                </Text>
               </View>
             </View>
             <TouchableOpacity>
-              <Text style={styles.subscriptionLink}>Изменить план</Text>
+              <Text style={[styles.subscriptionLink, { fontSize: adaptive.body, fontWeight: '600' }]}>Изменить план</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.subscriptionDivider} />
-          <View style={styles.subscriptionStats}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{activeServices}</Text>
-              <Text style={styles.statLabel}>Активные сервисы</Text>
+          <View style={[styles.subscriptionStats, { gap: adaptive.gap }]}>
+            <View style={[styles.statItem, { borderRadius: adaptive.cardRadius, padding: adaptive.vertical - 4 }]}>
+              <Text style={[styles.statValue, { fontSize: adaptive.heading - 2 }]}>{activeServices}</Text>
+              <Text style={[styles.statLabel, { fontSize: adaptive.small }]}>Активные сервисы</Text>
             </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{pendingServices}</Text>
-              <Text style={styles.statLabel}>Ожидают</Text>
+            <View style={[styles.statItem, { borderRadius: adaptive.cardRadius, padding: adaptive.vertical - 4 }]}>
+              <Text style={[styles.statValue, { fontSize: adaptive.heading - 2 }]}>{pendingServices}</Text>
+              <Text style={[styles.statLabel, { fontSize: adaptive.small }]}>Ожидают</Text>
             </View>
           </View>
         </View>
 
         {/* My Services Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Мои сервисы</Text>
+        <View style={[styles.section, { paddingHorizontal: adaptive.horizontal, marginBottom: adaptive.gap }]}>
+          <Text style={[styles.sectionTitle, { fontSize: adaptive.small, marginBottom: adaptive.micro }]}>
+            Мои сервисы
+          </Text>
           
-          <View style={styles.serviceCard}>
+          <View style={[styles.serviceCard, { borderRadius: adaptive.cardRadius, padding: adaptive.vertical, marginBottom: adaptive.gap - 4 }]}>
             <View style={styles.serviceCardContent}>
-              <View style={styles.serviceIconContainer}>
-                <Ionicons name="server" size={18} color="#111827" />
+              <View style={[styles.serviceIconContainer, {
+                width: adaptive.icon,
+                height: adaptive.icon,
+                borderRadius: adaptive.icon / 2,
+              }]}>
+                <Ionicons name="server" size={adaptive.body + 4} color="#111827" />
               </View>
               <View style={styles.serviceInfo}>
-                <Text style={styles.serviceName}>Серверы</Text>
-                <Text style={styles.serviceDescription}>
+                <Text style={[styles.serviceName, { fontSize: adaptive.body }]}>
+                  Серверы
+                </Text>
+                <Text style={[styles.serviceDescription, { fontSize: adaptive.small }]}>
                   {activeServices} активных • средняя загрузка 28%
                 </Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.serviceButton}>
-              <Text style={styles.serviceButtonText}>Открыть</Text>
+            <TouchableOpacity style={[styles.serviceButton, { borderRadius: adaptive.cardRadius / 2, paddingHorizontal: adaptive.horizontal - 4, paddingVertical: 8 }]}> 
+              <Text style={[styles.serviceButtonText, { fontSize: adaptive.small, fontWeight: '600' }]}>Открыть</Text>
             </TouchableOpacity>
           </View>
 
-          <View style={styles.serviceCard}>
+          <View style={[styles.serviceCard, { borderRadius: adaptive.cardRadius, padding: adaptive.vertical }]}>
             <View style={styles.serviceCardContent}>
-              <View style={styles.serviceIconContainer}>
-                <Ionicons name="cube" size={18} color="#111827" />
+              <View style={[styles.serviceIconContainer, {
+                width: adaptive.icon,
+                height: adaptive.icon,
+                borderRadius: adaptive.icon / 2,
+              }]}>
+                <Ionicons name="cube" size={adaptive.body + 4} color="#111827" />
               </View>
               <View style={styles.serviceInfo}>
-                <Text style={styles.serviceName}>Объектное хранилище</Text>
-                <Text style={styles.serviceDescription}>1 бакет • 40 ГБ</Text>
+                <Text style={[styles.serviceName, { fontSize: adaptive.body }]}>Объектное хранилище</Text>
+                <Text style={[styles.serviceDescription, { fontSize: adaptive.small }]}>1 бакет • 40 ГБ</Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.serviceButton}>
-              <Text style={styles.serviceButtonText}>Открыть</Text>
+            <TouchableOpacity style={[styles.serviceButton, { borderRadius: adaptive.cardRadius / 2, paddingHorizontal: adaptive.horizontal - 4, paddingVertical: 8 }]}> 
+              <Text style={[styles.serviceButtonText, { fontSize: adaptive.small, fontWeight: '600' }]}>Открыть</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Recent Orders Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Последние заказы</Text>
+        <View style={[styles.section, { paddingHorizontal: adaptive.horizontal, marginBottom: adaptive.gap }]}>
+          <Text style={[styles.sectionTitle, { fontSize: adaptive.small, marginBottom: adaptive.micro }]}>Последние заказы</Text>
           
           {recentOrders.length > 0 ? (
             recentOrders.map((order) => (
-              <View key={order.order_id} style={styles.orderCard}>
+              <View key={order.order_id} style={[styles.orderCard, { borderRadius: adaptive.cardRadius, padding: adaptive.vertical - 2, marginBottom: adaptive.gap - 6 }]}>
                 <View style={styles.orderCardContent}>
-                  <View style={styles.orderIconContainer}>
-                    <Ionicons name="document-text" size={18} color="#111827" />
+                  <View style={[styles.orderIconContainer, {
+                    width: adaptive.icon - 4,
+                    height: adaptive.icon,
+                    borderRadius: adaptive.icon / 2,
+                  }]}>
+                    <Ionicons name="document-text" size={adaptive.body + 4} color="#111827" />
                   </View>
                   <View style={styles.orderInfo}>
-                    <Text style={styles.orderTitle}>{order.plan_name}</Text>
-                    <Text style={styles.orderSubtitle}>
+                    <Text style={[styles.orderTitle, { fontSize: adaptive.body }]}>{order.plan_name}</Text>
+                    <Text style={[styles.orderSubtitle, { fontSize: adaptive.small }]}>
                       Заказ №{order.order_number || order.order_id} • {formatTimeAgo(order.created_at)}
                     </Text>
                   </View>
                 </View>
-                <View style={styles.orderStatusBadge}>
-                  <Text style={styles.orderStatusText}>
+                <View style={[styles.orderStatusBadge, { borderRadius: adaptive.cardRadius / 2, paddingVertical: 6, paddingHorizontal: adaptive.horizontal - 6 }]}>
+                  <Text style={[styles.orderStatusText, { fontSize: adaptive.small }] }>
                     {getStatusLabel(order.status || order.payment_status || 'pending')}
                   </Text>
                 </View>
               </View>
             ))
           ) : (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyText}>Нет заказов</Text>
+            <View style={[styles.emptyCard, { borderRadius: adaptive.cardRadius, padding: adaptive.vertical + 6 }]}>
+              <Text style={[styles.emptyText, { fontSize: adaptive.small }]}>Нет заказов</Text>
             </View>
           )}
         </View>
 
         {/* Support Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Поддержка</Text>
+        <View style={[styles.section, { paddingHorizontal: adaptive.horizontal, marginBottom: adaptive.gap }]}>
+          <Text style={[styles.sectionTitle, { fontSize: adaptive.small, marginBottom: adaptive.micro }]}>Поддержка</Text>
           
-          <TouchableOpacity style={styles.supportCard}>
+          <TouchableOpacity style={[styles.supportCard, { borderRadius: adaptive.cardRadius, padding: adaptive.vertical }]}>
             <View style={styles.supportCardContent}>
-              <View style={styles.supportIconContainer}>
-                <Ionicons name="chatbubble-ellipses" size={18} color="#111827" />
+              <View style={[styles.supportIconContainer, {
+                width: adaptive.icon,
+                height: adaptive.icon,
+                borderRadius: adaptive.icon / 2,
+              }]}>
+                <Ionicons name="chatbubble-ellipses" size={adaptive.body + 4} color="#111827" />
               </View>
               <View style={styles.supportInfo}>
-                <Text style={styles.supportTitle}>Открыть тикет</Text>
-                <Text style={styles.supportDescription}>Поможем решить вопрос</Text>
+                <Text style={[styles.supportTitle, { fontSize: adaptive.body }]}>Открыть тикет</Text>
+                <Text style={[styles.supportDescription, { fontSize: adaptive.small }]}>Поможем решить вопрос</Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.supportCard}>
+          <TouchableOpacity style={[styles.supportCard, { borderRadius: adaptive.cardRadius, padding: adaptive.vertical }]}>
             <View style={styles.supportCardContent}>
-              <View style={styles.supportIconContainer}>
-                <Ionicons name="receipt" size={18} color="#111827" />
+              <View style={[styles.supportIconContainer, {
+                width: adaptive.icon,
+                height: adaptive.icon,
+                borderRadius: adaptive.icon / 2,
+              }]}>
+                <Ionicons name="receipt" size={adaptive.body + 4} color="#111827" />
               </View>
               <View style={styles.supportInfo}>
-                <Text style={styles.supportTitle}>Оплата и счета</Text>
-                <Text style={styles.supportDescription}>Способы оплаты и история</Text>
+                <Text style={[styles.supportTitle, { fontSize: adaptive.body }]}>Оплата и счета</Text>
+                <Text style={[styles.supportDescription, { fontSize: adaptive.small }]}>Способы оплаты и история</Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
           </TouchableOpacity>
         </View>
 
-        <View style={styles.bottomSpacer} />
+        <View style={[styles.bottomSpacer, { height: adaptive.vertical + 4 }]} />
       </Animated.ScrollView>
 
       {/* Bottom Navigation */}
@@ -474,8 +588,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 50,
-    paddingBottom: 13,
+    paddingTop: Platform.OS === 'ios' ? 52 : 40,
+    paddingBottom: 12,
     paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
@@ -491,10 +605,9 @@ const styles = StyleSheet.create({
     height: 40,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 19,
+    fontWeight: '700',
     color: '#111827',
-    letterSpacing: 0,
   },
   profileButton: {
     width: 40,
@@ -530,73 +643,77 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 18,
     paddingBottom: 12,
-    gap: 11,
+    gap: 12,
   },
   welcomeText: {
     flex: 1,
   },
   welcomeTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     color: '#111827',
     marginBottom: 4,
-    letterSpacing: 0,
-    lineHeight: 21.78,
+    lineHeight: 24,
   },
   welcomeSubtitle: {
     fontSize: 12,
-    fontWeight: '400',
+    fontWeight: '500',
     color: '#9CA3AF',
-    lineHeight: 14.52,
+    lineHeight: 16,
   },
   segmentContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     marginHorizontal: 16,
     marginBottom: 12,
-    gap: 8,
+    gap: 10,
   },
   segmentButton: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingVertical: 13,
-    paddingHorizontal: 13,
-    borderRadius: 24,
-    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 18,
+    backgroundColor: '#F3F4F6',
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    minWidth: 175,
+    flex: 1,
+    gap: 5,
   },
   segmentButtonActive: {
     backgroundColor: '#FFFFFF',
     borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
-  segmentIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 24,
+  segmentIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 18,
     backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   segmentText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#9CA3AF',
-    lineHeight: 15.73,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6B7280',
+    textAlign: 'center',
   },
   segmentTextActive: {
     color: '#111827',
   },
   subscriptionCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 17,
+    borderRadius: 22,
+    padding: 18,
     marginHorizontal: 16,
     marginBottom: 12,
     borderWidth: 1,
@@ -619,9 +736,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   subscriptionIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 24,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
@@ -636,15 +753,15 @@ const styles = StyleSheet.create({
   },
   subscriptionPeriod: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
     color: '#9CA3AF',
     lineHeight: 14.52,
   },
   subscriptionLink: {
-    fontSize: 16,
-    fontWeight: '400',
+    fontSize: 15,
+    fontWeight: '600',
     color: '#111827',
-    lineHeight: 19.36,
+    lineHeight: 20,
   },
   subscriptionDivider: {
     width: '100%',
@@ -661,8 +778,8 @@ const styles = StyleSheet.create({
   statItem: {
     flex: 1,
     backgroundColor: '#F3F4F6',
-    borderRadius: 24,
-    padding: 11,
+    borderRadius: 20,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#E5E7EB',
     gap: 6,
@@ -675,8 +792,8 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 12,
-    fontWeight: '400',
-    color: '#9CA3AF',
+    fontWeight: '500',
+    color: '#6B7280',
     lineHeight: 14.52,
   },
   section: {
@@ -684,19 +801,19 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#9CA3AF',
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
     marginBottom: 8,
-    lineHeight: 16.94,
+    lineHeight: 18,
   },
   serviceCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 13,
+    borderRadius: 22,
+    padding: 16,
     marginBottom: 8,
     borderWidth: 1,
     borderColor: '#E5E7EB',
@@ -708,9 +825,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   serviceIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 24,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
@@ -734,26 +851,26 @@ const styles = StyleSheet.create({
     lineHeight: 14.52,
   },
   serviceButton: {
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 14,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
   serviceButtonText: {
     fontSize: 12,
-    fontWeight: '500',
-    color: '#374151',
-    lineHeight: 14.52,
+    fontWeight: '600',
+    color: '#1F2937',
+    lineHeight: 16,
   },
   orderCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 13,
+    borderRadius: 22,
+    padding: 16,
     marginBottom: 8,
     borderWidth: 1,
     borderColor: '#E5E7EB',
@@ -765,9 +882,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   orderIconContainer: {
-    width: 40.73,
-    height: 44,
-    borderRadius: 24,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
@@ -791,9 +908,9 @@ const styles = StyleSheet.create({
     lineHeight: 14.52,
   },
   orderStatusBadge: {
-    paddingHorizontal: 11,
+    paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: 14,
     backgroundColor: '#F3F4F6',
     borderWidth: 1,
     borderColor: '#E5E7EB',
@@ -821,8 +938,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 13,
+    borderRadius: 22,
+    padding: 16,
     marginBottom: 8,
     borderWidth: 1,
     borderColor: '#E5E7EB',
@@ -834,9 +951,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   supportIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 24,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
@@ -856,7 +973,7 @@ const styles = StyleSheet.create({
   supportDescription: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#9CA3AF',
+    color: '#6B7280',
     lineHeight: 14.52,
   },
   bottomSpacer: {
