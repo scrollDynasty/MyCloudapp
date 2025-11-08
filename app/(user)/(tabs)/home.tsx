@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -42,7 +42,7 @@ interface Order {
   created_at: string;
 }
 
-export default function UserHomeScreen() {
+const UserHomeScreen = React.memo(function UserHomeScreen() {
   const router = useRouter();
   const { user: authUser } = useAuth();
   const [user, setUser] = useState<User | null>(null);
@@ -110,7 +110,7 @@ export default function UserHomeScreen() {
     }
   }, [loading]);
 
-  const loadDashboardData = async (forceRefresh = false) => {
+  const loadDashboardData = useCallback(async (forceRefresh = false) => {
     try {
       const token = await AsyncStorage.getItem('token');
       
@@ -148,14 +148,14 @@ export default function UserHomeScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [router]);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     setRefreshing(true);
     loadDashboardData(true); // Принудительное обновление
-  };
+  }, [loadDashboardData]);
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = useCallback((status: string) => {
     switch (status) {
       case 'active':
       case 'completed':
@@ -169,9 +169,9 @@ export default function UserHomeScreen() {
       default:
         return '#9CA3AF';
     }
-  };
+  }, []);
 
-  const getStatusLabel = (status: string) => {
+  const getStatusLabel = useCallback((status: string) => {
     switch (status) {
       case 'active':
         return 'Активен';
@@ -186,9 +186,9 @@ export default function UserHomeScreen() {
       default:
         return status;
     }
-  };
+  }, []);
 
-  const formatTimeAgo = (dateString: string) => {
+  const formatTimeAgo = useCallback((dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
@@ -207,7 +207,7 @@ export default function UserHomeScreen() {
     } else {
       return date.toLocaleDateString('ru-RU');
     }
-  };
+  }, []);
 
   // Получаем последние заказы
   const recentOrders = orders
@@ -264,6 +264,7 @@ export default function UserHomeScreen() {
           },
         ]}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#4F46E5']} />
         }
@@ -511,7 +512,9 @@ export default function UserHomeScreen() {
       </Animated.ScrollView>
     </View>
   );
-}
+});
+
+export default UserHomeScreen;
 
 const styles = StyleSheet.create({
   container: {

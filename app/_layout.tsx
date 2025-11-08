@@ -2,12 +2,19 @@ import * as Linking from 'expo-linking';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useCallback, useEffect, useRef } from 'react';
 import { AuthProvider } from '../lib/AuthContext';
+import { startCacheCleanup } from '../lib/cacheOptimizer';
 
 export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
   const processedUrls = useRef<Set<string>>(new Set());
   const isInitialized = useRef(false);
+
+  // Инициализация автоматической очистки кеша
+  useEffect(() => {
+    const stopCleanup = startCacheCleanup();
+    return () => stopCleanup();
+  }, []);
 
   // Мемоизированный обработчик deep links
   const handleDeepLink = useCallback((url: string) => {
@@ -62,7 +69,7 @@ export default function RootLayout() {
       if (orderId) {
         router.replace(`/(user)/payment-success?order_id=${orderId}`);
       } else {
-        router.replace('/(user)/orders');
+        router.replace('/(user)/(tabs)/orders');
       }
     }
     // Обработка payment-cancel
@@ -73,7 +80,7 @@ export default function RootLayout() {
       if (orderId) {
         router.replace(`/(user)/checkout?orderId=${orderId}`);
       } else {
-        router.replace('/(user)/home');
+        router.replace('/(user)/(tabs)/home');
       }
     }
   }, [router]);

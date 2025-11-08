@@ -45,7 +45,7 @@ interface Order {
 
 type FilterType = 'active' | 'pending' | 'history';
 
-export default function OrdersScreen() {
+const OrdersScreen = React.memo(function OrdersScreen() {
   const router = useRouter();
   const { user: authUser } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -382,9 +382,9 @@ export default function OrdersScreen() {
       </View>
 
       <ScrollView
-       
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        removeClippedSubviews={true}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#4F46E5']} />
         }
@@ -476,7 +476,9 @@ export default function OrdersScreen() {
       </View>
     </Animated.View>
   );
-}
+});
+
+export default OrdersScreen;
 
 const styles = StyleSheet.create({
   container: {

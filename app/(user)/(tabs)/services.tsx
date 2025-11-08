@@ -44,7 +44,7 @@ interface ServiceGroup {
   plans_count: number;
 }
 
-export default function ServicesScreen() {
+const ServicesScreen = React.memo(function ServicesScreen() {
   const router = useRouter();
   const { user: authUser } = useAuth();
   const [user, setUser] = useState<User | null>(null);
@@ -193,7 +193,6 @@ export default function ServicesScreen() {
       </View>
 
       <Animated.ScrollView
-       
         style={[
           styles.content,
           {
@@ -202,6 +201,7 @@ export default function ServicesScreen() {
           },
         ]}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#4F46E5']} />
         }
@@ -320,7 +320,9 @@ export default function ServicesScreen() {
       </Animated.ScrollView>
     </View>
   );
-}
+});
+
+export default ServicesScreen;
 
 const styles = StyleSheet.create({
   container: {

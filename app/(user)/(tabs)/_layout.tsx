@@ -12,6 +12,8 @@ export default function UserLayout() {
     <MaterialTopTabs
       tabBarPosition="bottom"
       screenOptions={{
+        lazy: false,
+        lazyPreloadDistance: 1,
         swipeEnabled: true,
         animationEnabled: true,
         tabBarActiveTintColor: '#4F46E5',
