@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -55,7 +55,6 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default React.memo(function ServiceDetailsScreen() {
   const router = useRouter();
-  const pathname = usePathname();
   const params = useLocalSearchParams();
   const { user: authUser } = useAuth();
   const planId = params.planId as string;
@@ -64,11 +63,6 @@ export default React.memo(function ServiceDetailsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [processingOrder, setProcessingOrder] = useState(false);
-
-  // Проверка активного пути
-  const isActiveRoute = (route: string) => {
-    return pathname === route || pathname?.includes(route);
-  };
   const [dimensions, setDimensions] = useState(Dimensions.get('window'));
 
   // Отслеживание изменения размеров экрана
@@ -133,13 +127,13 @@ export default React.memo(function ServiceDetailsScreen() {
         Animated.timing(fadeAnim, {
           toValue: 1,
           duration: 400,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
         Animated.spring(slideAnim, {
           toValue: 0,
           tension: 50,
           friction: 8,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
       ]).start();
     }
@@ -456,78 +450,6 @@ export default React.memo(function ServiceDetailsScreen() {
 
         <View style={styles.bottomSpacer} />
       </Animated.ScrollView>
-
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity 
-          style={styles.bottomNavItem}
-          onPress={() => {
-            if (!isActiveRoute('/home')) {
-              router.replace('/(user)/home');
-            }
-          }}
-          activeOpacity={0.7}
-        >
-          <View style={styles.bottomNavContent}>
-            <View style={isActiveRoute('/home') ? styles.bottomNavIconActive : styles.bottomNavIcon}>
-              <Ionicons name="home" size={20} color={isActiveRoute('/home') ? '#FFFFFF' : '#9CA3AF'} />
-            </View>
-            <Text style={isActiveRoute('/home') ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Главная</Text>
-            {isActiveRoute('/home') && <View style={styles.bottomNavIndicator} />}
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.bottomNavItem}
-          onPress={() => {
-            if (!isActiveRoute('/services')) {
-              router.replace('/(user)/services');
-            }
-          }}
-          activeOpacity={0.7}
-        >
-          <View style={styles.bottomNavContent}>
-            <View style={isActiveRoute('/services') ? styles.bottomNavIconActive : styles.bottomNavIcon}>
-              <Ionicons name="grid" size={20} color={isActiveRoute('/services') ? '#FFFFFF' : '#9CA3AF'} />
-            </View>
-            <Text style={isActiveRoute('/services') ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Сервисы</Text>
-            {isActiveRoute('/services') && <View style={styles.bottomNavIndicator} />}
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.bottomNavItem}
-          onPress={() => {
-            if (!isActiveRoute('/orders')) {
-              router.replace('/(user)/orders');
-            }
-          }}
-          activeOpacity={0.7}
-        >
-          <View style={styles.bottomNavContent}>
-            <View style={isActiveRoute('/orders') ? styles.bottomNavIconActive : styles.bottomNavIcon}>
-              <Ionicons name="cart" size={20} color={isActiveRoute('/orders') ? '#FFFFFF' : '#9CA3AF'} />
-            </View>
-            <Text style={isActiveRoute('/orders') ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Заказы</Text>
-            {isActiveRoute('/orders') && <View style={styles.bottomNavIndicator} />}
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.bottomNavItem}
-          onPress={() => {
-            if (!isActiveRoute('/profile')) {
-              router.replace('/(user)/profile');
-            }
-          }}
-          activeOpacity={0.7}
-        >
-          <View style={styles.bottomNavContent}>
-            <View style={isActiveRoute('/profile') ? styles.bottomNavIconActive : styles.bottomNavIcon}>
-              <Ionicons name="person" size={20} color={isActiveRoute('/profile') ? '#FFFFFF' : '#9CA3AF'} />
-            </View>
-            <Text style={isActiveRoute('/profile') ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Профиль</Text>
-            {isActiveRoute('/profile') && <View style={styles.bottomNavIndicator} />}
-          </View>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 });
@@ -572,10 +494,6 @@ const styles = StyleSheet.create({
     left: 0,
     top: 0,
     zIndex: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
     elevation: 2,
   },
   headerTitle: {
@@ -605,10 +523,6 @@ const styles = StyleSheet.create({
     margin: 16,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.08,
-    shadowRadius: 30,
     elevation: 5,
   },
   planHeader: {
@@ -863,68 +777,7 @@ const styles = StyleSheet.create({
     lineHeight: 14.52,
   },
   bottomSpacer: {
-    height: 20,
-  },
-  bottomNav: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    paddingTop: 9,
-    paddingBottom: Platform.OS === 'ios' ? 15 : 15,
-    paddingHorizontal: 8,
-    justifyContent: 'center',
-    gap: 6,
-  },
-  bottomNavItem: {
-    width: 89,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  bottomNavContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    position: 'relative',
-  },
-  bottomNavIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 24,
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  bottomNavIconActive: {
-    width: 28,
-    height: 28,
-    borderRadius: 24,
-    backgroundColor: '#4F46E5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  bottomNavIndicator: {
-    position: 'absolute',
-    bottom: -12,
-    width: 32,
-    height: 3,
-    backgroundColor: '#4F46E5',
-    borderRadius: 2,
-  },
-  bottomNavLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#9CA3AF',
-    lineHeight: 14.52,
-  },
-  bottomNavLabelActive: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#4F46E5',
-    lineHeight: 14.52,
+    height: 80,
   },
 });
 

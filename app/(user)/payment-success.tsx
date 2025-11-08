@@ -195,10 +195,6 @@ const styles = StyleSheet.create({
     padding: 20,
     width: '100%',
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
     elevation: 3,
   },
   orderRow: {
@@ -260,10 +256,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#667eea',
     paddingVertical: 16,
     borderRadius: 12,
-    shadowColor: '#667eea',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
     elevation: 4,
   },
   buttonText: {
@@ -275,7 +267,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderWidth: 2,
     borderColor: '#e0e0e0',
-    shadowOpacity: 0,
     elevation: 0,
   },
   secondaryButtonText: {

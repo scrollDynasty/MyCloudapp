@@ -49,24 +49,26 @@ async function cleanupExpiredOrders() {
         }
       }
 
+      const placeholders = paymeTransactionIds.map(() => '?').join(',');
       await db.query(`
         UPDATE payme_transactions
         SET state = ?,
             cancel_time = ?,
             reason = ?,
             updated_at = NOW()
-        WHERE payme_transaction_id IN (?)
+        WHERE payme_transaction_id IN (${placeholders})
           AND state = ?
       `, [
         PaymeHelper.STATES.CANCELLED,
         cancelTime,
         timeoutReason,
-        paymeTransactionIds,
+        ...paymeTransactionIds,
         PaymeHelper.STATES.CREATED
       ]);
     }
 
     // Обновляем сами заказы, переводя их в отменённое состояние
+    const placeholders = orderIds.map(() => '?').join(',');
     const result = await db.query(`
       UPDATE orders
       SET status = 'cancelled',
@@ -84,12 +86,12 @@ async function cleanupExpiredOrders() {
             ELSE payme_cancel_reason
           END,
           updated_at = NOW()
-      WHERE id IN (?)
+      WHERE id IN (${placeholders})
     `, [
       PaymeHelper.STATES.CANCELLED,
       cancelTime,
       timeoutReason,
-      orderIds
+      ...orderIds
     ]);
 
     if (result.affectedRows > 0) {

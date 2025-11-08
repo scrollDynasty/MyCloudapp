@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -55,7 +55,6 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function ServiceGroupDetailsScreen() {
   const router = useRouter();
-  const pathname = usePathname();
   const params = useLocalSearchParams();
   const { user: authUser } = useAuth();
   const groupId = params.groupId as string;
@@ -92,13 +91,13 @@ export default function ServiceGroupDetailsScreen() {
         Animated.timing(fadeAnim, {
           toValue: 1,
           duration: 400,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
         Animated.spring(slideAnim, {
           toValue: 0,
           tension: 50,
           friction: 8,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
       ]).start();
     }
@@ -482,78 +481,6 @@ export default function ServiceGroupDetailsScreen() {
 
         <View style={styles.bottomSpacer} />
       </Animated.ScrollView>
-
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity 
-          style={styles.bottomNavItem}
-          onPress={() => {
-            if (pathname !== '/(user)/home') {
-              router.replace('/(user)/home');
-            }
-          }}
-          activeOpacity={0.7}
-        >
-          <View style={styles.bottomNavContent}>
-            <View style={pathname === '/(user)/home' ? styles.bottomNavIconActive : styles.bottomNavIcon}>
-              <Ionicons name="home" size={20} color={pathname === '/(user)/home' ? '#FFFFFF' : '#9CA3AF'} />
-            </View>
-            <Text style={pathname === '/(user)/home' ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Главная</Text>
-            {pathname === '/(user)/home' ? <View style={styles.bottomNavIndicator} /> : null}
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.bottomNavItem}
-          onPress={() => {
-            if (pathname !== '/(user)/services') {
-              router.replace('/(user)/services');
-            }
-          }}
-          activeOpacity={0.7}
-        >
-          <View style={styles.bottomNavContent}>
-            <View style={pathname === '/(user)/services' ? styles.bottomNavIconActive : styles.bottomNavIcon}>
-              <Ionicons name="grid" size={20} color={pathname === '/(user)/services' ? '#FFFFFF' : '#9CA3AF'} />
-            </View>
-            <Text style={pathname === '/(user)/services' ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Сервисы</Text>
-            {pathname === '/(user)/services' ? <View style={styles.bottomNavIndicator} /> : null}
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.bottomNavItem}
-          onPress={() => {
-            if (pathname !== '/(user)/orders') {
-              router.replace('/(user)/orders');
-            }
-          }}
-          activeOpacity={0.7}
-        >
-          <View style={styles.bottomNavContent}>
-            <View style={pathname === '/(user)/orders' ? styles.bottomNavIconActive : styles.bottomNavIcon}>
-              <Ionicons name="cart" size={20} color={pathname === '/(user)/orders' ? '#FFFFFF' : '#9CA3AF'} />
-            </View>
-            <Text style={pathname === '/(user)/orders' ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Заказы</Text>
-            {pathname === '/(user)/orders' ? <View style={styles.bottomNavIndicator} /> : null}
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.bottomNavItem}
-          onPress={() => {
-            if (pathname !== '/(user)/profile') {
-              router.replace('/(user)/profile');
-            }
-          }}
-          activeOpacity={0.7}
-        >
-          <View style={styles.bottomNavContent}>
-            <View style={pathname === '/(user)/profile' ? styles.bottomNavIconActive : styles.bottomNavIcon}>
-              <Ionicons name="person" size={20} color={pathname === '/(user)/profile' ? '#FFFFFF' : '#9CA3AF'} />
-            </View>
-            <Text style={pathname === '/(user)/profile' ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Профиль</Text>
-            {pathname === '/(user)/profile' ? <View style={styles.bottomNavIndicator} /> : null}
-          </View>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }
@@ -600,10 +527,6 @@ const styles = StyleSheet.create({
     zIndex: 1,
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
       },
       android: {
         elevation: 1,
@@ -700,10 +623,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 18,
     elevation: 3,
   },
   planCardContent: {
@@ -840,10 +759,6 @@ const styles = StyleSheet.create({
     paddingBottom: 13,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 18,
     elevation: 3,
   },
   includedBadges: {
@@ -866,67 +781,6 @@ const styles = StyleSheet.create({
     lineHeight: 14.52,
   },
   bottomSpacer: {
-    height: 20,
-  },
-  bottomNav: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    paddingTop: 9,
-    paddingBottom: Platform.OS === 'ios' ? 15 : 15,
-    paddingHorizontal: 8,
-    justifyContent: 'center',
-    gap: 6,
-  },
-  bottomNavItem: {
-    width: 89,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  bottomNavContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    position: 'relative',
-  },
-  bottomNavIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 24,
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  bottomNavIconActive: {
-    width: 28,
-    height: 28,
-    borderRadius: 24,
-    backgroundColor: '#4F46E5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  bottomNavIndicator: {
-    position: 'absolute',
-    bottom: -12,
-    width: 32,
-    height: 3,
-    backgroundColor: '#4F46E5',
-    borderRadius: 2,
-  },
-  bottomNavLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#9CA3AF',
-    lineHeight: 14.52,
-  },
-  bottomNavLabelActive: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#4F46E5',
-    lineHeight: 14.52,
+    height: 80,
   },
 });

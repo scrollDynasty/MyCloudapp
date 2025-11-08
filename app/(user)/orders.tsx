@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { usePathname, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -18,6 +18,8 @@ import {
 import { API_URL } from '../../config/api';
 import { getHeaders } from '../../config/fetch';
 import { useAuth } from '../../lib/AuthContext';
+import { getCachedOrFetch } from '../../lib/cache';
+import { rateLimitedFetch } from '../../lib/rateLimiter';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -45,18 +47,12 @@ type FilterType = 'active' | 'pending' | 'history';
 
 export default function OrdersScreen() {
   const router = useRouter();
-  const pathname = usePathname();
   const { user: authUser } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<FilterType>('active');
-  
-  // Проверка активного пути
-  const isActiveRoute = (route: string) => {
-    return pathname === route || pathname?.includes(route);
-  };
   
   // Анимации
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -69,13 +65,13 @@ export default function OrdersScreen() {
         Animated.timing(fadeAnim, {
           toValue: 1,
           duration: 600,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
         Animated.spring(slideAnim, {
           toValue: 0,
           tension: 50,
           friction: 8,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
       ]).start();
     }
@@ -85,15 +81,23 @@ export default function OrdersScreen() {
     loadOrders();
   }, []);
 
-  const loadOrders = async () => {
+  const loadOrders = async (forceRefresh = false) => {
     try {
       const token = await AsyncStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/orders`, {
-        headers: getHeaders(token || undefined),
-      });
+      
+      // Загрузить заказы с кешированием и rate limiting
+      const data = await getCachedOrFetch(
+        'user_orders',
+        () => rateLimitedFetch('user_orders', async () => {
+          const response = await fetch(`${API_URL}/api/orders`, {
+            headers: getHeaders(token || undefined),
+          });
+          return await response.json();
+        }),
+        forceRefresh
+      );
 
-      const data = await response.json();
-      if (data.success) {
+      if (data && data.success) {
         setOrders(data.data || []);
       }
     } catch (error) {
@@ -106,7 +110,7 @@ export default function OrdersScreen() {
 
   const handleRefresh = () => {
     setRefreshing(true);
-    loadOrders();
+    loadOrders(true); // Принудительное обновление
   };
 
   // Фильтрация заказов
@@ -186,14 +190,14 @@ export default function OrdersScreen() {
           toValue: 1,
           duration: 400,
           delay: index * 50,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
         Animated.spring(scaleAnim, {
           toValue: 1,
           delay: index * 50,
           tension: 50,
           friction: 7,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
       ]).start();
     }, []);
@@ -201,14 +205,14 @@ export default function OrdersScreen() {
     const handlePressIn = () => {
       Animated.spring(scaleAnim, {
         toValue: 0.98,
-        useNativeDriver: true,
+        useNativeDriver: Platform.OS !== 'web',
       }).start();
     };
     
     const handlePressOut = () => {
       Animated.spring(scaleAnim, {
         toValue: 1,
-        useNativeDriver: true,
+        useNativeDriver: Platform.OS !== 'web',
       }).start();
     };
     
@@ -468,73 +472,6 @@ export default function OrdersScreen() {
           </Text>
         </TouchableOpacity>
       </View>
-
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity 
-          style={styles.bottomNavItem}
-          onPress={() => {
-            if (!isActiveRoute('/home')) {
-              router.replace('/(user)/home');
-            }
-          }}
-          activeOpacity={0.7}
-        >
-          <View style={styles.bottomNavContent}>
-            <View style={isActiveRoute('/home') ? styles.bottomNavIconActive : styles.bottomNavIcon}>
-              <Ionicons name="home" size={20} color={isActiveRoute('/home') ? '#FFFFFF' : '#9CA3AF'} />
-            </View>
-            <Text style={isActiveRoute('/home') ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Главная</Text>
-            {isActiveRoute('/home') && <View style={styles.bottomNavIndicator} />}
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.bottomNavItem}
-          onPress={() => {
-            if (!isActiveRoute('/services')) {
-              router.replace('/(user)/services');
-            }
-          }}
-          activeOpacity={0.7}
-        >
-          <View style={styles.bottomNavContent}>
-            <View style={isActiveRoute('/services') ? styles.bottomNavIconActive : styles.bottomNavIcon}>
-              <Ionicons name="grid" size={20} color={isActiveRoute('/services') ? '#FFFFFF' : '#9CA3AF'} />
-            </View>
-            <Text style={isActiveRoute('/services') ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Сервисы</Text>
-            {isActiveRoute('/services') && <View style={styles.bottomNavIndicator} />}
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.bottomNavItem}
-          activeOpacity={0.7}
-        >
-          <View style={styles.bottomNavContent}>
-            <View style={isActiveRoute('/orders') ? styles.bottomNavIconActive : styles.bottomNavIcon}>
-              <Ionicons name="cart" size={20} color={isActiveRoute('/orders') ? '#FFFFFF' : '#9CA3AF'} />
-            </View>
-            <Text style={isActiveRoute('/orders') ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Заказы</Text>
-            {isActiveRoute('/orders') && <View style={styles.bottomNavIndicator} />}
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.bottomNavItem}
-          onPress={() => {
-            if (!isActiveRoute('/profile')) {
-              router.replace('/(user)/profile');
-            }
-          }}
-          activeOpacity={0.7}
-        >
-          <View style={styles.bottomNavContent}>
-            <View style={isActiveRoute('/profile') ? styles.bottomNavIconActive : styles.bottomNavIcon}>
-              <Ionicons name="person" size={20} color={isActiveRoute('/profile') ? '#FFFFFF' : '#9CA3AF'} />
-            </View>
-            <Text style={isActiveRoute('/profile') ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Профиль</Text>
-            {isActiveRoute('/profile') && <View style={styles.bottomNavIndicator} />}
-          </View>
-        </TouchableOpacity>
-      </View>
     </Animated.View>
   );
 }
@@ -670,10 +607,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 18,
     elevation: 4,
   },
   orderCardContent: {
@@ -811,67 +744,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '400',
     color: '#9CA3AF',
-    lineHeight: 14.52,
-  },
-  bottomNav: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    paddingTop: 9,
-    paddingBottom: Platform.OS === 'ios' ? 15 : 15,
-    paddingHorizontal: 8,
-    justifyContent: 'center',
-    gap: 6,
-  },
-  bottomNavItem: {
-    width: 89,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  bottomNavContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    position: 'relative',
-  },
-  bottomNavIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 24,
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  bottomNavIconActive: {
-    width: 28,
-    height: 28,
-    borderRadius: 24,
-    backgroundColor: '#4F46E5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  bottomNavIndicator: {
-    position: 'absolute',
-    bottom: -12,
-    width: 32,
-    height: 3,
-    backgroundColor: '#4F46E5',
-    borderRadius: 2,
-  },
-  bottomNavLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#9CA3AF',
-    lineHeight: 14.52,
-  },
-  bottomNavLabelActive: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#4F46E5',
     lineHeight: 14.52,
   },
 });
