@@ -50,6 +50,11 @@ export default React.memo(function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Проверка активного пути
+  const isActiveRoute = (route: string) => {
+    return pathname === route || pathname?.includes(route);
+  };
+
   // Анимации
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -390,52 +395,52 @@ export default React.memo(function ProfileScreen() {
         <TouchableOpacity 
           style={styles.bottomNavItem}
           onPress={() => {
-            if (pathname !== '/(user)/home') {
+            if (!isActiveRoute('/home')) {
               router.replace('/(user)/home');
             }
           }}
           activeOpacity={0.7}
         >
           <View style={styles.bottomNavContent}>
-            <View style={pathname === '/(user)/home' ? styles.bottomNavIconActive : styles.bottomNavIcon}>
-              <Ionicons name="home" size={20} color={pathname === '/(user)/home' ? '#FFFFFF' : '#9CA3AF'} />
+            <View style={isActiveRoute('/home') ? styles.bottomNavIconActive : styles.bottomNavIcon}>
+              <Ionicons name="home" size={20} color={isActiveRoute('/home') ? '#FFFFFF' : '#9CA3AF'} />
             </View>
-            <Text style={pathname === '/(user)/home' ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Главная</Text>
-            {pathname === '/(user)/home' ? <View style={styles.bottomNavIndicator} /> : null}
+            <Text style={isActiveRoute('/home') ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Главная</Text>
+            {isActiveRoute('/home') && <View style={styles.bottomNavIndicator} />}
           </View>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.bottomNavItem}
           onPress={() => {
-            if (pathname !== '/(user)/services') {
+            if (!isActiveRoute('/services')) {
               router.replace('/(user)/services');
             }
           }}
           activeOpacity={0.7}
         >
           <View style={styles.bottomNavContent}>
-            <View style={pathname === '/(user)/services' ? styles.bottomNavIconActive : styles.bottomNavIcon}>
-              <Ionicons name="grid" size={20} color={pathname === '/(user)/services' ? '#FFFFFF' : '#9CA3AF'} />
+            <View style={isActiveRoute('/services') ? styles.bottomNavIconActive : styles.bottomNavIcon}>
+              <Ionicons name="grid" size={20} color={isActiveRoute('/services') ? '#FFFFFF' : '#9CA3AF'} />
             </View>
-            <Text style={pathname === '/(user)/services' ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Сервисы</Text>
-            {pathname === '/(user)/services' ? <View style={styles.bottomNavIndicator} /> : null}
+            <Text style={isActiveRoute('/services') ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Сервисы</Text>
+            {isActiveRoute('/services') && <View style={styles.bottomNavIndicator} />}
           </View>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.bottomNavItem}
           onPress={() => {
-            if (pathname !== '/(user)/orders') {
+            if (!isActiveRoute('/orders')) {
               router.replace('/(user)/orders');
             }
           }}
           activeOpacity={0.7}
         >
           <View style={styles.bottomNavContent}>
-            <View style={pathname === '/(user)/orders' ? styles.bottomNavIconActive : styles.bottomNavIcon}>
-              <Ionicons name="cart" size={20} color={pathname === '/(user)/orders' ? '#FFFFFF' : '#9CA3AF'} />
+            <View style={isActiveRoute('/orders') ? styles.bottomNavIconActive : styles.bottomNavIcon}>
+              <Ionicons name="cart" size={20} color={isActiveRoute('/orders') ? '#FFFFFF' : '#9CA3AF'} />
             </View>
-            <Text style={pathname === '/(user)/orders' ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Заказы</Text>
-            {pathname === '/(user)/orders' ? <View style={styles.bottomNavIndicator} /> : null}
+            <Text style={isActiveRoute('/orders') ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Заказы</Text>
+            {isActiveRoute('/orders') && <View style={styles.bottomNavIndicator} />}
           </View>
         </TouchableOpacity>
         <TouchableOpacity 
@@ -443,11 +448,11 @@ export default React.memo(function ProfileScreen() {
           activeOpacity={0.7}
         >
           <View style={styles.bottomNavContent}>
-            <View style={pathname === '/(user)/profile' ? styles.bottomNavIconActive : styles.bottomNavIcon}>
-              <Ionicons name="person" size={20} color={pathname === '/(user)/profile' ? '#FFFFFF' : '#9CA3AF'} />
+            <View style={isActiveRoute('/profile') ? styles.bottomNavIconActive : styles.bottomNavIcon}>
+              <Ionicons name="person" size={20} color={isActiveRoute('/profile') ? '#FFFFFF' : '#9CA3AF'} />
             </View>
-            <Text style={pathname === '/(user)/profile' ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Профиль</Text>
-            {pathname === '/(user)/profile' ? <View style={styles.bottomNavIndicator} /> : null}
+            <Text style={isActiveRoute('/profile') ? styles.bottomNavLabelActive : styles.bottomNavLabel}>Профиль</Text>
+            {isActiveRoute('/profile') && <View style={styles.bottomNavIndicator} />}
           </View>
         </TouchableOpacity>
       </View>
