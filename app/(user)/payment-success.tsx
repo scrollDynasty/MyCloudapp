@@ -3,12 +3,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { API_URL } from '../../config/api';
 import { getHeaders } from '../../config/fetch';
@@ -52,11 +52,11 @@ export default function PaymentSuccessScreen() {
   };
 
   const handleGoToOrders = () => {
-    router.replace('/(user)/orders');
+    router.replace('/(user)/(tabs)/orders');
   };
 
   const handleGoToHome = () => {
-    router.replace('/(user)/home');
+    router.replace('/(user)/(tabs)/home');
   };
 
   if (loading) {

@@ -15,11 +15,11 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import { API_URL } from '../../config/api';
-import { getHeaders } from '../../config/fetch';
-import { useAuth } from '../../lib/AuthContext';
-import { getCachedOrFetch } from '../../lib/cache';
-import { rateLimitedFetch } from '../../lib/rateLimiter';
+import { API_URL } from '../../../config/api';
+import { getHeaders } from '../../../config/fetch';
+import { useAuth } from '../../../lib/AuthContext';
+import { getCachedOrFetch } from '../../../lib/cache';
+import { rateLimitedFetch } from '../../../lib/rateLimiter';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -183,7 +183,7 @@ export default function ServicesScreen() {
           <Text style={styles.headerTitle}>Сервисы</Text>
           <TouchableOpacity 
             style={styles.profileButton} 
-            onPress={() => router.replace('/(user)/profile')}
+            onPress={() => router.replace('/(user)/(tabs)/profile')}
           >
             <View style={styles.avatar}>
               <Ionicons name="person" size={20} color="#111827" />
@@ -193,6 +193,7 @@ export default function ServicesScreen() {
       </View>
 
       <Animated.ScrollView
+       
         style={[
           styles.content,
           {

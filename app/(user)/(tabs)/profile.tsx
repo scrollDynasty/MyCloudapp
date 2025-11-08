@@ -13,10 +13,10 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import { API_URL } from '../../config/api';
-import { getHeaders } from '../../config/fetch';
-import { useAuth } from '../../lib/AuthContext';
-import { getCachedOrFetch } from '../../lib/cache';
+import { API_URL } from '../../../config/api';
+import { getHeaders } from '../../../config/fetch';
+import { useAuth } from '../../../lib/AuthContext';
+import { getCachedOrFetch } from '../../../lib/cache';
 
 interface UserProfile {
   user_id: number;
@@ -214,6 +214,7 @@ export default React.memo(function ProfileScreen() {
       </View>
 
       <Animated.ScrollView
+       
         style={[
           styles.content,
           {

@@ -14,11 +14,11 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import { API_URL } from '../../config/api';
-import { getHeaders } from '../../config/fetch';
-import { useAuth } from '../../lib/AuthContext';
-import { getCachedOrFetch } from '../../lib/cache';
-import { rateLimitedFetch } from '../../lib/rateLimiter';
+import { API_URL } from '../../../config/api';
+import { getHeaders } from '../../../config/fetch';
+import { useAuth } from '../../../lib/AuthContext';
+import { getCachedOrFetch } from '../../../lib/cache';
+import { rateLimitedFetch } from '../../../lib/rateLimiter';
 
 interface User {
   user_id: number;

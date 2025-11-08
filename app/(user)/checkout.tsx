@@ -205,7 +205,7 @@ export default function CheckoutScreen() {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(user)/home');
+      router.replace('/(user)/(tabs)/home');
     }
   };
 
