@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -53,29 +53,6 @@ const OrdersScreen = React.memo(function OrdersScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<FilterType>('active');
-  
-  // Анимации
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(20)).current;
-  
-  // Анимация появления контента
-  useEffect(() => {
-    if (!loading) {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 600,
-          useNativeDriver: Platform.OS !== 'web',
-        }),
-        Animated.spring(slideAnim, {
-          toValue: 0,
-          tension: 50,
-          friction: 8,
-          useNativeDriver: Platform.OS !== 'web',
-        }),
-      ]).start();
-    }
-  }, [loading]);
 
   useEffect(() => {
     loadOrders();
@@ -366,16 +343,7 @@ const OrdersScreen = React.memo(function OrdersScreen() {
   }
 
   return (
-    <Animated.View 
-      style={[
-        styles.container,
-        {
-          opacity: fadeAnim,
-          transform: [{ translateY: slideAnim }],
-        }
-      ]}
-     
-    >
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Заказы</Text>
@@ -385,6 +353,10 @@ const OrdersScreen = React.memo(function OrdersScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         removeClippedSubviews={true}
+        directionalLockEnabled={true}
+        nestedScrollEnabled={true}
+        bounces={Platform.OS === 'ios'}
+        overScrollMode="never"
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#4F46E5']} />
         }
@@ -474,7 +446,7 @@ const OrdersScreen = React.memo(function OrdersScreen() {
           </Text>
         </TouchableOpacity>
       </View>
-    </Animated.View>
+    </View>
   );
 });
 

@@ -1,19 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { withLayoutContext } from 'expo-router';
-import { Platform } from 'react-native';
+import { Dimensions, Platform } from 'react-native';
 
 const { Navigator } = createMaterialTopTabNavigator();
 
 export const MaterialTopTabs = withLayoutContext(Navigator);
 
 export default function UserLayout() {
+  const { width } = Dimensions.get('window');
+  
   return (
     <MaterialTopTabs
       tabBarPosition="bottom"
+      initialLayout={{ width }}
       screenOptions={{
-        lazy: false,
+        lazy: true,
         lazyPreloadDistance: 1,
+        lazyPlaceholder: () => null,
         swipeEnabled: true,
         animationEnabled: true,
         tabBarActiveTintColor: '#4F46E5',

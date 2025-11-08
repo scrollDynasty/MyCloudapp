@@ -1,14 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Animated,
   Dimensions,
   Platform,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -55,34 +55,12 @@ const ServicesScreen = React.memo(function ServicesScreen() {
   const [filter, setFilter] = useState<'all' | 'active' | 'pending'>('all');
 
   // Анимации
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
-
   useEffect(() => {
     if (authUser) {
       setUser(authUser);
     }
     loadServices();
   }, [authUser]);
-
-  // Анимация появления контента
-  useEffect(() => {
-    if (!loading) {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: Platform.OS !== 'web',
-        }),
-        Animated.spring(slideAnim, {
-          toValue: 0,
-          tension: 50,
-          friction: 8,
-          useNativeDriver: Platform.OS !== 'web',
-        }),
-      ]).start();
-    }
-  }, [loading]);
 
   const loadServices = async (forceRefresh = false) => {
     try {
@@ -192,16 +170,14 @@ const ServicesScreen = React.memo(function ServicesScreen() {
         </View>
       </View>
 
-      <Animated.ScrollView
-        style={[
-          styles.content,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
-          },
-        ]}
+      <ScrollView
+        style={styles.content}
         showsVerticalScrollIndicator={false}
         removeClippedSubviews={true}
+        directionalLockEnabled={true}
+        nestedScrollEnabled={true}
+        bounces={Platform.OS === 'ios'}
+        overScrollMode="never"
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#4F46E5']} />
         }
@@ -317,7 +293,7 @@ const ServicesScreen = React.memo(function ServicesScreen() {
         </View>
 
         <View style={styles.bottomSpacer} />
-      </Animated.ScrollView>
+      </ScrollView>
     </View>
   );
 });
