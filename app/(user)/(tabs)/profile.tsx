@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Dimensions,
   Platform,
   RefreshControl,
   StyleSheet,
@@ -13,10 +14,14 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { API_URL } from '../../../config/api';
 import { getHeaders } from '../../../config/fetch';
 import { useAuth } from '../../../lib/AuthContext';
 import { getCachedOrFetch } from '../../../lib/cache';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const isSmallDevice = SCREEN_WIDTH < 375;
 
 interface UserProfile {
   user_id: number;
@@ -44,10 +49,19 @@ interface Order {
 export default React.memo(function ProfileScreen() {
   const router = useRouter();
   const { user: authUser, signOut } = useAuth();
+  const insets = useSafeAreaInsets();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [dimensions, setDimensions] = useState(Dimensions.get('window'));
+
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setDimensions(window);
+    });
+    return () => subscription?.remove();
+  }, []);
 
   // Анимации
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -188,6 +202,30 @@ export default React.memo(function ProfileScreen() {
   // Проверка, зарегистрирован ли пользователь через Google
   const isGoogleUser = user?.oauth_provider === 'google';
 
+  // Адаптивные размеры
+  const adaptive = useMemo(() => {
+    const width = dimensions.width;
+    const isVerySmall = width < 360;
+    const isSmall = width < 375;
+    const isMedium = width >= 375 && width < 430;
+    
+    return {
+      horizontal: isVerySmall ? 12 : isSmall ? 14 : 16,
+      vertical: isVerySmall ? 12 : 16,
+      gap: isVerySmall ? 8 : isSmall ? 10 : 12,
+      avatarSize: isVerySmall ? 56 : 64,
+      iconSize: isVerySmall ? 16 : 18,
+      largeIconSize: isVerySmall ? 28 : 32,
+      titleSize: isVerySmall ? 16 : 18,
+      nameSize: isVerySmall ? 15 : 16,
+      labelSize: isVerySmall ? 13 : 14,
+      textSize: isVerySmall ? 11 : 12,
+      buttonPadding: isVerySmall ? 8 : 11,
+      cardPadding: isVerySmall ? 11 : 13,
+      borderRadius: isVerySmall ? 20 : 24,
+    };
+  }, [dimensions]);
+
   // Подсчитываем статистику (мемоизировано для оптимизации)
   const { activeServices, pendingOrders } = useMemo(() => ({
     activeServices: Array.isArray(orders) ? orders.filter(o => o.status === 'active' || o.payment_status === 'paid').length : 0,
@@ -203,7 +241,7 @@ export default React.memo(function ProfileScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
@@ -228,160 +266,301 @@ export default React.memo(function ProfileScreen() {
         }
       >
         {/* Profile Header */}
-        <View style={styles.profileHeader}>
-          <View style={styles.avatarLarge}>
-            <Ionicons name="person" size={32} color="#111827" />
+        <View style={[styles.profileHeader, { 
+          paddingHorizontal: adaptive.horizontal,
+          paddingTop: adaptive.vertical,
+          paddingBottom: adaptive.gap,
+          gap: adaptive.gap 
+        }]}>
+          <View style={[styles.avatarLarge, { 
+            width: adaptive.avatarSize, 
+            height: adaptive.avatarSize,
+            borderRadius: adaptive.borderRadius 
+          }]}>
+            <Ionicons name="person" size={adaptive.largeIconSize} color="#111827" />
           </View>
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{user?.full_name || 'Пользователь'}</Text>
-            <Text style={styles.profileEmail}>{user?.email || ''}</Text>
+            <Text style={[styles.profileName, { fontSize: adaptive.nameSize }]} numberOfLines={1}>
+              {user?.full_name || 'Пользователь'}
+            </Text>
+            <Text style={[styles.profileEmail, { fontSize: adaptive.textSize }]} numberOfLines={1}>
+              {user?.email || ''}
+            </Text>
           </View>
-          <TouchableOpacity style={styles.editButton}>
-            <Text style={styles.editButtonText}>Редактировать</Text>
+          <TouchableOpacity style={[styles.editButton, { 
+            paddingHorizontal: adaptive.buttonPadding,
+            paddingVertical: adaptive.buttonPadding / 1.5,
+            borderRadius: adaptive.borderRadius 
+          }]}>
+            <Text style={[styles.editButtonText, { fontSize: adaptive.textSize }]}>
+              {dimensions.width < 360 ? 'Ред.' : 'Редактировать'}
+            </Text>
           </TouchableOpacity>
         </View>
 
         {/* Account Overview */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Обзор аккаунта</Text>
-          <View style={styles.statsRow}>
-            <View style={styles.statCard}>
-              <Text style={styles.statLabel}>Активные сервисы</Text>
-              <Text style={styles.statValue}>{activeServices}</Text>
+        <View style={[styles.sectionCard, { 
+          marginHorizontal: adaptive.horizontal,
+          padding: adaptive.cardPadding,
+          borderRadius: adaptive.borderRadius 
+        }]}>
+          <Text style={[styles.sectionTitle, { fontSize: adaptive.labelSize }]}>Обзор аккаунта</Text>
+          <View style={[styles.statsRow, { gap: adaptive.gap }]}>
+            <View style={[styles.statCard, { 
+              padding: adaptive.buttonPadding,
+              borderRadius: adaptive.borderRadius,
+              gap: adaptive.gap / 2 
+            }]}>
+              <Text style={[styles.statLabel, { fontSize: adaptive.textSize }]}>Активные сервисы</Text>
+              <Text style={[styles.statValue, { fontSize: adaptive.labelSize }]}>{activeServices}</Text>
             </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statLabel}>Ожидающие заказы</Text>
-              <Text style={styles.statValue}>{pendingOrders}</Text>
+            <View style={[styles.statCard, { 
+              padding: adaptive.buttonPadding,
+              borderRadius: adaptive.borderRadius,
+              gap: adaptive.gap / 2 
+            }]}>
+              <Text style={[styles.statLabel, { fontSize: adaptive.textSize }]}>Ожидающие заказы</Text>
+              <Text style={[styles.statValue, { fontSize: adaptive.labelSize }]}>{pendingOrders}</Text>
             </View>
           </View>
         </View>
 
         {/* Personal Info */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Личная информация</Text>
+        <View style={[styles.section, { marginHorizontal: adaptive.horizontal }]}>
+          <Text style={[styles.sectionTitle, { fontSize: adaptive.labelSize }]}>Личная информация</Text>
           
-          <View style={styles.infoCard}>
-            <View style={styles.infoCardContent}>
-              <View style={styles.infoIconContainer}>
-                <Ionicons name="person-outline" size={18} color="#111827" />
+          <View style={[styles.infoCard, { 
+            padding: adaptive.cardPadding,
+            borderRadius: adaptive.borderRadius 
+          }]}>
+            <View style={[styles.infoCardContent, { gap: adaptive.gap }]}>
+              <View style={[styles.infoIconContainer, { 
+                width: adaptive.avatarSize * 0.7,
+                height: adaptive.avatarSize * 0.7,
+                borderRadius: adaptive.borderRadius 
+              }]}>
+                <Ionicons name="person-outline" size={adaptive.iconSize} color="#111827" />
               </View>
               <View style={styles.infoDetails}>
-                <Text style={styles.infoLabel}>Полное имя</Text>
-                <Text style={styles.infoValue}>{user?.full_name || 'Не указано'}</Text>
+                <Text style={[styles.infoLabel, { fontSize: adaptive.labelSize }]}>Полное имя</Text>
+                <Text style={[styles.infoValue, { fontSize: adaptive.textSize }]} numberOfLines={1}>
+                  {user?.full_name || 'Не указано'}
+                </Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.changeButton}>
-              <Text style={styles.changeButtonText}>Изменить</Text>
+            <TouchableOpacity style={[styles.changeButton, { 
+              paddingHorizontal: adaptive.buttonPadding,
+              paddingVertical: adaptive.buttonPadding / 1.5,
+              borderRadius: adaptive.borderRadius 
+            }]}>
+              <Text style={[styles.changeButtonText, { fontSize: adaptive.textSize }]}>Изм.</Text>
             </TouchableOpacity>
           </View>
 
-          <View style={styles.infoCard}>
-            <View style={styles.infoCardContent}>
-              <View style={styles.infoIconContainer}>
-                <Ionicons name="mail-outline" size={18} color="#111827" />
+          <View style={[styles.infoCard, { 
+            padding: adaptive.cardPadding,
+            borderRadius: adaptive.borderRadius 
+          }]}>
+            <View style={[styles.infoCardContent, { gap: adaptive.gap }]}>
+              <View style={[styles.infoIconContainer, { 
+                width: adaptive.avatarSize * 0.7,
+                height: adaptive.avatarSize * 0.7,
+                borderRadius: adaptive.borderRadius 
+              }]}>
+                <Ionicons name="mail-outline" size={adaptive.iconSize} color="#111827" />
               </View>
               <View style={styles.infoDetails}>
-                <Text style={styles.infoLabel}>Email</Text>
-                <Text style={styles.infoValue}>{user?.email || 'Не указано'}</Text>
+                <Text style={[styles.infoLabel, { fontSize: adaptive.labelSize }]}>Email</Text>
+                <Text style={[styles.infoValue, { fontSize: adaptive.textSize }]} numberOfLines={1} ellipsizeMode="middle">
+                  {user?.email || 'Не указано'}
+                </Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.changeButton}>
-              <Text style={styles.changeButtonText}>Изменить</Text>
+            <TouchableOpacity style={[styles.changeButton, { 
+              paddingHorizontal: adaptive.buttonPadding,
+              paddingVertical: adaptive.buttonPadding / 1.5,
+              borderRadius: adaptive.borderRadius 
+            }]}>
+              <Text style={[styles.changeButtonText, { fontSize: adaptive.textSize }]}>Изм.</Text>
             </TouchableOpacity>
           </View>
 
-          <View style={styles.infoCard}>
-            <View style={styles.infoCardContent}>
-              <View style={styles.infoIconContainer}>
-                <Ionicons name="call-outline" size={18} color="#111827" />
+          <View style={[styles.infoCard, { 
+            padding: adaptive.cardPadding,
+            borderRadius: adaptive.borderRadius 
+          }]}>
+            <View style={[styles.infoCardContent, { gap: adaptive.gap }]}>
+              <View style={[styles.infoIconContainer, { 
+                width: adaptive.avatarSize * 0.7,
+                height: adaptive.avatarSize * 0.7,
+                borderRadius: adaptive.borderRadius 
+              }]}>
+                <Ionicons name="call-outline" size={adaptive.iconSize} color="#111827" />
               </View>
               <View style={styles.infoDetails}>
-                <Text style={styles.infoLabel}>Телефон</Text>
-                <Text style={styles.infoValue}>{user?.phone || 'Не указано'}</Text>
+                <Text style={[styles.infoLabel, { fontSize: adaptive.labelSize }]}>Телефон</Text>
+                <Text style={[styles.infoValue, { fontSize: adaptive.textSize }]} numberOfLines={1}>
+                  {user?.phone || 'Не указано'}
+                </Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.changeButton}>
-              <Text style={styles.changeButtonText}>Изменить</Text>
+            <TouchableOpacity style={[styles.changeButton, { 
+              paddingHorizontal: adaptive.buttonPadding,
+              paddingVertical: adaptive.buttonPadding / 1.5,
+              borderRadius: adaptive.borderRadius 
+            }]}>
+              <Text style={[styles.changeButtonText, { fontSize: adaptive.textSize }]}>Изм.</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Security Section */}
         {!isGoogleUser && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Безопасность</Text>
+          <View style={[styles.section, { marginHorizontal: adaptive.horizontal }]}>
+            <Text style={[styles.sectionTitle, { fontSize: adaptive.labelSize }]}>Безопасность</Text>
             
-            <View style={styles.infoCard}>
-              <View style={styles.infoCardContent}>
-                <View style={styles.infoIconContainer}>
-                  <Ionicons name="lock-closed-outline" size={18} color="#111827" />
+            <View style={[styles.infoCard, { 
+              padding: adaptive.cardPadding,
+              borderRadius: adaptive.borderRadius 
+            }]}>
+              <View style={[styles.infoCardContent, { gap: adaptive.gap }]}>
+                <View style={[styles.infoIconContainer, { 
+                  width: adaptive.avatarSize * 0.7,
+                  height: adaptive.avatarSize * 0.7,
+                  borderRadius: adaptive.borderRadius 
+                }]}>
+                  <Ionicons name="lock-closed-outline" size={adaptive.iconSize} color="#111827" />
                 </View>
                 <View style={styles.infoDetails}>
-                  <Text style={styles.infoLabel}>Пароль</Text>
-                  <Text style={styles.infoValue}>Последнее изменение 2 месяца назад</Text>
+                  <Text style={[styles.infoLabel, { fontSize: adaptive.labelSize }]}>Пароль</Text>
+                  <Text style={[styles.infoValue, { fontSize: adaptive.textSize }]} numberOfLines={2}>
+                    {dimensions.width < 360 ? 'Изменен 2 мес. назад' : 'Последнее изменение 2 месяца назад'}
+                  </Text>
                 </View>
               </View>
-              <TouchableOpacity style={styles.changeButton}>
-                <Text style={styles.changeButtonText}>Обновить</Text>
+              <TouchableOpacity style={[styles.changeButton, { 
+                paddingHorizontal: adaptive.buttonPadding,
+                paddingVertical: adaptive.buttonPadding / 1.5,
+                borderRadius: adaptive.borderRadius 
+              }]}>
+                <Text style={[styles.changeButtonText, { fontSize: adaptive.textSize }]}>Обн.</Text>
               </TouchableOpacity>
             </View>
 
-            <View style={styles.infoCard}>
-              <View style={styles.infoCardContent}>
-                <View style={styles.infoIconContainer}>
-                  <Ionicons name="shield-checkmark-outline" size={18} color="#111827" />
+            <View style={[styles.infoCard, { 
+              padding: adaptive.cardPadding,
+              borderRadius: adaptive.borderRadius 
+            }]}>
+              <View style={[styles.infoCardContent, { gap: adaptive.gap }]}>
+                <View style={[styles.infoIconContainer, { 
+                  width: adaptive.avatarSize * 0.7,
+                  height: adaptive.avatarSize * 0.7,
+                  borderRadius: adaptive.borderRadius 
+                }]}>
+                  <Ionicons name="shield-checkmark-outline" size={adaptive.iconSize} color="#111827" />
                 </View>
                 <View style={styles.infoDetails}>
-                  <Text style={styles.infoLabel}>Двухфакторная аутентификация</Text>
-                  <Text style={styles.infoValue}>Включена</Text>
+                  <Text style={[styles.infoLabel, { fontSize: adaptive.labelSize }]} numberOfLines={2}>
+                    {dimensions.width < 360 ? '2FA' : 'Двухфакторная аутентификация'}
+                  </Text>
+                  <Text style={[styles.infoValue, { fontSize: adaptive.textSize }]}>Включена</Text>
                 </View>
               </View>
-              <View style={styles.secureBadge}>
-                <Text style={styles.secureBadgeText}>Безопасно</Text>
+              <View style={[styles.secureBadge, { 
+                paddingHorizontal: adaptive.buttonPadding,
+                paddingVertical: adaptive.buttonPadding / 1.8,
+                borderRadius: adaptive.borderRadius / 2 
+              }]}>
+                <Text style={[styles.secureBadgeText, { fontSize: adaptive.textSize }]}>
+                  {dimensions.width < 360 ? '✓' : 'Безопасно'}
+                </Text>
               </View>
             </View>
           </View>
         )}
 
         {/* Billing Section */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Платежи</Text>
+        <View style={[styles.sectionCard, { 
+          marginHorizontal: adaptive.horizontal,
+          padding: adaptive.cardPadding,
+          borderRadius: adaptive.borderRadius 
+        }]}>
+          <Text style={[styles.sectionTitle, { fontSize: adaptive.labelSize }]}>Платежи</Text>
           
-          <View style={styles.infoCard}>
-            <View style={styles.infoCardContent}>
-              <View style={styles.infoIconContainer}>
-                <Ionicons name="card-outline" size={18} color="#111827" />
+          <View style={[styles.infoCard, { 
+            padding: adaptive.cardPadding,
+            borderRadius: adaptive.borderRadius 
+          }]}>
+            <View style={[styles.infoCardContent, { gap: adaptive.gap }]}>
+              <View style={[styles.infoIconContainer, { 
+                width: adaptive.avatarSize * 0.7,
+                height: adaptive.avatarSize * 0.7,
+                borderRadius: adaptive.borderRadius 
+              }]}>
+                <Ionicons name="card-outline" size={adaptive.iconSize} color="#111827" />
               </View>
               <View style={styles.infoDetails}>
-                <Text style={styles.infoLabel}>Способ оплаты</Text>
-                <Text style={styles.infoValue}>Visa •••• 4242</Text>
+                <Text style={[styles.infoLabel, { fontSize: adaptive.labelSize }]}>Способ оплаты</Text>
+                <Text style={[styles.infoValue, { fontSize: adaptive.textSize }]}>Visa •••• 4242</Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.changeButton}>
-              <Text style={styles.changeButtonText}>Управлять</Text>
+            <TouchableOpacity style={[styles.changeButton, { 
+              paddingHorizontal: adaptive.buttonPadding,
+              paddingVertical: adaptive.buttonPadding / 1.5,
+              borderRadius: adaptive.borderRadius 
+            }]}>
+              <Text style={[styles.changeButtonText, { fontSize: adaptive.textSize }]}>
+                {dimensions.width < 360 ? 'Упр.' : 'Управлять'}
+              </Text>
             </TouchableOpacity>
           </View>
 
-          <View style={styles.infoCard}>
-            <View style={styles.infoCardContent}>
-              <View style={styles.infoIconContainer}>
-                <Ionicons name="receipt-outline" size={18} color="#111827" />
+          <View style={[styles.infoCard, { 
+            padding: adaptive.cardPadding,
+            borderRadius: adaptive.borderRadius 
+          }]}>
+            <View style={[styles.infoCardContent, { gap: adaptive.gap }]}>
+              <View style={[styles.infoIconContainer, { 
+                width: adaptive.avatarSize * 0.7,
+                height: adaptive.avatarSize * 0.7,
+                borderRadius: adaptive.borderRadius 
+              }]}>
+                <Ionicons name="receipt-outline" size={adaptive.iconSize} color="#111827" />
               </View>
               <View style={styles.infoDetails}>
-                <Text style={styles.infoLabel}>Счета</Text>
-                <Text style={styles.infoValue}>Последний выдан: {new Date().toLocaleDateString('ru-RU')}</Text>
+                <Text style={[styles.infoLabel, { fontSize: adaptive.labelSize }]}>Счета</Text>
+                <Text style={[styles.infoValue, { fontSize: adaptive.textSize }]} numberOfLines={1}>
+                  {dimensions.width < 360 
+                    ? new Date().toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
+                    : `Последний выдан: ${new Date().toLocaleDateString('ru-RU')}`
+                  }
+                </Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.changeButton}>
-              <Text style={styles.changeButtonText}>Просмотр</Text>
+            <TouchableOpacity style={[styles.changeButton, { 
+              paddingHorizontal: adaptive.buttonPadding,
+              paddingVertical: adaptive.buttonPadding / 1.5,
+              borderRadius: adaptive.borderRadius 
+            }]}>
+              <Text style={[styles.changeButtonText, { fontSize: adaptive.textSize }]}>
+                {dimensions.width < 360 ? 'См.' : 'Просмотр'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Logout Button */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={18} color="#FFFFFF" />
-          <Text style={styles.logoutButtonText}>Выйти</Text>
+        <TouchableOpacity 
+          style={[styles.logoutButton, { 
+            marginHorizontal: adaptive.horizontal,
+            padding: adaptive.cardPadding,
+            borderRadius: adaptive.borderRadius,
+            gap: adaptive.gap 
+          }]} 
+          onPress={handleLogout}
+        >
+          <Ionicons name="log-out-outline" size={adaptive.iconSize} color="#FFFFFF" />
+          <Text style={[styles.logoutButtonText, { fontSize: adaptive.labelSize }]}>Выйти</Text>
         </TouchableOpacity>
 
         <View style={styles.bottomSpacer} />

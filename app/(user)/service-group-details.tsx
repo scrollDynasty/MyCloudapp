@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { API_URL } from '../../config/api';
 import { getHeaders } from '../../config/fetch';
 import { useAuth } from '../../lib/AuthContext';
@@ -57,6 +58,7 @@ export default function ServiceGroupDetailsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { user: authUser } = useAuth();
+  const insets = useSafeAreaInsets();
   const groupId = params.groupId as string;
   const groupName = params.groupName as string;
 
@@ -74,6 +76,28 @@ export default function ServiceGroupDetailsScreen() {
     });
     return () => subscription?.remove();
   }, []);
+
+  // Адаптивные размеры
+  const adaptive = useMemo(() => {
+    const width = dimensions.width;
+    const isSmall = width < 375;
+    
+    return {
+      horizontal: isSmall ? 14 : 16,
+      vertical: 12,
+      gap: isSmall ? 10 : 12,
+      cardPadding: isSmall ? 12 : 14,
+      borderRadius: 20,
+      iconSize: 20,
+      smallIconSize: 16,
+      titleSize: 18,
+      nameSize: isSmall ? 14 : 15,
+      labelSize: 14,
+      textSize: 13,
+      valueSize: 14,
+      buttonPadding: 12,
+    };
+  }, [dimensions]);
 
   // Анимации
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -323,14 +347,20 @@ export default function ServiceGroupDetailsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingHorizontal: adaptive.horizontal }]}>
         <View style={styles.headerContent}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={20} color="#111827" />
+          <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, {
+            width: 32 + adaptive.vertical,
+            height: 32 + adaptive.vertical,
+            borderRadius: adaptive.borderRadius
+          }]}>
+            <Ionicons name="arrow-back" size={adaptive.iconSize} color="#111827" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">Группа: {groupName}</Text>
+          <Text style={[styles.headerTitle, { fontSize: adaptive.titleSize }]} numberOfLines={1} ellipsizeMode="tail">
+            {groupName}
+          </Text>
           <View style={styles.headerRight} />
         </View>
       </View>
@@ -349,21 +379,27 @@ export default function ServiceGroupDetailsScreen() {
         }
       >
         {/* Title Section */}
-        <View style={styles.titleSection}>
+        <View style={[styles.titleSection, { paddingHorizontal: adaptive.horizontal }]}>
           <View style={styles.titleText}>
-            <Text style={styles.title}>Планы внутри группы</Text>
-            <Text style={styles.subtitle}>Выберите конфигурацию для покупки</Text>
+            <Text style={[styles.title, { fontSize: adaptive.titleSize }]}>Планы внутри группы</Text>
+            <Text style={[styles.subtitle, { fontSize: adaptive.textSize }]}>Выберите конфигурацию для покупки</Text>
           </View>
         </View>
 
         {/* Search Bar */}
-        <View style={styles.searchContainer}>
+        <View style={[styles.searchContainer, { 
+          marginHorizontal: adaptive.horizontal,
+          paddingHorizontal: adaptive.cardPadding,
+          paddingVertical: adaptive.buttonPadding,
+          borderRadius: adaptive.borderRadius,
+          gap: adaptive.gap 
+        }]}>
           <View style={styles.searchIconContainer}>
-            <Ionicons name="search" size={18} color="#9CA3AF" />
+            <Ionicons name="search" size={adaptive.smallIconSize} color="#9CA3AF" />
           </View>
           <TextInput
-            style={styles.searchInput}
-            placeholder="Поиск по планам, CPU, RAM..."
+            style={[styles.searchInput, { fontSize: adaptive.textSize }]}
+            placeholder="Поиск по планам..."
             placeholderTextColor="#9CA3AF"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -371,86 +407,116 @@ export default function ServiceGroupDetailsScreen() {
         </View>
 
         {/* Available Services Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Доступные сервисы</Text>
+        <View style={[styles.section, { marginHorizontal: adaptive.horizontal }]}>
+          <Text style={[styles.sectionTitle, { fontSize: adaptive.labelSize }]}>Доступные сервисы</Text>
           {filteredPlans.map((plan) => {
             const specs = formatPlanSpecs(plan);
             const badges = getPlanBadges(plan);
             const isProcessing = processingOrder === plan.id;
 
             return (
-              <View key={plan.id} style={styles.planCard}>
-                <View style={[styles.planCardContent, { flexDirection: dimensions.width < 375 ? 'column' : 'row' }]}>
-                  <View style={styles.planMainInfo}>
-                    <View style={styles.planIconContainer}>
-                      <Ionicons name="server" size={18} color="#111827" />
-                    </View>
-                    <View style={styles.planDetails}>
-                      <Text style={styles.planName} numberOfLines={1} ellipsizeMode="tail">{plan.name_ru}</Text>
-                      {specs ? (
-                        <Text style={styles.planSpecs} numberOfLines={2} ellipsizeMode="tail">{specs}</Text>
-                      ) : null}
-                      {badges.length > 0 ? (
-                        <View style={styles.badgesContainer}>
-                          {badges.map((badge, index) => (
-                            <View key={index} style={styles.badge}>
-                              <Text style={styles.badgeText} numberOfLines={1}>{badge}</Text>
-                            </View>
-                          ))}
-                        </View>
-                      ) : null}
-                    </View>
-                  </View>
-                  <View style={[styles.planActions, { 
-                    alignItems: dimensions.width < 375 ? 'flex-start' : 'flex-end',
-                    marginTop: dimensions.width < 375 ? 12 : 0,
+              <View key={plan.id} style={[styles.planCard, {
+                padding: adaptive.cardPadding,
+                borderRadius: adaptive.borderRadius
+              }]}>
+                {/* Заголовок с иконкой и названием */}
+                <View style={[styles.planMainInfo, { gap: adaptive.gap }]}>
+                  <View style={[styles.planIconContainer, {
+                    width: 40 + adaptive.vertical,
+                    height: 40 + adaptive.vertical,
+                    borderRadius: adaptive.borderRadius
                   }]}>
-                    <Text style={styles.priceText} numberOfLines={1}>
-                      {displayPrice(plan)}{getBillingPeriodText(plan.billing_period)}
+                    <Ionicons name="server" size={adaptive.smallIconSize} color="#111827" />
+                  </View>
+                  <View style={styles.planDetails}>
+                    <Text style={[styles.planName, { fontSize: adaptive.nameSize, fontWeight: '600' }]} numberOfLines={2}>
+                      {plan.name_ru}
                     </Text>
-                    <View style={[styles.buttonsRow, { 
-                      flexDirection: dimensions.width < 375 ? 'column' : 'row',
-                      width: dimensions.width < 375 ? '100%' : 'auto',
-                      gap: dimensions.width < 375 ? 8 : 8,
-                    }]}>
-                      <TouchableOpacity
-                        style={[styles.detailsButton, {
-                          flex: dimensions.width < 375 ? 1 : 0,
-                          width: dimensions.width < 375 ? '100%' : 'auto',
-                          minWidth: dimensions.width < 375 ? '100%' : 0,
-                        }]}
-                        onPress={() => handleViewDetails(plan)}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons name="information-circle-outline" size={16} color="#374151" />
-                        <Text style={styles.detailsButtonText} numberOfLines={1}>Детали</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.buyButton, {
-                          flex: dimensions.width < 375 ? 1 : 0,
-                          width: dimensions.width < 375 ? '100%' : 'auto',
-                          minWidth: dimensions.width < 375 ? '100%' : 0,
-                        }]}
-                        onPress={() => handleOrderPlan(plan)}
-                        disabled={isProcessing}
-                        activeOpacity={0.7}
-                      >
-                        {isProcessing ? (
-                          <ActivityIndicator size="small" color="#FFFFFF" />
-                        ) : (
-                          <React.Fragment>
-                            <Ionicons name="cart" size={16} color="#FFFFFF" />
-                            <Text style={styles.buyButtonText} numberOfLines={1}>Купить</Text>
-                          </React.Fragment>
-                        )}
-                      </TouchableOpacity>
-                    </View>
+                    {specs ? (
+                      <Text style={[styles.planSpecs, { fontSize: adaptive.textSize, marginTop: 4 }]} numberOfLines={2}>
+                        {specs}
+                      </Text>
+                    ) : null}
                   </View>
                 </View>
+
+                {/* Badges */}
+                {badges.length > 0 ? (
+                  <View style={[styles.badgesContainer, { gap: 6, marginTop: adaptive.gap }]}>
+                    {badges.map((badge, index) => (
+                      <View key={index} style={[styles.badge, {
+                        paddingHorizontal: adaptive.buttonPadding - 2,
+                        paddingVertical: 6,
+                        borderRadius: adaptive.borderRadius / 1.5
+                      }]}>
+                        <Text style={[styles.badgeText, { fontSize: adaptive.textSize }]} numberOfLines={1}>{badge}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+
+                {/* Разделитель */}
+                <View style={[styles.divider, { marginVertical: adaptive.gap }]} />
+
+                {/* Цена */}
+                <View style={{ marginBottom: adaptive.gap }}>
+                  <Text style={{ fontSize: adaptive.textSize - 1, color: '#9CA3AF', marginBottom: 4 }}>
+                    Стоимость:
+                  </Text>
+                  <Text style={[styles.priceText, { fontSize: adaptive.valueSize + 2, fontWeight: '500' }]}>
+                    {displayPrice(plan)}{getBillingPeriodText(plan.billing_period)}
+                  </Text>
+                </View>
+
+                {/* Кнопки */}
+                <View style={[styles.buttonsRow, { 
+                  flexDirection: 'row',
+                  gap: adaptive.gap,
+                }]}>
+                  <TouchableOpacity
+                    style={[styles.detailsButton, {
+                      flex: 1,
+                      paddingHorizontal: adaptive.buttonPadding,
+                      paddingVertical: adaptive.buttonPadding,
+                      borderRadius: adaptive.borderRadius,
+                      gap: 6
+                    }]}
+                    onPress={() => handleViewDetails(plan)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="information-circle-outline" size={adaptive.smallIconSize} color="#374151" />
+                    <Text style={[styles.detailsButtonText, { fontSize: adaptive.labelSize }]} numberOfLines={1}>Детали</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.buyButton, {
+                      flex: 1,
+                      paddingHorizontal: adaptive.buttonPadding,
+                      paddingVertical: adaptive.buttonPadding,
+                      borderRadius: adaptive.borderRadius,
+                      gap: 6
+                    }]}
+                    onPress={() => handleOrderPlan(plan)}
+                    disabled={isProcessing}
+                    activeOpacity={0.7}
+                  >
+                    {isProcessing ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <React.Fragment>
+                        <Ionicons name="cart" size={adaptive.smallIconSize} color="#FFFFFF" />
+                        <Text style={[styles.buyButtonText, { fontSize: adaptive.labelSize }]} numberOfLines={1}>Купить</Text>
+                      </React.Fragment>
+                    )}
+                  </TouchableOpacity>
+                </View>
+
+                {/* Описание */}
                 {plan.description_ru ? (
                   <React.Fragment>
-                    <View style={styles.divider} />
-                    <Text style={styles.planDescription} numberOfLines={3} ellipsizeMode="tail">{plan.description_ru}</Text>
+                    <View style={[styles.divider, { marginVertical: adaptive.gap }]} />
+                    <Text style={[styles.planDescription, { fontSize: adaptive.textSize }]} numberOfLines={3} ellipsizeMode="tail">
+                      {plan.description_ru}
+                    </Text>
                   </React.Fragment>
                 ) : null}
               </View>
@@ -459,21 +525,40 @@ export default function ServiceGroupDetailsScreen() {
         </View>
 
         {/* What's Included Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Что входит</Text>
-          <View style={styles.includedCard}>
-            <View style={styles.includedBadges}>
-              <View style={styles.includedBadge}>
-                <Text style={styles.includedBadgeText}>Поддержка 24/7</Text>
+        <View style={[styles.section, { marginHorizontal: adaptive.horizontal }]}>
+          <Text style={[styles.sectionTitle, { fontSize: adaptive.labelSize }]}>Что входит</Text>
+          <View style={[styles.includedCard, {
+            padding: adaptive.cardPadding,
+            borderRadius: adaptive.borderRadius
+          }]}>
+            <View style={[styles.includedBadges, { gap: 8 }]}>
+              <View style={[styles.includedBadge, {
+                paddingHorizontal: adaptive.buttonPadding,
+                paddingVertical: 8,
+                borderRadius: adaptive.borderRadius / 1.5
+              }]}>
+                <Text style={[styles.includedBadgeText, { fontSize: adaptive.textSize }]}>Поддержка 24/7</Text>
               </View>
-              <View style={styles.includedBadge}>
-                <Text style={styles.includedBadgeText}>Бесплатный SSL</Text>
+              <View style={[styles.includedBadge, {
+                paddingHorizontal: adaptive.buttonPadding,
+                paddingVertical: 8,
+                borderRadius: adaptive.borderRadius / 1.5
+              }]}>
+                <Text style={[styles.includedBadgeText, { fontSize: adaptive.textSize }]}>Бесплатный SSL</Text>
               </View>
-              <View style={styles.includedBadge}>
-                <Text style={styles.includedBadgeText}>Гибкая масштабируемость</Text>
+              <View style={[styles.includedBadge, {
+                paddingHorizontal: adaptive.buttonPadding,
+                paddingVertical: 8,
+                borderRadius: adaptive.borderRadius / 1.5
+              }]}>
+                <Text style={[styles.includedBadgeText, { fontSize: adaptive.textSize }]}>Гибкая масштабируемость</Text>
               </View>
-              <View style={styles.includedBadge}>
-                <Text style={styles.includedBadgeText}>Панель управления</Text>
+              <View style={[styles.includedBadge, {
+                paddingHorizontal: adaptive.buttonPadding,
+                paddingVertical: 8,
+                borderRadius: adaptive.borderRadius / 1.5
+              }]}>
+                <Text style={[styles.includedBadgeText, { fontSize: adaptive.textSize }]}>Панель управления</Text>
               </View>
             </View>
           </View>

@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { API_URL } from '../../../config/api';
 import { getHeaders } from '../../../config/fetch';
 import { useAuth } from '../../../lib/AuthContext';
@@ -47,6 +48,7 @@ interface ServiceGroup {
 const ServicesScreen = React.memo(function ServicesScreen() {
   const router = useRouter();
   const { user: authUser } = useAuth();
+  const insets = useSafeAreaInsets();
   const [user, setUser] = useState<User | null>(null);
   const [serviceGroups, setServiceGroups] = useState<ServiceGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -153,7 +155,7 @@ const ServicesScreen = React.memo(function ServicesScreen() {
   const userName = user?.full_name?.split(' ')[0] || 'Пользователь';
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>

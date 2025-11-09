@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { API_URL } from '../../../config/api';
 import { getHeaders } from '../../../config/fetch';
 import { useAuth } from '../../../lib/AuthContext';
@@ -48,6 +49,7 @@ type FilterType = 'active' | 'pending' | 'history';
 const OrdersScreen = React.memo(function OrdersScreen() {
   const router = useRouter();
   const { user: authUser } = useAuth();
+  const insets = useSafeAreaInsets();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -343,7 +345,7 @@ const OrdersScreen = React.memo(function OrdersScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Заказы</Text>

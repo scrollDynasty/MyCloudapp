@@ -1,6 +1,8 @@
 import * as Linking from 'expo-linking';
 import { Stack, useRouter, useSegments } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef } from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from '../lib/AuthContext';
 import { startCacheCleanup } from '../lib/cacheOptimizer';
 
@@ -111,34 +113,37 @@ export default function RootLayout() {
     };
   }, [handleDeepLink]);
   return (
-    <AuthProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen 
-          name="auth/login" 
-          options={{ 
-            gestureEnabled: false,
-            animation: 'fade'
-          }} 
-        />
-        <Stack.Screen 
-          name="auth/register" 
-          options={{ 
-            gestureEnabled: false,
-            animation: 'fade'
-          }} 
-        />
-        <Stack.Screen 
-          name="auth/forgot-password" 
-          options={{ 
-            gestureEnabled: false,
-            animation: 'fade'
-          }} 
-        />
-        <Stack.Screen name="auth/callback" />
-        <Stack.Screen name="(user)" />
-        <Stack.Screen name="(admin)" />
-      </Stack>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <StatusBar style="auto" translucent backgroundColor="transparent" />
+      <AuthProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen 
+            name="auth/login" 
+            options={{ 
+              gestureEnabled: false,
+              animation: 'fade'
+            }} 
+          />
+          <Stack.Screen 
+            name="auth/register" 
+            options={{ 
+              gestureEnabled: false,
+              animation: 'fade'
+            }} 
+          />
+          <Stack.Screen 
+            name="auth/forgot-password" 
+            options={{ 
+              gestureEnabled: false,
+              animation: 'fade'
+            }} 
+          />
+          <Stack.Screen name="auth/callback" />
+          <Stack.Screen name="(user)" />
+          <Stack.Screen name="(admin)" />
+        </Stack>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }

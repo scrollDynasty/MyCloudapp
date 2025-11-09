@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { withLayoutContext } from 'expo-router';
 import { Dimensions, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { Navigator } = createMaterialTopTabNavigator();
 
@@ -9,6 +10,7 @@ export const MaterialTopTabs = withLayoutContext(Navigator);
 
 export default function UserLayout() {
   const { width } = Dimensions.get('window');
+  const insets = useSafeAreaInsets();
   
   return (
     <MaterialTopTabs
@@ -27,9 +29,9 @@ export default function UserLayout() {
           borderTopWidth: 1,
           borderTopColor: '#E5E7EB',
           paddingTop: 9,
-          paddingBottom: Platform.OS === 'ios' ? 25 : 15,
-          height: Platform.OS === 'ios' ? 85 : 70,
-          elevation: 0,
+          paddingBottom: Math.max(insets.bottom, Platform.OS === 'ios' ? 10 : 8),
+          height: 58 + Math.max(insets.bottom, Platform.OS === 'ios' ? 10 : 8),
+          elevation: 8,
         },
         tabBarItemStyle: {
           paddingVertical: 8,

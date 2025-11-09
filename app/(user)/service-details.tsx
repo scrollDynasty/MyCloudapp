@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { API_URL } from '../../config/api';
 import { getHeaders } from '../../config/fetch';
 import { useAuth } from '../../lib/AuthContext';
@@ -57,6 +58,7 @@ export default React.memo(function ServiceDetailsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { user: authUser } = useAuth();
+  const insets = useSafeAreaInsets();
   const planId = params.planId as string;
 
   const [plan, setPlan] = useState<ServicePlan | null>(null);
@@ -72,6 +74,30 @@ export default React.memo(function ServiceDetailsScreen() {
     });
     return () => subscription?.remove();
   }, []);
+
+  // Адаптивные размеры
+  const adaptive = useMemo(() => {
+    const width = dimensions.width;
+    const isSmall = width < 375;
+    
+    return {
+      horizontal: isSmall ? 14 : 16,
+      vertical: 12,
+      gap: isSmall ? 10 : 12,
+      cardPadding: isSmall ? 12 : 14,
+      borderRadius: 20,
+      iconSize: 20,
+      smallIconSize: 16,
+      titleSize: 18,
+      nameSize: isSmall ? 14 : 15,
+      labelSize: 14,
+      textSize: 13,
+      valueSize: 14,
+      priceSize: isSmall ? 17 : 19,
+      buttonPadding: 12,
+      buttonVertical: 12,
+    };
+  }, [dimensions]);
 
   // Анимации
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -279,14 +305,23 @@ export default React.memo(function ServiceDetailsScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingHorizontal: adaptive.horizontal }]}>
         <View style={styles.headerContent}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={20} color="#111827" />
+          <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { 
+            width: 32 + adaptive.vertical,
+            height: 32 + adaptive.vertical,
+            borderRadius: adaptive.borderRadius 
+          }]}>
+            <Ionicons name="arrow-back" size={adaptive.iconSize} color="#111827" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">Детали сервиса</Text>
+          <Text style={[styles.headerTitle, { 
+            fontSize: adaptive.titleSize,
+            paddingHorizontal: 36 + adaptive.vertical 
+          }]} numberOfLines={1} ellipsizeMode="tail">
+            Детали сервиса
+          </Text>
           <View style={styles.headerRight} />
         </View>
       </View>
@@ -305,60 +340,92 @@ export default React.memo(function ServiceDetailsScreen() {
         }
       >
         {/* Plan Card */}
-        <View style={styles.planCard}>
-          <View style={styles.planHeader}>
-            <View style={styles.planIcon}>
-              <View style={styles.planIconBorder}>
-                <Ionicons name="server" size={20} color="#111827" />
+        <View style={[styles.planCard, { 
+          margin: adaptive.horizontal,
+          padding: adaptive.cardPadding,
+          borderRadius: adaptive.borderRadius 
+        }]}>
+          <View style={[styles.planHeader, { gap: adaptive.gap }]}>
+            <View style={[styles.planIcon, { 
+              width: 36 + adaptive.vertical,
+              height: 36 + adaptive.vertical,
+              borderRadius: adaptive.borderRadius 
+            }]}>
+              <View style={[styles.planIconBorder, { 
+                width: 32 + adaptive.vertical,
+                height: 36 + adaptive.vertical,
+                borderRadius: adaptive.borderRadius 
+              }]}>
+                <Ionicons name="server" size={adaptive.iconSize} color="#111827" />
               </View>
             </View>
             <View style={styles.planTitleSection}>
-              <Text style={styles.planName}>{plan.name_ru}</Text>
+              <Text style={[styles.planName, { fontSize: adaptive.nameSize }]} numberOfLines={2}>
+                {plan.name_ru}
+              </Text>
               {planSpecs ? (
-                <Text style={styles.planSubtitle}>{planSpecs}</Text>
+                <Text style={[styles.planSubtitle, { fontSize: adaptive.textSize }]} numberOfLines={1}>
+                  {planSpecs}
+                </Text>
               ) : null}
             </View>
-            <View style={styles.availabilityBadge}>
-              <Text style={styles.availabilityText}>Доступен</Text>
-            </View>
-          </View>
-
-          {/* Specs Grid */}
-          <View style={styles.specsGrid}>
-            <View style={[styles.specItem, { width: dimensions.width < 375 ? '48%' : '23%' }]}>
-              <Ionicons name="hardware-chip-outline" size={14} color="#374151" />
-              <Text style={styles.specText} numberOfLines={1} ellipsizeMode="tail">{getFieldValue('cpu') || getFieldValue('vCPU') || 'N/A'}</Text>
-            </View>
-            <View style={[styles.specItem, { width: dimensions.width < 375 ? '48%' : '23%' }]}>
-              <Ionicons name="albums-outline" size={14} color="#374151" />
-              <Text style={styles.specText} numberOfLines={1} ellipsizeMode="tail">{getFieldValue('ram') || getFieldValue('memory') || 'N/A'}</Text>
-            </View>
-            <View style={[styles.specItem, { width: dimensions.width < 375 ? '48%' : '23%' }]}>
-              <Ionicons name="save-outline" size={14} color="#374151" />
-              <Text style={styles.specText} numberOfLines={1} ellipsizeMode="tail">{getFieldValue('storage') || getFieldValue('ssd') || 'N/A'}</Text>
-            </View>
-            <View style={[styles.specItem, { width: dimensions.width < 375 ? '48%' : '23%' }]}>
-              <Ionicons name="calendar-outline" size={14} color="#374151" />
-              <Text style={styles.specText} numberOfLines={1} ellipsizeMode="tail">{getBillingPeriodText(plan.billing_period)}</Text>
+            <View style={[styles.availabilityBadge, { 
+              paddingHorizontal: adaptive.buttonPadding,
+              paddingVertical: 6,
+              borderRadius: adaptive.borderRadius 
+            }]}>
+              <Text style={[styles.availabilityText, { fontSize: adaptive.textSize }]}>
+                Доступен
+              </Text>
             </View>
           </View>
 
           {/* Price Section */}
-          <View style={[styles.priceSection, { flexDirection: dimensions.width < 375 ? 'column' : 'row' }]}>
-            <View style={styles.priceInfo}>
-              <Text style={[styles.priceAmount, { fontSize: dimensions.width < 375 ? 16 : 18 }]} numberOfLines={1}>{displayPrice}{getBillingPeriodText(plan.billing_period)}</Text>
-              <Text style={styles.priceNote} numberOfLines={2}>С учётом НДС,{'\n'}если применимо</Text>
+          <View style={{ marginTop: adaptive.gap }}>
+            {/* Разделитель */}
+            <View style={{ height: 1, backgroundColor: '#E5E7EB', marginVertical: adaptive.gap }} />
+            
+            {/* Цена */}
+            <View style={{ marginBottom: adaptive.gap }}>
+              <Text style={{ fontSize: adaptive.textSize, color: '#9CA3AF', marginBottom: 6 }}>
+                Стоимость:
+              </Text>
+              <Text style={[styles.priceAmount, { fontSize: adaptive.priceSize + 2, fontWeight: '500' }]}>
+                {displayPrice}{getBillingPeriodText(plan.billing_period)}
+              </Text>
+              <Text style={[styles.priceNote, { fontSize: adaptive.textSize, marginTop: 4 }]}>
+                С учётом НДС, если применимо
+              </Text>
             </View>
-            <View style={[styles.actionButtons, { width: dimensions.width < 375 ? '100%' : 'auto' }]}>
+
+            {/* Кнопки */}
+            <View style={[styles.actionButtons, { 
+              flexDirection: 'row',
+              gap: adaptive.gap 
+            }]}>
               <TouchableOpacity 
-                style={[styles.characteristicsButton, { flex: dimensions.width < 375 ? 1 : 0, paddingHorizontal: dimensions.width < 375 ? 10 : 11 }]}
+                style={[styles.characteristicsButton, { 
+                  flex: 1,
+                  paddingHorizontal: adaptive.buttonPadding,
+                  paddingVertical: adaptive.buttonPadding + 2,
+                  borderRadius: adaptive.borderRadius,
+                  gap: 6 
+                }]}
                 activeOpacity={0.7}
               >
-                <Ionicons name="options-outline" size={16} color="#374151" />
-                <Text style={[styles.characteristicsButtonText, { fontSize: dimensions.width < 375 ? 12 : 13 }]} numberOfLines={1}>Характеристики</Text>
+                <Ionicons name="options-outline" size={adaptive.smallIconSize} color="#374151" />
+                <Text style={[styles.characteristicsButtonText, { fontSize: adaptive.labelSize }]} numberOfLines={1}>
+                  Детали
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.buyButton, { flex: dimensions.width < 375 ? 1 : 0, paddingHorizontal: dimensions.width < 375 ? 16 : 13 }]}
+                style={[styles.buyButton, { 
+                  flex: 1,
+                  paddingHorizontal: adaptive.buttonPadding,
+                  paddingVertical: adaptive.buttonVertical + 2,
+                  borderRadius: adaptive.borderRadius,
+                  gap: 6 
+                }]}
                 onPress={handleOrderPlan}
                 disabled={processingOrder}
                 activeOpacity={0.7}
@@ -367,8 +434,8 @@ export default React.memo(function ServiceDetailsScreen() {
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
                   <React.Fragment>
-                    <Ionicons name="cart-outline" size={16} color="#FFFFFF" />
-                    <Text style={[styles.buyButtonText, { fontSize: dimensions.width < 375 ? 13 : 14 }]} numberOfLines={1}>Купить</Text>
+                    <Ionicons name="cart-outline" size={adaptive.smallIconSize} color="#FFFFFF" />
+                    <Text style={[styles.buyButtonText, { fontSize: adaptive.labelSize }]} numberOfLines={1}>Купить</Text>
                   </React.Fragment>
                 )}
               </TouchableOpacity>
@@ -377,34 +444,52 @@ export default React.memo(function ServiceDetailsScreen() {
         </View>
 
         {/* What's Included Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Что включено</Text>
-          <View style={styles.includedCard}>
-            <View style={styles.includedRow}>
-              <Text style={styles.includedLabel}>Виртуальные ядра</Text>
-              <Text style={styles.includedValue}>{getFieldValue('cpu') || getFieldValue('vCPU') || 'N/A'}</Text>
-            </View>
-            <View style={styles.includedRow}>
-              <Text style={styles.includedLabel}>Оперативная память</Text>
-              <Text style={styles.includedValue}>{getFieldValue('ram') || getFieldValue('memory') || 'N/A'}</Text>
-            </View>
-            <View style={styles.includedRow}>
-              <Text style={styles.includedLabel}>Хранилище</Text>
-              <Text style={styles.includedValue}>{getFieldValue('storage') || getFieldValue('ssd') || 'N/A'}</Text>
-            </View>
-            <View style={styles.includedRow}>
-              <Text style={styles.includedLabel}>Трафик</Text>
-              <Text style={styles.includedValue}>
-                {getFieldValue('traffic') || getFieldValue('bandwidth') || 'Безлимит (справедл. использование)'}
+        <View style={[styles.section, { marginHorizontal: adaptive.horizontal }]}>
+          <Text style={[styles.sectionTitle, { fontSize: adaptive.titleSize }]}>Что включено</Text>
+          <View style={[styles.includedCard, { 
+            padding: adaptive.cardPadding,
+            borderRadius: adaptive.borderRadius,
+            gap: adaptive.gap 
+          }]}>
+            <View style={[styles.includedRow, { gap: adaptive.gap }]}>
+              <Text style={[styles.includedLabel, { fontSize: adaptive.textSize }]}>
+                Виртуальные ядра
+              </Text>
+              <Text style={[styles.includedValue, { fontSize: adaptive.valueSize }]} numberOfLines={1}>
+                {getFieldValue('cpu') || getFieldValue('vCPU') || 'N/A'}
               </Text>
             </View>
-            <View style={styles.includedRow}>
-              <Text style={styles.includedLabel}>Локация</Text>
-              <Text style={styles.includedValue}>{getFieldValue('location') || getFieldValue('region') || 'Ташкент, UZ'}</Text>
+            <View style={[styles.includedRow, { gap: adaptive.gap }]}>
+              <Text style={[styles.includedLabel, { fontSize: adaptive.textSize }]}>
+                Оперативная память
+              </Text>
+              <Text style={[styles.includedValue, { fontSize: adaptive.valueSize }]} numberOfLines={1}>
+                {getFieldValue('ram') || getFieldValue('memory') || 'N/A'}
+              </Text>
             </View>
-            <View style={styles.includedRow}>
-              <Text style={styles.includedLabel}>Срок биллинга</Text>
-              <Text style={styles.includedValue}>
+            <View style={[styles.includedRow, { gap: adaptive.gap }]}>
+              <Text style={[styles.includedLabel, { fontSize: adaptive.textSize }]}>Хранилище</Text>
+              <Text style={[styles.includedValue, { fontSize: adaptive.valueSize }]} numberOfLines={1}>
+                {getFieldValue('storage') || getFieldValue('ssd') || 'N/A'}
+              </Text>
+            </View>
+            <View style={[styles.includedRow, { gap: adaptive.gap }]}>
+              <Text style={[styles.includedLabel, { fontSize: adaptive.textSize }]}>Трафик</Text>
+              <Text style={[styles.includedValue, { fontSize: adaptive.valueSize }]} numberOfLines={1}>
+                {getFieldValue('traffic') || getFieldValue('bandwidth') || 'Безлимит'}
+              </Text>
+            </View>
+            <View style={[styles.includedRow, { gap: adaptive.gap }]}>
+              <Text style={[styles.includedLabel, { fontSize: adaptive.textSize }]}>Локация</Text>
+              <Text style={[styles.includedValue, { fontSize: adaptive.valueSize }]} numberOfLines={1}>
+                {getFieldValue('location') || getFieldValue('region') || 'Ташкент, UZ'}
+              </Text>
+            </View>
+            <View style={[styles.includedRow, { gap: adaptive.gap }]}>
+              <Text style={[styles.includedLabel, { fontSize: adaptive.textSize }]}>
+                Срок биллинга
+              </Text>
+              <Text style={[styles.includedValue, { fontSize: adaptive.valueSize }]} numberOfLines={1}>
                 {plan.billing_period === 'monthly' ? 'Ежемесячно' : 
                  plan.billing_period === 'yearly' ? 'Ежегодно' :
                  plan.billing_period === 'quarterly' ? 'Ежеквартально' : 'Ежемесячно'}
@@ -414,25 +499,51 @@ export default React.memo(function ServiceDetailsScreen() {
         </View>
 
         {/* Configuration Options Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Опции конфигурации</Text>
-          <View style={styles.configCard}>
-            <View style={styles.configRow}>
-              <Text style={styles.configLabel}>ОС</Text>
-              <View style={styles.configValueBadge}>
-                <Text style={styles.configValueText}>{getFieldValue('os') || getFieldValue('operating_system') || 'Ubuntu 22.04'}</Text>
+        <View style={[styles.section, { marginHorizontal: adaptive.horizontal }]}>
+          <Text style={[styles.sectionTitle, { fontSize: adaptive.titleSize }]}>
+            Опции конфигурации
+          </Text>
+          <View style={[styles.configCard, { 
+            padding: adaptive.cardPadding,
+            borderRadius: adaptive.borderRadius,
+            gap: adaptive.gap 
+          }]}>
+            <View style={[styles.configRow, { gap: adaptive.gap }]}>
+              <Text style={[styles.configLabel, { fontSize: adaptive.valueSize }]}>ОС</Text>
+              <View style={[styles.configValueBadge, { 
+                paddingHorizontal: adaptive.buttonPadding,
+                paddingVertical: 8,
+                borderRadius: adaptive.borderRadius 
+              }]}>
+                <Text style={[styles.configValueText, { fontSize: adaptive.textSize }]} numberOfLines={1}>
+                  {getFieldValue('os') || getFieldValue('operating_system') || 'Ubuntu 22.04'}
+                </Text>
               </View>
             </View>
-            <View style={styles.configRow}>
-              <Text style={styles.configLabel}>Снапшоты</Text>
-              <View style={styles.configValueBadge}>
-                <Text style={styles.configValueText}>{getFieldValue('snapshot') || 'Выкл.'}</Text>
+            <View style={[styles.configRow, { gap: adaptive.gap }]}>
+              <Text style={[styles.configLabel, { fontSize: adaptive.valueSize }]}>Снапшоты</Text>
+              <View style={[styles.configValueBadge, { 
+                paddingHorizontal: adaptive.buttonPadding,
+                paddingVertical: 8,
+                borderRadius: adaptive.borderRadius 
+              }]}>
+                <Text style={[styles.configValueText, { fontSize: adaptive.textSize }]}>
+                  {getFieldValue('snapshot') || 'Выкл.'}
+                </Text>
               </View>
             </View>
-            <View style={styles.configRow}>
-              <Text style={styles.configLabel}>Публичный IP</Text>
-              <View style={styles.configValueBadge}>
-                <Text style={styles.configValueText}>{getFieldValue('public_ip') || 'Включён'}</Text>
+            <View style={[styles.configRow, { gap: adaptive.gap }]}>
+              <Text style={[styles.configLabel, { fontSize: adaptive.valueSize }]}>
+                Публичный IP
+              </Text>
+              <View style={[styles.configValueBadge, { 
+                paddingHorizontal: adaptive.buttonPadding,
+                paddingVertical: 8,
+                borderRadius: adaptive.borderRadius 
+              }]}>
+                <Text style={[styles.configValueText, { fontSize: adaptive.textSize }]}>
+                  {getFieldValue('public_ip') || 'Включён'}
+                </Text>
               </View>
             </View>
           </View>
@@ -440,10 +551,15 @@ export default React.memo(function ServiceDetailsScreen() {
 
         {/* Description Section */}
         {plan.description_ru && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Описание</Text>
-            <View style={styles.descriptionCard}>
-              <Text style={styles.descriptionText}>{plan.description_ru}</Text>
+          <View style={[styles.section, { marginHorizontal: adaptive.horizontal }]}>
+            <Text style={[styles.sectionTitle, { fontSize: adaptive.titleSize }]}>Описание</Text>
+            <View style={[styles.descriptionCard, { 
+              padding: adaptive.cardPadding,
+              borderRadius: adaptive.borderRadius 
+            }]}>
+              <Text style={[styles.descriptionText, { fontSize: adaptive.textSize }]}>
+                {plan.description_ru}
+              </Text>
             </View>
           </View>
         )}

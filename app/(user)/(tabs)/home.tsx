@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { API_URL } from '../../../config/api';
 import { getHeaders } from '../../../config/fetch';
 import { useAuth } from '../../../lib/AuthContext';
@@ -45,6 +46,7 @@ interface Order {
 const UserHomeScreen = React.memo(function UserHomeScreen() {
   const router = useRouter();
   const { user: authUser } = useAuth();
+  const insets = useSafeAreaInsets();
   const [user, setUser] = useState<User | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -213,7 +215,7 @@ const UserHomeScreen = React.memo(function UserHomeScreen() {
   const userName = user?.full_name?.split(' ')[0] || 'Пользователь';
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View
         style={[styles.header, {
