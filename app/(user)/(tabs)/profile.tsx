@@ -13,6 +13,7 @@ import {
   View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import PaymeCheckout from '../../../components/PaymeCheckout';
 import { API_URL } from '../../../config/api';
 import { getHeaders } from '../../../config/fetch';
 import { useAuth } from '../../../lib/AuthContext';
@@ -49,6 +50,7 @@ export default React.memo(function ProfileScreen() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showAddCardModal, setShowAddCardModal] = useState(false);
 
   const loadProfileData = useCallback(async (forceRefresh = false) => {
     try {
@@ -279,17 +281,20 @@ export default React.memo(function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Платёжные данные</Text>
           
-          <TouchableOpacity style={styles.settingCard}>
+          <TouchableOpacity 
+            style={styles.settingCard}
+            onPress={() => setShowAddCardModal(true)}
+          >
             <View style={styles.settingLeft}>
               <View style={styles.settingIcon}>
                 <Ionicons name="card-outline" size={20} color="#4F46E5" />
               </View>
               <View style={styles.settingInfo}>
                 <Text style={styles.settingTitle}>Привязать карту</Text>
-                <Text style={styles.settingSubtitle}>Добавьте способ оплаты</Text>
+                <Text style={styles.settingSubtitle}>Uzcard или Humo</Text>
               </View>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+            <Ionicons name="add-circle" size={20} color="#4F46E5" />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.settingCard}>
@@ -318,6 +323,15 @@ export default React.memo(function ProfileScreen() {
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      {/* Payme Checkout */}
+      <PaymeCheckout
+        visible={showAddCardModal}
+        onClose={() => setShowAddCardModal(false)}
+        onCardAdded={() => {
+          loadProfileData(true);
+        }}
+      />
     </View>
   );
 });

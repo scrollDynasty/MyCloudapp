@@ -10,7 +10,7 @@ const router = express.Router();
  * Показывает сообщение пользователю и перенаправляет в приложение.
  */
 router.get('/payment-success', async (req, res) => {
-  const { order_id } = req.query;
+  const { order_id, card_token, card_last4 } = req.query;
   
   // HTML страница с автоматическим редиректом
   const html = `
@@ -193,9 +193,15 @@ router.get('/payment-success', async (req, res) => {
         const isExpoGo = /Expo/i.test(navigator.userAgent);
         
         // URL для редиректа
-        const webUrl = '${process.env.FRONTEND_URL || 'http://localhost:8081'}/(user)/payment-success?order_id=${order_id || ''}';
-        const deepLink = 'exp://192.168.1.100:8081/--/(user)/payment-success?order_id=${order_id || ''}'; // Для Expo Go
-        const customScheme = 'mycloud://payment-success?order_id=${order_id || ''}'; // Для production app
+        const params = new URLSearchParams({
+          ${order_id ? `order_id: '${order_id}',` : ''}
+          ${card_token ? `card_token: '${card_token}',` : ''}
+          ${card_last4 ? `card_last4: '${card_last4}'` : ''}
+        }).toString();
+        
+        const webUrl = '${process.env.FRONTEND_URL || 'http://localhost:8081'}/(user)/payment-success?' + params;
+        const deepLink = 'exp://192.168.1.100:8081/--/(user)/payment-success?' + params; // Для Expo Go
+        const customScheme = 'mycloud://payment-success?' + params; // Для production app
         
         // Для мобильных - пробуем открыть deep link немедленно
         if (isMobile) {

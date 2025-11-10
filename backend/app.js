@@ -32,6 +32,7 @@ const paymentRedirectRoutes = require('./api/payments/redirect');
 const ordersRoutes = require('./api/orders/orders');
 const authRoutes = require('./api/auth/auth');
 const emailVerificationRoutes = require('./api/auth/email-verification');
+const cardsRoutes = require('./routes/cards');
 
 // Setup Google OAuth
 const setupGoogleOAuth = require('./core/config/google-oauth');
@@ -192,6 +193,7 @@ app.use('/api/service-groups', rateLimiters.api.middleware(), serviceGroupsRoute
 app.use('/api/service-plans', rateLimiters.api.middleware(), servicePlansRoutes);
 app.use('/api/payments', rateLimiters.api.middleware(), paymentsRoutes);
 app.use('/api/orders', rateLimiters.api.middleware(), ordersRoutes);
+app.use('/api/cards', rateLimiters.api.middleware(), cardsRoutes);
 
 // Payment redirect routes (без /api префикса)
 app.use('/', paymentRedirectRoutes);
