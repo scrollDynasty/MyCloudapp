@@ -347,7 +347,7 @@ export default function ServiceGroupDetailsScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top > 0 ? 8 : 0 }]}>
       {/* Header */}
       <View style={[styles.header, { paddingHorizontal: adaptive.horizontal }]}>
         <View style={styles.headerContent}>

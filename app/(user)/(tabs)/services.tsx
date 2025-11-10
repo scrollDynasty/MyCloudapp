@@ -152,23 +152,12 @@ const ServicesScreen = React.memo(function ServicesScreen() {
     );
   }
 
-  const userName = user?.full_name?.split(' ')[0] || 'Пользователь';
-
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top > 0 ? 8 : 0 }]}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <View style={styles.headerLeft} />
           <Text style={styles.headerTitle}>Сервисы</Text>
-          <TouchableOpacity 
-            style={styles.profileButton} 
-            onPress={() => router.replace('/(user)/(tabs)/profile')}
-          >
-            <View style={styles.avatar}>
-              <Ionicons name="person" size={20} color="#111827" />
-            </View>
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -184,17 +173,6 @@ const ServicesScreen = React.memo(function ServicesScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#4F46E5']} />
         }
       >
-        {/* Welcome Section */}
-        <View style={styles.welcomeSection}>
-          <View style={styles.welcomeText}>
-            <Text style={styles.welcomeTitle}>Мои сервисы</Text>
-            <Text style={styles.welcomeSubtitle}>Быстрый доступ к активным ресурсам</Text>
-          </View>
-          <View style={styles.avatarLarge}>
-            <Ionicons name="person" size={20} color="#111827" />
-          </View>
-        </View>
-
         {/* Search Bar */}
         <View style={styles.searchContainer}>
           <View style={styles.searchBar}>
@@ -314,8 +292,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 50,
-    paddingBottom: 13,
+    paddingTop: 16,
+    paddingBottom: 12,
     paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
@@ -324,75 +302,19 @@ const styles = StyleSheet.create({
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerLeft: {
-    width: 40,
-    height: 40,
+    justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#111827',
-    letterSpacing: 0,
-  },
-  profileButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 24,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  avatarLarge: {
-    width: 32,
-    height: 32,
-    borderRadius: 24,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   content: {
     flex: 1,
   },
-  welcomeSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 12,
-    gap: 11,
-  },
-  welcomeText: {
-    flex: 1,
-  },
-  welcomeTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 4,
-    letterSpacing: 0,
-    lineHeight: 21.78,
-  },
-  welcomeSubtitle: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: '#9CA3AF',
-    lineHeight: 14.52,
-  },
   searchContainer: {
     paddingHorizontal: 16,
+    marginTop: 16,
     marginBottom: 12,
   },
   searchBar: {

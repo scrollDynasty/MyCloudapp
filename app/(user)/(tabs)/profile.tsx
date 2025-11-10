@@ -1,14 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Animated,
-  Dimensions,
-  Platform,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -19,9 +17,6 @@ import { API_URL } from '../../../config/api';
 import { getHeaders } from '../../../config/fetch';
 import { useAuth } from '../../../lib/AuthContext';
 import { getCachedOrFetch } from '../../../lib/cache';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const isSmallDevice = SCREEN_WIDTH < 375;
 
 interface UserProfile {
   user_id: number;
@@ -54,30 +49,16 @@ export default React.memo(function ProfileScreen() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [dimensions, setDimensions] = useState(Dimensions.get('window'));
-
-  useEffect(() => {
-    const subscription = Dimensions.addEventListener('change', ({ window }) => {
-      setDimensions(window);
-    });
-    return () => subscription?.remove();
-  }, []);
-
-  // Анимации
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
 
   const loadProfileData = useCallback(async (forceRefresh = false) => {
     try {
       const token = await AsyncStorage.getItem('token');
       
       if (!token) {
-        // Тихо перенаправляем на логин без показа алерта
         router.replace('/auth/login');
         return;
       }
 
-      // Используем кэш для профиля пользователя
       const profileData = await getCachedOrFetch<UserProfile>(
         'user_profile',
         async () => {
@@ -110,38 +91,23 @@ export default React.memo(function ProfileScreen() {
         setUser(profileData);
       }
 
-      // Используем кэш для заказов
       const ordersData = await getCachedOrFetch<Order[]>(
         'user_orders',
         async () => {
           const ordersResponse = await fetch(`${API_URL}/api/orders`, {
             headers: getHeaders(token || undefined),
           });
-          
-          if (!ordersResponse.ok) {
-            throw new Error('Failed to fetch orders');
-          }
-
           const data = await ordersResponse.json();
-          if (data.success && Array.isArray(data.data)) {
-            return data.data || [];
-          }
-          return [];
+          return data.success ? data.data : [];
         },
         forceRefresh
       );
 
-      if (ordersData && Array.isArray(ordersData)) {
+      if (ordersData) {
         setOrders(ordersData);
-      } else {
-        setOrders([]);
       }
-    } catch (error: any) {
-      console.error('Error loading profile data:', error);
-      // Не показываем ошибку, если данные загружены из кэша
-      if (forceRefresh) {
-        Alert.alert('Ошибка', 'Не удалось загрузить данные профиля');
-      }
+    } catch (error) {
+      console.error('Error loading profile:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -149,88 +115,27 @@ export default React.memo(function ProfileScreen() {
   }, [router]);
 
   useEffect(() => {
-    if (authUser) {
-      setUser(authUser);
-      // Загружаем данные только если их нет в кэше или они устарели
-      loadProfileData(false);
-    } else {
-      // Если пользователь вышел, сбрасываем состояние
-      setUser(null);
-      setLoading(false);
-    }
-  }, [authUser, loadProfileData]);
-
-  // Анимация появления контента
-  useEffect(() => {
-    if (!loading) {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: Platform.OS !== 'web',
-        }),
-        Animated.spring(slideAnim, {
-          toValue: 0,
-          tension: 50,
-          friction: 8,
-          useNativeDriver: Platform.OS !== 'web',
-        }),
-      ]).start();
-    }
-  }, [loading]);
+    loadProfileData();
+  }, [loadProfileData]);
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
-    loadProfileData(true); // Принудительное обновление
+    loadProfileData(true);
   }, [loadProfileData]);
 
-  const handleLogout = async () => {
-    try {
-      // Сначала очищаем состояние
-      setUser(null);
-      // Затем выходим
-      await signOut();
-      // Перенаправляем на страницу логина
-      router.replace('/auth/login');
-    } catch (error) {
-      console.error('Logout error:', error);
-      // Все равно перенаправляем на логин, даже если произошла ошибка
-      router.replace('/auth/login');
-    }
-  };
-
-  // Проверка, зарегистрирован ли пользователь через Google
-  const isGoogleUser = user?.oauth_provider === 'google';
-
-  // Адаптивные размеры
-  const adaptive = useMemo(() => {
-    const width = dimensions.width;
-    const isVerySmall = width < 360;
-    const isSmall = width < 375;
-    const isMedium = width >= 375 && width < 430;
-    
-    return {
-      horizontal: isVerySmall ? 12 : isSmall ? 14 : 16,
-      vertical: isVerySmall ? 12 : 16,
-      gap: isVerySmall ? 8 : isSmall ? 10 : 12,
-      avatarSize: isVerySmall ? 56 : 64,
-      iconSize: isVerySmall ? 16 : 18,
-      largeIconSize: isVerySmall ? 28 : 32,
-      titleSize: isVerySmall ? 16 : 18,
-      nameSize: isVerySmall ? 15 : 16,
-      labelSize: isVerySmall ? 13 : 14,
-      textSize: isVerySmall ? 11 : 12,
-      buttonPadding: isVerySmall ? 8 : 11,
-      cardPadding: isVerySmall ? 11 : 13,
-      borderRadius: isVerySmall ? 20 : 24,
-    };
-  }, [dimensions]);
-
-  // Подсчитываем статистику (мемоизировано для оптимизации)
-  const { activeServices, pendingOrders } = useMemo(() => ({
-    activeServices: Array.isArray(orders) ? orders.filter(o => o.status === 'active' || o.payment_status === 'paid').length : 0,
-    pendingOrders: Array.isArray(orders) ? orders.filter(o => o.status === 'pending' || o.payment_status === 'pending').length : 0,
-  }), [orders]);
+  const handleLogout = useCallback(async () => {
+    Alert.alert('Выход', 'Вы уверены, что хотите выйти?', [
+      { text: 'Отмена', style: 'cancel' },
+      {
+        text: 'Выйти',
+        style: 'destructive',
+        onPress: async () => {
+          await signOut();
+          router.replace('/auth/login');
+        },
+      },
+    ]);
+  }, [signOut, router]);
 
   if (loading) {
     return (
@@ -240,331 +145,179 @@ export default React.memo(function ProfileScreen() {
     );
   }
 
+  const activeOrders = Array.isArray(orders) ? orders.filter(o => o.status === 'active') : [];
+  const pendingOrders = Array.isArray(orders) ? orders.filter(o => o.status === 'pending' || o.payment_status === 'pending') : [];
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top > 0 ? 8 : 0 }]}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <View style={styles.headerLeft} />
           <Text style={styles.headerTitle}>Профиль</Text>
-          <View style={styles.headerRight} />
         </View>
       </View>
 
-      <Animated.ScrollView
-       
-        style={[
-          styles.content,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
-          },
-        ]}
+      <ScrollView
+        style={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#4F46E5']} />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#0EA5E9']} />
         }
       >
-        {/* Profile Header */}
-        <View style={[styles.profileHeader, { 
-          paddingHorizontal: adaptive.horizontal,
-          paddingTop: adaptive.vertical,
-          paddingBottom: adaptive.gap,
-          gap: adaptive.gap 
-        }]}>
-          <View style={[styles.avatarLarge, { 
-            width: adaptive.avatarSize, 
-            height: adaptive.avatarSize,
-            borderRadius: adaptive.borderRadius 
-          }]}>
-            <Ionicons name="person" size={adaptive.largeIconSize} color="#111827" />
+        {/* Profile Section */}
+        <View style={styles.profileSection}>
+          {/* Avatar and User Info */}
+          <View style={styles.profileRow}>
+            <View style={styles.avatarWrapper}>
+            <View style={styles.avatar}>
+              <Ionicons name="person" size={36} color="#4F46E5" />
+            </View>
+            </View>
+            
+            <View style={styles.userInfoContainer}>
+              <View style={styles.userNameRow}>
+                <Text style={styles.userName} numberOfLines={1}>
+                  {user?.full_name || 'alex.johnson'}
+                </Text>
+              </View>
+              
+              <View style={styles.statusRow}>
+                <View style={styles.statusBadge}>
+                  <View style={styles.statusDot} />
+                  <Text style={styles.statusText}>Статус: Активен</Text>
+                </View>
+              </View>
+              
+              <View style={styles.statsGrid}>
+                <View style={styles.statBox}>
+                  <Text style={styles.statValue}>7</Text>
+                  <Text style={styles.statLabel}>Услуг</Text>
+                </View>
+                <View style={styles.statBox}>
+                  <Text style={styles.statValue}>1.2 ТБ</Text>
+                  <Text style={styles.statLabel}>Хранилище</Text>
+                </View>
+                <View style={styles.statBox}>
+                  <Text style={styles.statValue}>{pendingOrders.length}</Text>
+                  <Text style={styles.statLabel}>К оплате</Text>
+                </View>
+              </View>
+              
+              <View style={styles.proBadge}>
+                <Ionicons name="star" size={12} color="#F59E0B" />
+                <Text style={styles.proText}>Pro</Text>
+              </View>
+            </View>
           </View>
-          <View style={styles.profileInfo}>
-            <Text style={[styles.profileName, { fontSize: adaptive.nameSize }]} numberOfLines={1}>
-              {user?.full_name || 'Пользователь'}
-            </Text>
-            <Text style={[styles.profileEmail, { fontSize: adaptive.textSize }]} numberOfLines={1}>
-              {user?.email || ''}
-            </Text>
+        </View>
+
+        {/* Services Row */}
+        <View style={styles.servicesRow}>
+          <View style={styles.serviceCard}>
+            <Text style={styles.serviceTitle}>VPS-1</Text>
+            <Text style={styles.serviceStatus}>Активна</Text>
           </View>
-          <TouchableOpacity style={[styles.editButton, { 
-            paddingHorizontal: adaptive.buttonPadding,
-            paddingVertical: adaptive.buttonPadding / 1.5,
-            borderRadius: adaptive.borderRadius 
-          }]}>
-            <Text style={[styles.editButtonText, { fontSize: adaptive.textSize }]}>
-              {dimensions.width < 360 ? 'Ред.' : 'Редактировать'}
-            </Text>
+          <View style={styles.serviceCard}>
+            <Text style={styles.serviceTitle}>mysite.io</Text>
+            <Text style={styles.serviceStatus}>Оплачено</Text>
+          </View>
+          <View style={styles.serviceCard}>
+            <Text style={styles.serviceTitle}>+320 GB</Text>
+            <Text style={styles.serviceStatus}>Объектное</Text>
+          </View>
+        </View>
+
+        {/* Payment Button */}
+        {pendingOrders.length > 0 && (
+          <TouchableOpacity
+            style={styles.payButton}
+            onPress={() => router.push('/(user)/(tabs)/orders?filter=pending')}
+          >
+            <Ionicons name="card-outline" size={18} color="#FFFFFF" />
+            <Text style={styles.payButtonText}>Оплатить</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Account Profile Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Профиль аккаунта</Text>
+          
+          <TouchableOpacity style={styles.settingCard}>
+            <View style={styles.settingLeft}>
+              <View style={styles.settingIcon}>
+                <Ionicons name="star-outline" size={20} color="#4F46E5" />
+              </View>
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingTitle}>Тариф: Pro</Text>
+                <Text style={styles.settingSubtitle}>Ежемесячно • Приоритетная поддержка</Text>
+              </View>
+            </View>
+            <View style={styles.actionButton}>
+              <Text style={styles.actionButtonText}>Изменить</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.settingCard}>
+            <View style={styles.settingLeft}>
+              <View style={styles.settingIcon}>
+                <Ionicons name="person-outline" size={20} color="#4F46E5" />
+              </View>
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingTitle}>Контакты</Text>
+                <Text style={styles.settingSubtitle} numberOfLines={1}>
+                  {user?.email || 'Имя, Email, Телефон'}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.actionButton}>
+              <Text style={styles.actionButtonText}>Редактировать</Text>
+            </View>
           </TouchableOpacity>
         </View>
 
-        {/* Account Overview */}
-        <View style={[styles.sectionCard, { 
-          marginHorizontal: adaptive.horizontal,
-          padding: adaptive.cardPadding,
-          borderRadius: adaptive.borderRadius 
-        }]}>
-          <Text style={[styles.sectionTitle, { fontSize: adaptive.labelSize }]}>Обзор аккаунта</Text>
-          <View style={[styles.statsRow, { gap: adaptive.gap }]}>
-            <View style={[styles.statCard, { 
-              padding: adaptive.buttonPadding,
-              borderRadius: adaptive.borderRadius,
-              gap: adaptive.gap / 2 
-            }]}>
-              <Text style={[styles.statLabel, { fontSize: adaptive.textSize }]}>Активные сервисы</Text>
-              <Text style={[styles.statValue, { fontSize: adaptive.labelSize }]}>{activeServices}</Text>
-            </View>
-            <View style={[styles.statCard, { 
-              padding: adaptive.buttonPadding,
-              borderRadius: adaptive.borderRadius,
-              gap: adaptive.gap / 2 
-            }]}>
-              <Text style={[styles.statLabel, { fontSize: adaptive.textSize }]}>Ожидающие заказы</Text>
-              <Text style={[styles.statValue, { fontSize: adaptive.labelSize }]}>{pendingOrders}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Personal Info */}
-        <View style={[styles.section, { marginHorizontal: adaptive.horizontal }]}>
-          <Text style={[styles.sectionTitle, { fontSize: adaptive.labelSize }]}>Личная информация</Text>
+        {/* Payment Methods Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Платёжные данные</Text>
           
-          <View style={[styles.infoCard, { 
-            padding: adaptive.cardPadding,
-            borderRadius: adaptive.borderRadius 
-          }]}>
-            <View style={[styles.infoCardContent, { gap: adaptive.gap }]}>
-              <View style={[styles.infoIconContainer, { 
-                width: adaptive.avatarSize * 0.7,
-                height: adaptive.avatarSize * 0.7,
-                borderRadius: adaptive.borderRadius 
-              }]}>
-                <Ionicons name="person-outline" size={adaptive.iconSize} color="#111827" />
+          <TouchableOpacity style={styles.settingCard}>
+            <View style={styles.settingLeft}>
+              <View style={styles.settingIcon}>
+                <Ionicons name="card-outline" size={20} color="#4F46E5" />
               </View>
-              <View style={styles.infoDetails}>
-                <Text style={[styles.infoLabel, { fontSize: adaptive.labelSize }]}>Полное имя</Text>
-                <Text style={[styles.infoValue, { fontSize: adaptive.textSize }]} numberOfLines={1}>
-                  {user?.full_name || 'Не указано'}
-                </Text>
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingTitle}>Привязать карту</Text>
+                <Text style={styles.settingSubtitle}>Добавьте способ оплаты</Text>
               </View>
             </View>
-            <TouchableOpacity style={[styles.changeButton, { 
-              paddingHorizontal: adaptive.buttonPadding,
-              paddingVertical: adaptive.buttonPadding / 1.5,
-              borderRadius: adaptive.borderRadius 
-            }]}>
-              <Text style={[styles.changeButtonText, { fontSize: adaptive.textSize }]}>Изм.</Text>
-            </TouchableOpacity>
-          </View>
+            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+          </TouchableOpacity>
 
-          <View style={[styles.infoCard, { 
-            padding: adaptive.cardPadding,
-            borderRadius: adaptive.borderRadius 
-          }]}>
-            <View style={[styles.infoCardContent, { gap: adaptive.gap }]}>
-              <View style={[styles.infoIconContainer, { 
-                width: adaptive.avatarSize * 0.7,
-                height: adaptive.avatarSize * 0.7,
-                borderRadius: adaptive.borderRadius 
-              }]}>
-                <Ionicons name="mail-outline" size={adaptive.iconSize} color="#111827" />
+          <TouchableOpacity style={styles.settingCard}>
+            <View style={styles.settingLeft}>
+              <View style={styles.settingIcon}>
+                <Ionicons name="wallet-outline" size={20} color="#4F46E5" />
               </View>
-              <View style={styles.infoDetails}>
-                <Text style={[styles.infoLabel, { fontSize: adaptive.labelSize }]}>Email</Text>
-                <Text style={[styles.infoValue, { fontSize: adaptive.textSize }]} numberOfLines={1} ellipsizeMode="middle">
-                  {user?.email || 'Не указано'}
-                </Text>
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingTitle}>Payme</Text>
+                <Text style={styles.settingSubtitle}>Быстрые платежи</Text>
               </View>
             </View>
-            <TouchableOpacity style={[styles.changeButton, { 
-              paddingHorizontal: adaptive.buttonPadding,
-              paddingVertical: adaptive.buttonPadding / 1.5,
-              borderRadius: adaptive.borderRadius 
-            }]}>
-              <Text style={[styles.changeButtonText, { fontSize: adaptive.textSize }]}>Изм.</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={[styles.infoCard, { 
-            padding: adaptive.cardPadding,
-            borderRadius: adaptive.borderRadius 
-          }]}>
-            <View style={[styles.infoCardContent, { gap: adaptive.gap }]}>
-              <View style={[styles.infoIconContainer, { 
-                width: adaptive.avatarSize * 0.7,
-                height: adaptive.avatarSize * 0.7,
-                borderRadius: adaptive.borderRadius 
-              }]}>
-                <Ionicons name="call-outline" size={adaptive.iconSize} color="#111827" />
-              </View>
-              <View style={styles.infoDetails}>
-                <Text style={[styles.infoLabel, { fontSize: adaptive.labelSize }]}>Телефон</Text>
-                <Text style={[styles.infoValue, { fontSize: adaptive.textSize }]} numberOfLines={1}>
-                  {user?.phone || 'Не указано'}
-                </Text>
-              </View>
-            </View>
-            <TouchableOpacity style={[styles.changeButton, { 
-              paddingHorizontal: adaptive.buttonPadding,
-              paddingVertical: adaptive.buttonPadding / 1.5,
-              borderRadius: adaptive.borderRadius 
-            }]}>
-              <Text style={[styles.changeButtonText, { fontSize: adaptive.textSize }]}>Изм.</Text>
-            </TouchableOpacity>
-          </View>
+            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+          </TouchableOpacity>
         </View>
 
-        {/* Security Section */}
-        {!isGoogleUser && (
-          <View style={[styles.section, { marginHorizontal: adaptive.horizontal }]}>
-            <Text style={[styles.sectionTitle, { fontSize: adaptive.labelSize }]}>Безопасность</Text>
-            
-            <View style={[styles.infoCard, { 
-              padding: adaptive.cardPadding,
-              borderRadius: adaptive.borderRadius 
-            }]}>
-              <View style={[styles.infoCardContent, { gap: adaptive.gap }]}>
-                <View style={[styles.infoIconContainer, { 
-                  width: adaptive.avatarSize * 0.7,
-                  height: adaptive.avatarSize * 0.7,
-                  borderRadius: adaptive.borderRadius 
-                }]}>
-                  <Ionicons name="lock-closed-outline" size={adaptive.iconSize} color="#111827" />
-                </View>
-                <View style={styles.infoDetails}>
-                  <Text style={[styles.infoLabel, { fontSize: adaptive.labelSize }]}>Пароль</Text>
-                  <Text style={[styles.infoValue, { fontSize: adaptive.textSize }]} numberOfLines={2}>
-                    {dimensions.width < 360 ? 'Изменен 2 мес. назад' : 'Последнее изменение 2 месяца назад'}
-                  </Text>
-                </View>
-              </View>
-              <TouchableOpacity style={[styles.changeButton, { 
-                paddingHorizontal: adaptive.buttonPadding,
-                paddingVertical: adaptive.buttonPadding / 1.5,
-                borderRadius: adaptive.borderRadius 
-              }]}>
-                <Text style={[styles.changeButtonText, { fontSize: adaptive.textSize }]}>Обн.</Text>
-              </TouchableOpacity>
+        {/* Logout */}
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <View style={styles.settingLeft}>
+            <View style={[styles.settingIcon, { backgroundColor: '#FEE2E2' }]}>
+              <Ionicons name="log-out-outline" size={20} color="#EF4444" />
             </View>
-
-            <View style={[styles.infoCard, { 
-              padding: adaptive.cardPadding,
-              borderRadius: adaptive.borderRadius 
-            }]}>
-              <View style={[styles.infoCardContent, { gap: adaptive.gap }]}>
-                <View style={[styles.infoIconContainer, { 
-                  width: adaptive.avatarSize * 0.7,
-                  height: adaptive.avatarSize * 0.7,
-                  borderRadius: adaptive.borderRadius 
-                }]}>
-                  <Ionicons name="shield-checkmark-outline" size={adaptive.iconSize} color="#111827" />
-                </View>
-                <View style={styles.infoDetails}>
-                  <Text style={[styles.infoLabel, { fontSize: adaptive.labelSize }]} numberOfLines={2}>
-                    {dimensions.width < 360 ? '2FA' : 'Двухфакторная аутентификация'}
-                  </Text>
-                  <Text style={[styles.infoValue, { fontSize: adaptive.textSize }]}>Включена</Text>
-                </View>
-              </View>
-              <View style={[styles.secureBadge, { 
-                paddingHorizontal: adaptive.buttonPadding,
-                paddingVertical: adaptive.buttonPadding / 1.8,
-                borderRadius: adaptive.borderRadius / 2 
-              }]}>
-                <Text style={[styles.secureBadgeText, { fontSize: adaptive.textSize }]}>
-                  {dimensions.width < 360 ? '✓' : 'Безопасно'}
-                </Text>
-              </View>
-            </View>
+            <Text style={[styles.settingTitle, { color: '#EF4444' }]}>Выйти из аккаунта</Text>
           </View>
-        )}
-
-        {/* Billing Section */}
-        <View style={[styles.sectionCard, { 
-          marginHorizontal: adaptive.horizontal,
-          padding: adaptive.cardPadding,
-          borderRadius: adaptive.borderRadius 
-        }]}>
-          <Text style={[styles.sectionTitle, { fontSize: adaptive.labelSize }]}>Платежи</Text>
-          
-          <View style={[styles.infoCard, { 
-            padding: adaptive.cardPadding,
-            borderRadius: adaptive.borderRadius 
-          }]}>
-            <View style={[styles.infoCardContent, { gap: adaptive.gap }]}>
-              <View style={[styles.infoIconContainer, { 
-                width: adaptive.avatarSize * 0.7,
-                height: adaptive.avatarSize * 0.7,
-                borderRadius: adaptive.borderRadius 
-              }]}>
-                <Ionicons name="card-outline" size={adaptive.iconSize} color="#111827" />
-              </View>
-              <View style={styles.infoDetails}>
-                <Text style={[styles.infoLabel, { fontSize: adaptive.labelSize }]}>Способ оплаты</Text>
-                <Text style={[styles.infoValue, { fontSize: adaptive.textSize }]}>Visa •••• 4242</Text>
-              </View>
-            </View>
-            <TouchableOpacity style={[styles.changeButton, { 
-              paddingHorizontal: adaptive.buttonPadding,
-              paddingVertical: adaptive.buttonPadding / 1.5,
-              borderRadius: adaptive.borderRadius 
-            }]}>
-              <Text style={[styles.changeButtonText, { fontSize: adaptive.textSize }]}>
-                {dimensions.width < 360 ? 'Упр.' : 'Управлять'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={[styles.infoCard, { 
-            padding: adaptive.cardPadding,
-            borderRadius: adaptive.borderRadius 
-          }]}>
-            <View style={[styles.infoCardContent, { gap: adaptive.gap }]}>
-              <View style={[styles.infoIconContainer, { 
-                width: adaptive.avatarSize * 0.7,
-                height: adaptive.avatarSize * 0.7,
-                borderRadius: adaptive.borderRadius 
-              }]}>
-                <Ionicons name="receipt-outline" size={adaptive.iconSize} color="#111827" />
-              </View>
-              <View style={styles.infoDetails}>
-                <Text style={[styles.infoLabel, { fontSize: adaptive.labelSize }]}>Счета</Text>
-                <Text style={[styles.infoValue, { fontSize: adaptive.textSize }]} numberOfLines={1}>
-                  {dimensions.width < 360 
-                    ? new Date().toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
-                    : `Последний выдан: ${new Date().toLocaleDateString('ru-RU')}`
-                  }
-                </Text>
-              </View>
-            </View>
-            <TouchableOpacity style={[styles.changeButton, { 
-              paddingHorizontal: adaptive.buttonPadding,
-              paddingVertical: adaptive.buttonPadding / 1.5,
-              borderRadius: adaptive.borderRadius 
-            }]}>
-              <Text style={[styles.changeButtonText, { fontSize: adaptive.textSize }]}>
-                {dimensions.width < 360 ? 'См.' : 'Просмотр'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Logout Button */}
-        <TouchableOpacity 
-          style={[styles.logoutButton, { 
-            marginHorizontal: adaptive.horizontal,
-            padding: adaptive.cardPadding,
-            borderRadius: adaptive.borderRadius,
-            gap: adaptive.gap 
-          }]} 
-          onPress={handleLogout}
-        >
-          <Ionicons name="log-out-outline" size={adaptive.iconSize} color="#FFFFFF" />
-          <Text style={[styles.logoutButtonText, { fontSize: adaptive.labelSize }]}>Выйти</Text>
         </TouchableOpacity>
 
         <View style={styles.bottomSpacer} />
-      </Animated.ScrollView>
+      </ScrollView>
     </View>
   );
 });
@@ -581,8 +334,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 50,
-    paddingBottom: 13,
+    paddingTop: 16,
+    paddingBottom: 12,
     paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
@@ -591,212 +344,230 @@ const styles = StyleSheet.create({
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerLeft: {
-    width: 40,
-    height: 40,
+    justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#111827',
-    letterSpacing: 0,
-  },
-  headerRight: {
-    width: 40,
-    height: 40,
   },
   content: {
     flex: 1,
   },
-  profileHeader: {
+  profileSection: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  profileRow: {
+    flexDirection: 'row',
+    padding: 16,
+    gap: 16,
+  },
+  avatarWrapper: {
+    width: 68,
+    height: 68,
+  },
+  avatar: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: '#EEF2FF',
+    borderWidth: 2,
+    borderColor: '#4F46E5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  userInfoContainer: {
+    flex: 1,
+    gap: 4,
+  },
+  userNameRow: {
+    marginBottom: 6,
+  },
+  userName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  statusRow: {
+    flexDirection: 'row',
+    marginBottom: 4,
+  },
+  statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 12,
-  },
-  avatarLarge: {
-    width: 64,
-    height: 64,
-    borderRadius: 24,
     backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    gap: 6,
   },
-  profileInfo: {
-    flex: 1,
-    gap: 2,
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#10B981',
   },
-  profileName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
-    lineHeight: 19.36,
-  },
-  profileEmail: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: '#9CA3AF',
-    lineHeight: 14.52,
-  },
-  editButton: {
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-    borderRadius: 24,
-    backgroundColor: '#F3F4F6',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  editButtonText: {
+  statusText: {
     fontSize: 12,
     fontWeight: '500',
     color: '#374151',
-    lineHeight: 14.52,
   },
-  sectionCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 17,
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    elevation: 3,
-  },
-  section: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#9CA3AF',
-    marginBottom: 12,
-    lineHeight: 16.94,
-  },
-  statsRow: {
+  statsGrid: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 12,
+    gap: 20,
+    marginTop: 8,
+    marginBottom: 4,
   },
-  statCard: {
-    flex: 1,
-    gap: 6,
-    padding: 11,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  statLabel: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: '#9CA3AF',
-    lineHeight: 14.52,
+  statBox: {
+    gap: 4,
   },
   statValue: {
     fontSize: 14,
     fontWeight: '600',
     color: '#111827',
-    lineHeight: 16.94,
   },
-  infoCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 13,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+  statLabel: {
+    fontSize: 11,
+    fontWeight: '400',
+    color: '#6B7280',
   },
-  infoCardContent: {
+  proBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    flex: 1,
+    backgroundColor: '#FEF3C7',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    gap: 6,
+    alignSelf: 'flex-start',
   },
-  infoIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 24,
-    backgroundColor: '#F3F4F6',
+  proText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#92400E',
+  },
+  servicesRow: {
+    flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 16,
+    marginBottom: 12,
+  },
+  serviceCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 14,
+    gap: 6,
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
-  infoDetails: {
-    flex: 1,
-    gap: 2,
+  serviceTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#111827',
   },
-  infoLabel: {
+  serviceStatus: {
+    fontSize: 11,
+    fontWeight: '400',
+    color: '#6B7280',
+  },
+  payButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4F46E5',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    gap: 8,
+  },
+  payButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  section: {
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  sectionTitle: {
     fontSize: 14,
     fontWeight: '600',
     color: '#111827',
-    lineHeight: 16.94,
+    marginBottom: 12,
   },
-  infoValue: {
+  settingCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 8,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  settingLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  settingIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  settingInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  settingTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  settingSubtitle: {
     fontSize: 12,
     fontWeight: '400',
-    color: '#9CA3AF',
-    lineHeight: 14.52,
+    color: '#6B7280',
   },
-  changeButton: {
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-    borderRadius: 24,
+  actionButton: {
     backgroundColor: '#F3F4F6',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 12,
   },
-  changeButtonText: {
-    fontSize: 12,
+  actionButtonText: {
+    fontSize: 13,
     fontWeight: '500',
     color: '#374151',
-    lineHeight: 14.52,
-  },
-  secureBadge: {
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  secureBadgeText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#9CA3AF',
-    lineHeight: 14.52,
   },
   logoutButton: {
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#6366F1',
-    borderRadius: 24,
-    padding: 13,
+    backgroundColor: '#FFFFFF',
     marginHorizontal: 16,
-    marginTop: 8,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#6366F1',
-  },
-  logoutButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#FFFFFF',
-    lineHeight: 16.94,
+    borderColor: '#E5E7EB',
   },
   bottomSpacer: {
-    height: 80,
+    height: 20,
   },
 });
-

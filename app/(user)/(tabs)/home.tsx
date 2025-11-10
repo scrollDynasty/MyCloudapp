@@ -198,12 +198,6 @@ const UserHomeScreen = React.memo(function UserHomeScreen() {
   const activeServices = orders.filter(o => o.status === 'active' || o.payment_status === 'paid').length;
   const pendingServices = orders.filter(o => o.status === 'pending' || o.payment_status === 'pending').length;
 
-  const headerPaddingTop = Platform.OS === 'ios'
-    ? (isTablet ? 72 : isCompact ? 48 : 58)
-    : (isTablet ? 58 : isCompact ? 36 : 44);
-
-  const headerPaddingBottom = isCompact ? 10 : 14;
-
   if (loading) {
     return (
       <View style={styles.centerContainer}>
@@ -212,26 +206,12 @@ const UserHomeScreen = React.memo(function UserHomeScreen() {
     );
   }
 
-  const userName = user?.full_name?.split(' ')[0] || 'Пользователь';
-
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top > 0 ? 8 : 0 }]}>
       {/* Header */}
-      <View
-        style={[styles.header, {
-          paddingHorizontal: adaptive.horizontal,
-          paddingTop: headerPaddingTop,
-          paddingBottom: headerPaddingBottom,
-        }]}
-      >
+      <View style={styles.header}>
         <View style={styles.headerContent}>
-          <View style={[styles.headerLeft, { width: adaptive.icon, height: adaptive.icon }]} />
-          <Text style={[styles.headerTitle, { fontSize: adaptive.heading, lineHeight: adaptive.heading + 2 }]}>Главная</Text>
-          <TouchableOpacity style={styles.profileButton} onPress={() => {/* TODO: открыть уведомления */}}>
-            <View style={[styles.avatar, { width: adaptive.icon, height: adaptive.icon, borderRadius: adaptive.icon / 2 }]}>
-              <Ionicons name="notifications-outline" size={adaptive.body + 6} color="#111827" />
-            </View>
-          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Главная</Text>
         </View>
       </View>
 
@@ -247,21 +227,6 @@ const UserHomeScreen = React.memo(function UserHomeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#4F46E5']} />
         }
       >
-        {/* Welcome Section */}
-        <View style={[styles.welcomeSection, { paddingHorizontal: adaptive.horizontal, paddingTop: adaptive.vertical, gap: adaptive.gap }]}>
-          <View style={styles.welcomeText}>
-            <Text style={[styles.welcomeTitle, { fontSize: adaptive.heading, lineHeight: adaptive.heading + 4 }]}>
-              Добро пожаловать, {userName}
-            </Text>
-            <Text style={[styles.welcomeSubtitle, { fontSize: adaptive.small, lineHeight: adaptive.small + 2 }]}>
-              Управляйте подключёнными сервисами и заказами
-            </Text>
-          </View>
-          <View style={[styles.avatarLarge, { width: adaptive.icon, height: adaptive.icon, borderRadius: adaptive.icon / 2 }]}>
-            <Ionicons name="person" size={adaptive.body + 8} color="#111827" />
-          </View>
-        </View>
-
         {/* Segment Control */}
         <View style={[styles.segmentContainer, { marginHorizontal: adaptive.horizontal, gap: isCompact ? 6 : 8 }]}> 
           <TouchableOpacity
@@ -468,7 +433,10 @@ const UserHomeScreen = React.memo(function UserHomeScreen() {
             <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.supportCard, { borderRadius: adaptive.cardRadius, padding: adaptive.vertical }]}>
+          <TouchableOpacity 
+            style={[styles.supportCard, { borderRadius: adaptive.cardRadius, padding: adaptive.vertical }]}
+            onPress={() => router.push('/(user)/(tabs)/orders?filter=pending')}
+          >
             <View style={styles.supportCardContent}>
               <View style={[styles.supportIconContainer, {
                 width: adaptive.icon,
@@ -506,7 +474,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 52 : 40,
+    paddingTop: 16,
     paddingBottom: 12,
     paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
@@ -516,75 +484,21 @@ const styles = StyleSheet.create({
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerLeft: {
-    width: 40,
-    height: 40,
+    justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 19,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '600',
     color: '#111827',
-  },
-  profileButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 24,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  avatarLarge: {
-    width: 40,
-    height: 40,
-    borderRadius: 24,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   content: {
     flex: 1,
-  },
-  welcomeSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 18,
-    paddingBottom: 12,
-    gap: 12,
-  },
-  welcomeText: {
-    flex: 1,
-  },
-  welcomeTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 4,
-    lineHeight: 24,
-  },
-  welcomeSubtitle: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#9CA3AF',
-    lineHeight: 16,
   },
   segmentContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     marginHorizontal: 16,
+    marginTop: 16,
     marginBottom: 12,
     gap: 10,
   },

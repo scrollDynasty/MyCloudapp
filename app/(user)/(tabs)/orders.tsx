@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -48,6 +48,7 @@ type FilterType = 'active' | 'pending' | 'history';
 
 const OrdersScreen = React.memo(function OrdersScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const { user: authUser } = useAuth();
   const insets = useSafeAreaInsets();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -55,6 +56,16 @@ const OrdersScreen = React.memo(function OrdersScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<FilterType>('active');
+
+  // Установка фильтра из параметров URL
+  useEffect(() => {
+    if (params.filter && typeof params.filter === 'string') {
+      const filterParam = params.filter as FilterType;
+      if (['active', 'pending', 'history'].includes(filterParam)) {
+        setFilter(filterParam);
+      }
+    }
+  }, [params.filter]);
 
   useEffect(() => {
     loadOrders();
@@ -345,10 +356,12 @@ const OrdersScreen = React.memo(function OrdersScreen() {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top > 0 ? 8 : 0 }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Заказы</Text>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>Заказы</Text>
+        </View>
       </View>
 
       <ScrollView
@@ -364,12 +377,6 @@ const OrdersScreen = React.memo(function OrdersScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Welcome Section */}
-        <View style={styles.welcomeSection}>
-          <Text style={styles.welcomeTitle}>Ваши заказы</Text>
-          <Text style={styles.welcomeSubtitle}>История покупок и активные услуги</Text>
-        </View>
-
         {/* Search Bar */}
         <View style={styles.searchContainer}>
           <Ionicons name="search-outline" size={20} color="#9CA3AF" />
@@ -466,19 +473,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 50,
-    paddingBottom: 13,
+    paddingTop: 16,
+    paddingBottom: 12,
     paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#111827',
-    lineHeight: 21.78,
-    textAlign: 'center',
   },
   scrollView: {
     flex: 1,
@@ -487,23 +497,8 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 120,
   },
-  welcomeSection: {
-    marginBottom: 12,
-    gap: 4,
-  },
-  welcomeTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
-    lineHeight: 21.78,
-  },
-  welcomeSubtitle: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: '#9CA3AF',
-    lineHeight: 14.52,
-  },
   searchContainer: {
+    marginTop: 16,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F3F4F6',
