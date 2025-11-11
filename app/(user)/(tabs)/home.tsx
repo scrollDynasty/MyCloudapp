@@ -7,6 +7,7 @@ import {
   Alert,
   Dimensions,
   Platform,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -283,55 +284,314 @@ const UserHomeScreen = React.memo(function UserHomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Subscription Card */}
-        <View
-          style={[styles.subscriptionCard, {
-            marginHorizontal: adaptive.horizontal,
-            marginBottom: adaptive.gap,
-            borderRadius: adaptive.cardRadius,
-            padding: adaptive.vertical,
-          }]}
-        >
-          <View style={styles.subscriptionHeader}>
-            <View style={styles.subscriptionInfo}>
-              <View style={[styles.subscriptionIconContainer, {
-                width: adaptive.icon,
-                height: adaptive.icon,
-                borderRadius: adaptive.icon / 2,
-              }]}>
-                <Ionicons name="star" size={adaptive.body + 4} color="#111827" />
+        {/* Content based on active segment */}
+        {activeSegment === 'servers' ? (
+          <>
+            {/* Subscription Card */}
+            <View
+              style={[styles.subscriptionCard, {
+                marginHorizontal: adaptive.horizontal,
+                marginBottom: adaptive.gap,
+                borderRadius: adaptive.cardRadius,
+                padding: adaptive.vertical,
+              }]}
+            >
+              <View style={styles.subscriptionHeader}>
+                <View style={styles.subscriptionInfo}>
+                  <View style={[styles.subscriptionIconContainer, {
+                    width: adaptive.icon,
+                    height: adaptive.icon,
+                    borderRadius: adaptive.icon / 2,
+                  }]}>
+                    <Ionicons name="star" size={adaptive.body + 4} color="#111827" />
+                  </View>
+                  <View>
+                    <Text style={[styles.subscriptionTitle, { fontSize: adaptive.body }]}>
+                      Подписка
+                    </Text>
+                    <Text style={[styles.subscriptionPeriod, { fontSize: adaptive.small }]}>
+                      Pro • помесячно
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity>
+                  <Text style={[styles.subscriptionLink, { fontSize: adaptive.body, fontWeight: '600' }]}>Изменить план</Text>
+                </TouchableOpacity>
               </View>
-              <View>
-                <Text style={[styles.subscriptionTitle, { fontSize: adaptive.body }]}>
-                  Подписка
-                </Text>
-                <Text style={[styles.subscriptionPeriod, { fontSize: adaptive.small }]}>
-                  Pro • помесячно
-                </Text>
+              <View style={styles.subscriptionDivider} />
+              <View style={[styles.subscriptionStats, { gap: adaptive.gap }]}>
+                <View style={[styles.statItem, { borderRadius: adaptive.cardRadius, padding: adaptive.vertical - 4 }]}>
+                  <Text style={[styles.statValue, { fontSize: adaptive.heading - 2 }]}>{activeServices}</Text>
+                  <Text style={[styles.statLabel, { fontSize: adaptive.small }]}>Активные сервисы</Text>
+                </View>
+                <View style={[styles.statItem, { borderRadius: adaptive.cardRadius, padding: adaptive.vertical - 4 }]}>
+                  <Text style={[styles.statValue, { fontSize: adaptive.heading - 2 }]}>{pendingServices}</Text>
+                  <Text style={[styles.statLabel, { fontSize: adaptive.small }]}>Ожидают</Text>
+                </View>
               </View>
             </View>
-            <TouchableOpacity>
-              <Text style={[styles.subscriptionLink, { fontSize: adaptive.body, fontWeight: '600' }]}>Изменить план</Text>
+          </>
+        ) : (
+          <>
+            {/* Storage Usage Card */}
+            <View
+              style={[styles.storageCard, {
+                marginHorizontal: adaptive.horizontal,
+                marginBottom: adaptive.gap,
+                borderRadius: adaptive.cardRadius,
+                padding: adaptive.vertical,
+              }]}
+            >
+              <View style={styles.storageHeader}>
+                <View style={[styles.storageIconWrapper, {
+                  width: adaptive.icon,
+                  height: adaptive.icon,
+                  borderRadius: adaptive.cardRadius,
+                }]}>
+                  <Ionicons name="cloud" size={adaptive.body + 6} color="#6366F1" />
+                </View>
+                <View style={styles.storageInfo}>
+                  <Text style={[styles.storageTitle, { fontSize: adaptive.small }]}>Использовано</Text>
+                  <Text style={[styles.storageAmount, { fontSize: adaptive.heading }]}>
+                    15.4 GB <Text style={[styles.storageTotal, { fontSize: adaptive.body }]}>из 100 GB</Text>
+                  </Text>
+                </View>
+              </View>
+              
+              <View style={[styles.progressBarContainer, { marginTop: adaptive.gap - 2 }]}>
+                <View style={styles.progressBarBg}>
+                  <View style={[styles.progressBarFill, { width: '15.4%' }]} />
+                </View>
+              </View>
+            </View>
+
+            {/* Action Buttons */}
+            <View style={[styles.actionsContainer, {
+              marginHorizontal: adaptive.horizontal,
+              marginBottom: adaptive.gap,
+              gap: adaptive.gap - 2,
+            }]}>
+              <Pressable 
+                style={({ pressed }) => [
+                  styles.uploadButton, 
+                  {
+                    borderRadius: adaptive.cardRadius / 2,
+                    paddingVertical: adaptive.vertical - 4,
+                    backgroundColor: pressed ? '#6366F1' : '#FFFFFF',
+                  }
+                ]}
+              >
+                {({ pressed }) => (
+                  <>
+                    <Ionicons 
+                      name="cloud-upload-outline" 
+                      size={adaptive.body + 4} 
+                      color={pressed ? "#FFFFFF" : "#4F46E5"} 
+                    />
+                    <Text style={[
+                      styles.uploadButtonText, 
+                      { fontSize: adaptive.body, color: pressed ? "#FFFFFF" : "#4F46E5" }
+                    ]}>
+                      Загрузить
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+              
+              <Pressable 
+                style={({ pressed }) => [
+                  styles.secondaryButton, 
+                  {
+                    borderRadius: adaptive.cardRadius / 2,
+                    paddingVertical: adaptive.vertical - 4,
+                    backgroundColor: pressed ? '#6366F1' : '#FFFFFF',
+                  }
+                ]}
+              >
+                {({ pressed }) => (
+                  <>
+                    <Ionicons 
+                      name="create-outline" 
+                      size={adaptive.body + 4} 
+                      color={pressed ? "#FFFFFF" : "#4F46E5"} 
+                    />
+                    <Text style={[
+                      styles.secondaryButtonText, 
+                      { fontSize: adaptive.body, color: pressed ? "#FFFFFF" : "#4F46E5" }
+                    ]}>
+                      Создать
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+            </View>
+          </>
+        )}
+
+        {/* Files List for Storage or My Services Section */}
+        {activeSegment === 'storage' ? (
+          <View style={[styles.section, { paddingHorizontal: adaptive.horizontal, marginBottom: adaptive.gap }]}>
+            <View style={styles.listHeader}>
+              <Text style={[styles.sectionTitle, { fontSize: adaptive.small, marginBottom: 0 }]}>
+                Файлы и папки
+              </Text>
+              <TouchableOpacity activeOpacity={0.7}>
+                <Ionicons name="options-outline" size={adaptive.body + 4} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+            
+            {/* Storage Items */}
+            <TouchableOpacity 
+              style={[styles.storageItem, { 
+                borderRadius: adaptive.cardRadius - 2, 
+                padding: adaptive.vertical - 2,
+                marginTop: adaptive.gap - 2 
+              }]}
+              activeOpacity={0.7}
+            >
+              <View style={styles.storageItemContent}>
+                <View style={[styles.storageItemIcon, {
+                  width: adaptive.icon,
+                  height: adaptive.icon,
+                  borderRadius: adaptive.cardRadius - 2,
+                }]}>
+                  <Ionicons name="folder" size={adaptive.body + 6} color="#6366F1" />
+                </View>
+                <View style={styles.storageItemInfo}>
+                  <Text style={[styles.storageItemName, { fontSize: adaptive.body }]} numberOfLines={1}>
+                    Документы
+                  </Text>
+                  <Text style={[styles.storageItemMeta, { fontSize: adaptive.small }]}>2 дня назад</Text>
+                </View>
+              </View>
+              <TouchableOpacity style={styles.moreButton} activeOpacity={0.7}>
+                <Ionicons name="ellipsis-vertical" size={adaptive.body + 2} color="#9CA3AF" />
+              </TouchableOpacity>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.storageItem, { 
+                borderRadius: adaptive.cardRadius - 2, 
+                padding: adaptive.vertical - 2 
+              }]}
+              activeOpacity={0.7}
+            >
+              <View style={styles.storageItemContent}>
+                <View style={[styles.storageItemIcon, {
+                  width: adaptive.icon,
+                  height: adaptive.icon,
+                  borderRadius: adaptive.cardRadius - 2,
+                  backgroundColor: '#F1F5F9',
+                }]}>
+                  <Ionicons name="document-text" size={adaptive.body + 6} color="#64748B" />
+                </View>
+                <View style={styles.storageItemInfo}>
+                  <Text style={[styles.storageItemName, { fontSize: adaptive.body }]} numberOfLines={1}>
+                    Презентация.pdf
+                  </Text>
+                  <View style={styles.storageItemMetaRow}>
+                    <Text style={[styles.storageItemMeta, { fontSize: adaptive.small }]}>2.5 MB</Text>
+                    <Text style={[styles.storageItemMeta, { fontSize: adaptive.small }]}> • </Text>
+                    <Text style={[styles.storageItemMeta, { fontSize: adaptive.small }]}>Вчера</Text>
+                  </View>
+                </View>
+              </View>
+              <TouchableOpacity style={styles.moreButton} activeOpacity={0.7}>
+                <Ionicons name="ellipsis-vertical" size={adaptive.body + 2} color="#9CA3AF" />
+              </TouchableOpacity>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.storageItem, { 
+                borderRadius: adaptive.cardRadius - 2, 
+                padding: adaptive.vertical - 2 
+              }]}
+              activeOpacity={0.7}
+            >
+              <View style={styles.storageItemContent}>
+                <View style={[styles.storageItemIcon, {
+                  width: adaptive.icon,
+                  height: adaptive.icon,
+                  borderRadius: adaptive.cardRadius - 2,
+                }]}>
+                  <Ionicons name="folder" size={adaptive.body + 6} color="#6366F1" />
+                </View>
+                <View style={styles.storageItemInfo}>
+                  <Text style={[styles.storageItemName, { fontSize: adaptive.body }]} numberOfLines={1}>
+                    Фотографии
+                  </Text>
+                  <Text style={[styles.storageItemMeta, { fontSize: adaptive.small }]}>5 дней назад</Text>
+                </View>
+              </View>
+              <TouchableOpacity style={styles.moreButton} activeOpacity={0.7}>
+                <Ionicons name="ellipsis-vertical" size={adaptive.body + 2} color="#9CA3AF" />
+              </TouchableOpacity>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.storageItem, { 
+                borderRadius: adaptive.cardRadius - 2, 
+                padding: adaptive.vertical - 2 
+              }]}
+              activeOpacity={0.7}
+            >
+              <View style={styles.storageItemContent}>
+                <View style={[styles.storageItemIcon, {
+                  width: adaptive.icon,
+                  height: adaptive.icon,
+                  borderRadius: adaptive.cardRadius - 2,
+                }]}>
+                  <Ionicons name="folder" size={adaptive.body + 6} color="#6366F1" />
+                </View>
+                <View style={styles.storageItemInfo}>
+                  <Text style={[styles.storageItemName, { fontSize: adaptive.body }]} numberOfLines={1}>
+                    Проекты
+                  </Text>
+                  <Text style={[styles.storageItemMeta, { fontSize: adaptive.small }]}>1 неделю назад</Text>
+                </View>
+              </View>
+              <TouchableOpacity style={styles.moreButton} activeOpacity={0.7}>
+                <Ionicons name="ellipsis-vertical" size={adaptive.body + 2} color="#9CA3AF" />
+              </TouchableOpacity>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.storageItem, { 
+                borderRadius: adaptive.cardRadius - 2, 
+                padding: adaptive.vertical - 2 
+              }]}
+              activeOpacity={0.7}
+            >
+              <View style={styles.storageItemContent}>
+                <View style={[styles.storageItemIcon, {
+                  width: adaptive.icon,
+                  height: adaptive.icon,
+                  borderRadius: adaptive.cardRadius - 2,
+                  backgroundColor: '#F1F5F9',
+                }]}>
+                  <Ionicons name="document" size={adaptive.body + 6} color="#64748B" />
+                </View>
+                <View style={styles.storageItemInfo}>
+                  <Text style={[styles.storageItemName, { fontSize: adaptive.body }]} numberOfLines={1}>
+                    Отчет_2024.docx
+                  </Text>
+                  <View style={styles.storageItemMetaRow}>
+                    <Text style={[styles.storageItemMeta, { fontSize: adaptive.small }]}>1.2 MB</Text>
+                    <Text style={[styles.storageItemMeta, { fontSize: adaptive.small }]}> • </Text>
+                    <Text style={[styles.storageItemMeta, { fontSize: adaptive.small }]}>3 дня назад</Text>
+                  </View>
+                </View>
+              </View>
+              <TouchableOpacity style={styles.moreButton} activeOpacity={0.7}>
+                <Ionicons name="ellipsis-vertical" size={adaptive.body + 2} color="#9CA3AF" />
+              </TouchableOpacity>
             </TouchableOpacity>
           </View>
-          <View style={styles.subscriptionDivider} />
-          <View style={[styles.subscriptionStats, { gap: adaptive.gap }]}>
-            <View style={[styles.statItem, { borderRadius: adaptive.cardRadius, padding: adaptive.vertical - 4 }]}>
-              <Text style={[styles.statValue, { fontSize: adaptive.heading - 2 }]}>{activeServices}</Text>
-              <Text style={[styles.statLabel, { fontSize: adaptive.small }]}>Активные сервисы</Text>
-            </View>
-            <View style={[styles.statItem, { borderRadius: adaptive.cardRadius, padding: adaptive.vertical - 4 }]}>
-              <Text style={[styles.statValue, { fontSize: adaptive.heading - 2 }]}>{pendingServices}</Text>
-              <Text style={[styles.statLabel, { fontSize: adaptive.small }]}>Ожидают</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* My Services Section */}
-        <View style={[styles.section, { paddingHorizontal: adaptive.horizontal, marginBottom: adaptive.gap }]}>
-          <Text style={[styles.sectionTitle, { fontSize: adaptive.small, marginBottom: adaptive.micro }]}>
-            Мои сервисы
-          </Text>
+        ) : (
+          <View style={[styles.section, { paddingHorizontal: adaptive.horizontal, marginBottom: adaptive.gap }]}>
+            <Text style={[styles.sectionTitle, { fontSize: adaptive.small, marginBottom: adaptive.micro }]}>
+              Мои сервисы
+            </Text>
           
           <View style={[styles.serviceCard, { borderRadius: adaptive.cardRadius, padding: adaptive.vertical, marginBottom: adaptive.gap - 4 }]}>
             <View style={styles.serviceCardContent}>
@@ -374,85 +634,90 @@ const UserHomeScreen = React.memo(function UserHomeScreen() {
               <Text style={[styles.serviceButtonText, { fontSize: adaptive.small, fontWeight: '600' }]}>Открыть</Text>
             </TouchableOpacity>
           </View>
-        </View>
+          </View>
+        )}
 
-        {/* Recent Orders Section */}
-        <View style={[styles.section, { paddingHorizontal: adaptive.horizontal, marginBottom: adaptive.gap }]}>
-          <Text style={[styles.sectionTitle, { fontSize: adaptive.small, marginBottom: adaptive.micro }]}>Последние заказы</Text>
-          
-          {recentOrders.length > 0 ? (
-            recentOrders.map((order) => (
-              <View key={order.order_id} style={[styles.orderCard, { borderRadius: adaptive.cardRadius, padding: adaptive.vertical - 2, marginBottom: adaptive.gap - 6 }]}>
-                <View style={styles.orderCardContent}>
-                  <View style={[styles.orderIconContainer, {
-                    width: adaptive.icon - 4,
-                    height: adaptive.icon,
-                    borderRadius: adaptive.icon / 2,
-                  }]}>
-                    <Ionicons name="document-text" size={adaptive.body + 4} color="#111827" />
+        {/* Recent Orders Section - only show for servers */}
+        {activeSegment === 'servers' && (
+          <View style={[styles.section, { paddingHorizontal: adaptive.horizontal, marginBottom: adaptive.gap }]}>
+            <Text style={[styles.sectionTitle, { fontSize: adaptive.small, marginBottom: adaptive.micro }]}>Последние заказы</Text>
+            
+            {recentOrders.length > 0 ? (
+              recentOrders.map((order) => (
+                <View key={order.order_id} style={[styles.orderCard, { borderRadius: adaptive.cardRadius, padding: adaptive.vertical - 2, marginBottom: adaptive.gap - 6 }]}>
+                  <View style={styles.orderCardContent}>
+                    <View style={[styles.orderIconContainer, {
+                      width: adaptive.icon - 4,
+                      height: adaptive.icon,
+                      borderRadius: adaptive.icon / 2,
+                    }]}>
+                      <Ionicons name="document-text" size={adaptive.body + 4} color="#111827" />
+                    </View>
+                    <View style={styles.orderInfo}>
+                      <Text style={[styles.orderTitle, { fontSize: adaptive.body }]}>{order.plan_name}</Text>
+                      <Text style={[styles.orderSubtitle, { fontSize: adaptive.small }]}>
+                        Заказ №{order.order_number || order.order_id} • {formatTimeAgo(order.created_at)}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.orderInfo}>
-                    <Text style={[styles.orderTitle, { fontSize: adaptive.body }]}>{order.plan_name}</Text>
-                    <Text style={[styles.orderSubtitle, { fontSize: adaptive.small }]}>
-                      Заказ №{order.order_number || order.order_id} • {formatTimeAgo(order.created_at)}
+                  <View style={[styles.orderStatusBadge, { borderRadius: adaptive.cardRadius / 2, paddingVertical: 6, paddingHorizontal: adaptive.horizontal - 6 }]}>
+                    <Text style={[styles.orderStatusText, { fontSize: adaptive.small }] }>
+                      {getStatusLabel(order.status || order.payment_status || 'pending')}
                     </Text>
                   </View>
                 </View>
-                <View style={[styles.orderStatusBadge, { borderRadius: adaptive.cardRadius / 2, paddingVertical: 6, paddingHorizontal: adaptive.horizontal - 6 }]}>
-                  <Text style={[styles.orderStatusText, { fontSize: adaptive.small }] }>
-                    {getStatusLabel(order.status || order.payment_status || 'pending')}
-                  </Text>
+              ))
+            ) : (
+              <View style={[styles.emptyCard, { borderRadius: adaptive.cardRadius, padding: adaptive.vertical + 6 }]}>
+                <Text style={[styles.emptyText, { fontSize: adaptive.small }]}>Нет заказов</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Support Section - only show for servers */}
+        {activeSegment === 'servers' && (
+          <View style={[styles.section, { paddingHorizontal: adaptive.horizontal, marginBottom: adaptive.gap }]}>
+            <Text style={[styles.sectionTitle, { fontSize: adaptive.small, marginBottom: adaptive.micro }]}>Поддержка</Text>
+            
+            <TouchableOpacity style={[styles.supportCard, { borderRadius: adaptive.cardRadius, padding: adaptive.vertical }]}>
+              <View style={styles.supportCardContent}>
+                <View style={[styles.supportIconContainer, {
+                  width: adaptive.icon,
+                  height: adaptive.icon,
+                  borderRadius: adaptive.icon / 2,
+                }]}>
+                  <Ionicons name="chatbubble-ellipses" size={adaptive.body + 4} color="#111827" />
+                </View>
+                <View style={styles.supportInfo}>
+                  <Text style={[styles.supportTitle, { fontSize: adaptive.body }]}>Открыть тикет</Text>
+                  <Text style={[styles.supportDescription, { fontSize: adaptive.small }]}>Поможем решить вопрос</Text>
                 </View>
               </View>
-            ))
-          ) : (
-            <View style={[styles.emptyCard, { borderRadius: adaptive.cardRadius, padding: adaptive.vertical + 6 }]}>
-              <Text style={[styles.emptyText, { fontSize: adaptive.small }]}>Нет заказов</Text>
-            </View>
-          )}
-        </View>
+              <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+            </TouchableOpacity>
 
-        {/* Support Section */}
-        <View style={[styles.section, { paddingHorizontal: adaptive.horizontal, marginBottom: adaptive.gap }]}>
-          <Text style={[styles.sectionTitle, { fontSize: adaptive.small, marginBottom: adaptive.micro }]}>Поддержка</Text>
-          
-          <TouchableOpacity style={[styles.supportCard, { borderRadius: adaptive.cardRadius, padding: adaptive.vertical }]}>
-            <View style={styles.supportCardContent}>
-              <View style={[styles.supportIconContainer, {
-                width: adaptive.icon,
-                height: adaptive.icon,
-                borderRadius: adaptive.icon / 2,
-              }]}>
-                <Ionicons name="chatbubble-ellipses" size={adaptive.body + 4} color="#111827" />
+            <TouchableOpacity 
+              style={[styles.supportCard, { borderRadius: adaptive.cardRadius, padding: adaptive.vertical }]}
+              onPress={() => router.push('/(user)/(tabs)/orders?filter=pending')}
+            >
+              <View style={styles.supportCardContent}>
+                <View style={[styles.supportIconContainer, {
+                  width: adaptive.icon,
+                  height: adaptive.icon,
+                  borderRadius: adaptive.icon / 2,
+                }]}>
+                  <Ionicons name="receipt" size={adaptive.body + 4} color="#111827" />
+                </View>
+                <View style={styles.supportInfo}>
+                  <Text style={[styles.supportTitle, { fontSize: adaptive.body }]}>Оплата и счета</Text>
+                  <Text style={[styles.supportDescription, { fontSize: adaptive.small }]}>Способы оплаты и история</Text>
+                </View>
               </View>
-              <View style={styles.supportInfo}>
-                <Text style={[styles.supportTitle, { fontSize: adaptive.body }]}>Открыть тикет</Text>
-                <Text style={[styles.supportDescription, { fontSize: adaptive.small }]}>Поможем решить вопрос</Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.supportCard, { borderRadius: adaptive.cardRadius, padding: adaptive.vertical }]}
-            onPress={() => router.push('/(user)/(tabs)/orders?filter=pending')}
-          >
-            <View style={styles.supportCardContent}>
-              <View style={[styles.supportIconContainer, {
-                width: adaptive.icon,
-                height: adaptive.icon,
-                borderRadius: adaptive.icon / 2,
-              }]}>
-                <Ionicons name="receipt" size={adaptive.body + 4} color="#111827" />
-              </View>
-              <View style={styles.supportInfo}>
-                <Text style={[styles.supportTitle, { fontSize: adaptive.body }]}>Оплата и счета</Text>
-                <Text style={[styles.supportDescription, { fontSize: adaptive.small }]}>Способы оплаты и история</Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
-          </TouchableOpacity>
-        </View>
+              <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={[styles.bottomSpacer, { height: adaptive.vertical + 4 }]} />
       </ScrollView>
@@ -802,5 +1067,126 @@ const styles = StyleSheet.create({
   },
   bottomSpacer: {
     height: 80,
+  },
+  // Storage styles
+  storageCard: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    elevation: 1,
+  },
+  storageHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  storageIconWrapper: {
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  storageInfo: {
+    flex: 1,
+  },
+  storageTitle: {
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  storageAmount: {
+    fontWeight: '500',
+    color: '#111827',
+  },
+  storageTotal: {
+    fontWeight: '400',
+    color: '#9CA3AF',
+  },
+  progressBarContainer: {
+    marginTop: 4,
+  },
+  progressBarBg: {
+    height: 8,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#6366F1',
+    borderRadius: 4,
+  },
+  actionsContainer: {
+    flexDirection: 'row',
+  },
+  uploadButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  uploadButtonText: {
+    fontWeight: '500',
+    color: '#FFFFFF',
+  },
+  secondaryButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  secondaryButtonText: {
+    fontWeight: '500',
+    color: '#4F46E5',
+  },
+  listHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  storageItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  storageItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  storageItemIcon: {
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  storageItemInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  storageItemName: {
+    fontWeight: '500',
+    color: '#111827',
+  },
+  storageItemMeta: {
+    color: '#9CA3AF',
+  },
+  storageItemMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  moreButton: {
+    padding: 4,
   },
 });
