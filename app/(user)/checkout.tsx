@@ -10,7 +10,6 @@ import {
   Dimensions,
   Linking,
   Platform,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -18,6 +17,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { API_URL } from '../../config/api';
 import { getHeaders } from '../../config/fetch';
 
@@ -50,6 +50,8 @@ interface OrderDetails {
   full_name: string;
   email: string;
   order_number?: string;
+  created_at?: string;
+  payment_status?: string;
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -59,23 +61,37 @@ export default function CheckoutScreen() {
   const params = useLocalSearchParams();
   const orderIdParam = (params.orderId || params.order_id) as string | undefined;
   const orderId = orderIdParam ?? '';
+  const insets = useSafeAreaInsets();
 
   const [order, setOrder] = useState<OrderDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
+  const [isExpired, setIsExpired] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
+  const isVerySmall = SCREEN_WIDTH < 360;
   const isSmallScreen = SCREEN_WIDTH < 375;
   const isMediumScreen = SCREEN_WIDTH >= 375 && SCREEN_WIDTH < 768;
 
   const adaptive = useMemo(() => {
     return {
-      cardPadding: isSmallScreen ? 18 : 24,
-      cardRadius: isSmallScreen ? 20 : 28,
-      contentPadding: isSmallScreen ? 14 : 20,
+      cardPadding: isVerySmall ? 14 : isSmallScreen ? 16 : 20,
+      cardRadius: isVerySmall ? 16 : isSmallScreen ? 18 : 24,
+      contentPadding: isVerySmall ? 12 : isSmallScreen ? 14 : 16,
+      headerPaddingTop: insets.top > 0 ? 8 : (isVerySmall ? 28 : 32),
+      sectionIconSize: isVerySmall ? 32 : 36,
+      sectionTitleSize: isVerySmall ? 12 : 13,
+      sectionSubtitleSize: isVerySmall ? 10 : 11,
+      infoLabelSize: isVerySmall ? 11 : 12,
+      infoValueSize: isVerySmall ? 12 : 13,
+      summaryLabelSize: isVerySmall ? 11 : 12,
+      summaryTotalSize: isVerySmall ? 14 : 15,
+      buttonTextSize: isVerySmall ? 11 : 12,
+      termsTextSize: isVerySmall ? 10 : 11,
+      expiredTextSize: isVerySmall ? 11 : 12,
     } as const;
-  }, [isSmallScreen]);
+  }, [isVerySmall, isSmallScreen, insets.top]);
 
   useEffect(() => {
     if (orderId) {
@@ -105,6 +121,18 @@ export default function CheckoutScreen() {
       const data = await response.json();
       if (data.success) {
         setOrder(data.data);
+        
+        // Проверяем, не истёк ли срок оплаты (1 час)
+        if (data.data.created_at && data.data.payment_status === 'pending') {
+          const createdAt = new Date(data.data.created_at);
+          const now = new Date();
+          const hourInMs = 60 * 60 * 1000;
+          const timeDiff = now.getTime() - createdAt.getTime();
+          
+          if (timeDiff > hourInMs) {
+            setIsExpired(true);
+          }
+        }
       }
     } catch (error) {
       console.error('Error loading order:', error);
@@ -212,7 +240,7 @@ export default function CheckoutScreen() {
   const formatAmount = useMemo(() => {
     return (amount: number, currency: string) => {
       if (!amount) {
-        return '0 сум';
+        return '0';
       }
 
       const normalizedCurrency = (currency || 'UZS').toUpperCase();
@@ -222,9 +250,9 @@ export default function CheckoutScreen() {
       }
 
       try {
-        return `${new Intl.NumberFormat('ru-RU').format(amount)} сум`;
+        return `${new Intl.NumberFormat('ru-RU').format(amount)}`;
       } catch (error) {
-        return `${amount.toLocaleString('ru-RU')} сум`;
+        return `${amount.toLocaleString('ru-RU')}`;
       }
     };
   }, []);
@@ -274,20 +302,21 @@ export default function CheckoutScreen() {
    }
  
   return (
-    <SafeAreaView style={styles.pageSafeArea}>
+    <View style={styles.pageSafeArea}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.pageContainer}>
-        <View style={styles.pageHeader}>
+        <View style={[styles.pageHeader, { paddingTop: adaptive.headerPaddingTop }]}>
           <View style={styles.headerContent}>
             <TouchableOpacity style={styles.headerBackButton} onPress={handleCancel} activeOpacity={0.8}>
-              <Ionicons name="arrow-back" size={20} color="#111827" />
+              <Ionicons name="arrow-back" size={isVerySmall ? 18 : 20} color="#111827" />
             </TouchableOpacity>
-            <Text style={styles.pageTitle}>Оплата заказа</Text>
+            <Text style={[styles.pageTitle, { fontSize: isVerySmall ? 14 : 16 }]}>Оплата заказа</Text>
             <View style={styles.headerRight}>
-              <View style={styles.headerBadge}>
-                <Ionicons name="shield-checkmark" size={14} color="#4F46E5" />
-                <Text style={styles.headerBadgeText}>Безопасно</Text>
-              </View>
+              {!isVerySmall && (
+                <View style={styles.headerBadge}>
+                  <Ionicons name="shield-checkmark" size={14} color="#4F46E5" />
+                </View>
+              )}
             </View>
           </View>
         </View>
@@ -313,12 +342,14 @@ export default function CheckoutScreen() {
             ]}
           >
             <View style={styles.sectionCard}>
-              <View style={styles.sectionIcon}>
-                <Ionicons name="document-text-outline" size={18} color="#374151" />
+              <View style={[styles.sectionIcon, { width: adaptive.sectionIconSize, height: adaptive.sectionIconSize }]}>
+                <Ionicons name="document-text-outline" size={isVerySmall ? 16 : 18} color="#374151" />
               </View>
               <View style={styles.sectionTextContainer}>
-                <Text style={styles.sectionTitle}>Детали заказа</Text>
-                <Text style={styles.sectionSubtitle}>Проверьте данные перед оплатой.</Text>
+                <Text style={[styles.sectionTitle, { fontSize: adaptive.sectionTitleSize }]}>Детали заказа</Text>
+                <Text style={[styles.sectionSubtitle, { fontSize: adaptive.sectionSubtitleSize }]}>
+                  Проверьте данные перед оплатой.
+                </Text>
               </View>
             </View>
 
@@ -328,8 +359,10 @@ export default function CheckoutScreen() {
                   key={row.label}
                   style={[styles.infoRow, index !== infoRows.length - 1 && styles.infoRowDivider]}
                 >
-                  <Text style={styles.infoLabel}>{row.label}</Text>
-                  <Text style={styles.infoValue}>{row.value}</Text>
+                  <Text style={[styles.infoLabel, { fontSize: adaptive.infoLabelSize }]}>{row.label}</Text>
+                  <Text style={[styles.infoValue, { fontSize: adaptive.infoValueSize }]} numberOfLines={2}>
+                    {row.value}
+                  </Text>
                 </View>
               ))}
             </View>
@@ -337,14 +370,29 @@ export default function CheckoutScreen() {
             {order.order_number && (
               <View style={styles.summaryCard}>
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Заказ</Text>
-                  <Text style={styles.summaryValue}>#{order.order_number}</Text>
+                  <Text style={[styles.summaryLabel, { fontSize: adaptive.summaryLabelSize }]}>Заказ</Text>
+                  <Text style={[styles.summaryValue, { fontSize: adaptive.summaryLabelSize }]}>
+                    #{order.order_number}
+                  </Text>
                 </View>
                 <View style={styles.summaryDivider} />
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryTotalLabel}>Итого к оплате</Text>
-                  <Text style={styles.summaryTotalValue}>{paymentLabel}</Text>
+                  <Text style={[styles.summaryTotalLabel, { fontSize: isVerySmall ? 12 : 13 }]}>
+                    Итого к оплате
+                  </Text>
+                  <Text style={[styles.summaryTotalValue, { fontSize: adaptive.summaryTotalSize }]}>
+                    {paymentLabel}
+                  </Text>
                 </View>
+              </View>
+            )}
+
+            {isExpired && (
+              <View style={styles.expiredCard}>
+                <Ionicons name="time-outline" size={isVerySmall ? 18 : 20} color="#DC2626" />
+                <Text style={[styles.expiredText, { fontSize: adaptive.expiredTextSize }]}>
+                  Срок оплаты истёк. Заказ можно оплатить только в течение 1 часа после создания.
+                </Text>
               </View>
             )}
 
@@ -355,42 +403,44 @@ export default function CheckoutScreen() {
                 disabled={processing}
                 activeOpacity={0.8}
               >
-                <Ionicons name="chevron-back" size={18} color="#374151" />
-                <Text style={styles.backButtonText}>Назад</Text>
+                <Ionicons name="chevron-back" size={isVerySmall ? 16 : 18} color="#374151" />
+                <Text style={[styles.backButtonText, { fontSize: adaptive.buttonTextSize }]}>Назад</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.actionButton, styles.payButton, processing && styles.payButtonDisabled]}
+                style={[styles.actionButton, styles.payButton, (processing || isExpired) && styles.payButtonDisabled]}
                 onPress={handlePayWithPayme}
-                disabled={processing}
+                disabled={processing || isExpired}
                 activeOpacity={0.8}
               >
                 <LinearGradient
                   colors={['#7C3AED', '#6366F1']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
-                  style={styles.payButtonGradient}
+                  style={[styles.payButtonGradient, { minHeight: isVerySmall ? 36 : 38 }]}
                 >
                   {processing ? (
-                    <ActivityIndicator color="#fff" />
+                    <ActivityIndicator color="#fff" size={isVerySmall ? 'small' : 'small'} />
                   ) : (
                     <>
-                      <Ionicons name="card-outline" size={18} color="#FFFFFF" />
-                      <Ionicons name="arrow-forward" size={16} color="#C7D2FE" />
-                      <Text style={styles.payButtonText}>{paymentLabel}</Text>
+                      <Ionicons name="card-outline" size={isVerySmall ? 16 : 18} color="#FFFFFF" />
+                      {!isVerySmall && <Ionicons name="arrow-forward" size={16} color="#C7D2FE" />}
+                      <Text style={[styles.payButtonText, { fontSize: adaptive.buttonTextSize }]}>
+                        {paymentLabel}
+                      </Text>
                     </>
                   )}
                 </LinearGradient>
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.termsText}>
+            <Text style={[styles.termsText, { fontSize: adaptive.termsTextSize }]}>
               Продолжая, вы соглашаетесь с условиями обслуживания и политикой возвратов.
             </Text>
           </Animated.View>
         </ScrollView>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -404,7 +454,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
   },
   pageHeader: {
-    paddingTop: Platform.OS === 'ios' ? 52 : 36,
     paddingBottom: 10,
     paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
@@ -419,9 +468,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   headerBackButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
@@ -430,43 +479,35 @@ const styles = StyleSheet.create({
   },
   pageTitle: {
     flex: 1,
-    fontSize: 16,
     fontWeight: '600',
     color: '#111827',
     textAlign: 'center',
   },
   headerRight: {
-    width: 72,
+    width: 32,
     alignItems: 'flex-end',
   },
   headerBadge: {
-    flexDirection: 'row',
+    width: 28,
+    height: 28,
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'center',
     backgroundColor: '#EEF2FF',
-    borderRadius: 10,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-  },
-  headerBadgeText: {
-    fontSize: 10,
-    color: '#4F46E5',
-    fontWeight: '500',
+    borderRadius: 14,
   },
   pageScroll: {
     flex: 1,
   },
   pageContent: {
-    paddingVertical: 20,
-    paddingBottom: 28,
+    paddingVertical: 16,
+    paddingBottom: 24,
   },
   pageCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 24,
     borderWidth: 1,
     borderColor: '#E5E7EB',
     elevation: 2,
-    gap: 14,
+    gap: 12,
   },
   headerRow: {
     flexDirection: 'row',
@@ -507,58 +548,54 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     backgroundColor: '#F5F6F9',
-    borderRadius: 18,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   sectionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 14,
+    borderRadius: 12,
     backgroundColor: '#E5E7EB',
     alignItems: 'center',
     justifyContent: 'center',
   },
   sectionTextContainer: {
     flex: 1,
-    gap: 4,
+    gap: 3,
   },
   sectionTitle: {
-    fontSize: 13,
     fontWeight: '500',
     color: '#111827',
   },
   sectionSubtitle: {
-    fontSize: 11,
     color: '#6B7280',
   },
   infoCard: {
     backgroundColor: '#F8FAFC',
-    borderRadius: 18,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 8,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 8,
   },
   infoRowDivider: {
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
-    paddingBottom: 10,
+    paddingBottom: 8,
   },
   infoLabel: {
-    fontSize: 12,
     color: '#6B7280',
+    flexShrink: 0,
   },
   infoValue: {
-    fontSize: 13,
     color: '#111827',
     fontWeight: '500',
     textAlign: 'right',
@@ -566,12 +603,12 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     backgroundColor: '#F8FAFC',
-    borderRadius: 18,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 8,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -579,11 +616,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   summaryLabel: {
-    fontSize: 12,
     color: '#374151',
   },
   summaryValue: {
-    fontSize: 12,
     color: '#374151',
     fontWeight: '600',
   },
@@ -595,19 +630,17 @@ const styles = StyleSheet.create({
     borderRadius: 1,
   },
   summaryTotalLabel: {
-    fontSize: 13,
     fontWeight: '600',
     color: '#111827',
   },
   summaryTotalValue: {
-    fontSize: 15,
     fontWeight: '600',
     color: '#111827',
   },
   actionsRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 10,
+    gap: 8,
+    marginTop: 8,
   },
   actionButton: {
     flex: 1,
@@ -619,43 +652,55 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
     paddingHorizontal: 10,
-    paddingVertical: 9,
+    paddingVertical: 10,
     borderRadius: 12,
   },
   backButtonText: {
-    fontSize: 12,
     color: '#1F2937',
     fontWeight: '600',
   },
   payButton: {
-    borderRadius: 16,
+    borderRadius: 12,
   },
   payButtonGradient: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderRadius: 12,
-    minHeight: 38,
   },
   payButtonText: {
-    fontSize: 12,
     fontWeight: '600',
     color: '#FFFFFF',
   },
   payButtonDisabled: {
-    opacity: 0.7,
+    opacity: 0.6,
   },
   termsText: {
-    fontSize: 11,
     color: '#9CA3AF',
     textAlign: 'center',
-    lineHeight: 16,
-    marginTop: 12,
+    lineHeight: 15,
+    marginTop: 10,
+  },
+  expiredCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: '#FEF2F2',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  expiredText: {
+    flex: 1,
+    color: '#DC2626',
+    lineHeight: 17,
   },
   loadingContainer: {
     flex: 1,
