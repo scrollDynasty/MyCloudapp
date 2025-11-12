@@ -15,7 +15,6 @@ const db = require('./core/db/connection');
 const { initializeDatabase } = require('./core/middleware/db-init');
 const { rateLimiters } = require('./core/middleware/rate-limiter');
 const requestTimeout = require('./core/middleware/request-timeout');
-const { monitor } = require('./core/utils/monitoring');
 const { logger } = require('./core/utils/logger');
 const { startOrderCleanupJob } = require('./core/utils/order-cleanup');
 
@@ -33,6 +32,7 @@ const ordersRoutes = require('./api/orders/orders');
 const authRoutes = require('./api/auth/auth');
 const emailVerificationRoutes = require('./api/auth/email-verification');
 const cardsRoutes = require('./routes/cards');
+const ticketsRoutes = require('./api/tickets/tickets');
 
 // Setup Google OAuth
 const setupGoogleOAuth = require('./core/config/google-oauth');
@@ -56,7 +56,6 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, Postman)
     if (!origin) {
       return callback(null, true);
     }
@@ -98,7 +97,6 @@ app.use(cors({
   optionsSuccessStatus: 204
 }));
 
-// Handle preflight requests explicitly for all routes
 app.options('*', (req, res) => {
   const origin = req.headers.origin;
   if (allowedOrigins.indexOf(origin) !== -1 || !origin || origin.includes('localhost') || origin.includes('127.0.0.1')) {
@@ -112,11 +110,31 @@ app.options('*', (req, res) => {
   }
 });
 
-// Performance monitoring
-app.use(monitor.trackRequest());
-
 // Security headers middleware (after CORS to not override CORS headers)
 app.use(securityHeaders);
+
+// Simple request logger
+app.use((req, res, next) => {
+  const start = Date.now();
+  
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    const status = res.statusCode;
+    const method = req.method;
+    const path = req.path;
+    
+    // Логируем только API запросы
+    if (path.startsWith('/api/')) {
+      if (status >= 200 && status < 300) {
+        console.log(`✅ ${method} ${path} - ${status}`);
+      } else if (status >= 400) {
+        console.log(`⚠️ ${method} ${path} - ${status}`);
+      }
+    }
+  });
+  
+  next();
+});
 
 // Rate limiting для всех запросов
 app.use(rateLimit(100, 15 * 60 * 1000)); // 100 запросов в 15 минут
@@ -159,9 +177,8 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Health check endpoint with detailed metrics
+// Health check endpoint
 app.get('/health', async (req, res) => {
-  const metrics = monitor.getMetrics();
   const dbStats = db.getPoolStats();
   
   res.json({
@@ -170,15 +187,8 @@ app.get('/health', async (req, res) => {
     version: require('./package.json').version,
     environment: process.env.NODE_ENV || 'development',
     uptime: process.uptime(),
-    memory: metrics.memory,
     database: dbStats
   });
-});
-
-// Metrics endpoint (for monitoring tools)
-app.get('/metrics', (req, res) => {
-  const metrics = monitor.getMetrics();
-  res.json(metrics);
 });
 
 // API Routes with rate limiting
@@ -194,6 +204,7 @@ app.use('/api/service-plans', rateLimiters.api.middleware(), servicePlansRoutes)
 app.use('/api/payments', rateLimiters.api.middleware(), paymentsRoutes);
 app.use('/api/orders', rateLimiters.api.middleware(), ordersRoutes);
 app.use('/api/cards', rateLimiters.api.middleware(), cardsRoutes);
+app.use('/api/tickets', rateLimiters.api.middleware(), ticketsRoutes);
 
 // Payment redirect routes (без /api префикса)
 app.use('/', paymentRedirectRoutes);
@@ -728,9 +739,6 @@ async function gracefulShutdown(signal) {
       try {
         // Close database connections
         await db.close();
-        
-        // Clean up monitoring
-        monitor.destroy();
         
         // Clean up rate limiters
         Object.values(rateLimiters).forEach(limiter => limiter.destroy());

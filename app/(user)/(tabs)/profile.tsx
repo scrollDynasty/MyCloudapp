@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -125,16 +126,38 @@ export default React.memo(function ProfileScreen() {
     loadProfileData(true);
   }, [loadProfileData]);
 
-  const handleLogout = useCallback(async () => {
+  const handleLogout = useCallback(() => {
+    const performLogout = async () => {
+      try {
+        console.log('🚪 Starting logout process...');
+        
+        await signOut();
+        
+        console.log('✅ User data cleared, navigating to login...');
+        router.replace('/auth/login');
+        console.log('✅ Navigation completed');
+      } catch (error) {
+        console.error('❌ Logout error:', error);
+        Alert.alert('Ошибка', 'Не удалось выйти из аккаунта. Попробуйте еще раз.');
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      // На web Alert.alert не поддерживает несколько кнопок
+      const confirmFn = (globalThis as any).confirm as ((message?: string) => boolean) | undefined;
+      const confirmed = confirmFn ? confirmFn('Вы уверены, что хотите выйти?') : true;
+      if (confirmed) {
+        performLogout();
+      }
+      return;
+    }
+
     Alert.alert('Выход', 'Вы уверены, что хотите выйти?', [
       { text: 'Отмена', style: 'cancel' },
       {
         text: 'Выйти',
         style: 'destructive',
-        onPress: async () => {
-          await signOut();
-          router.replace('/auth/login');
-        },
+        onPress: performLogout,
       },
     ]);
   }, [signOut, router]);

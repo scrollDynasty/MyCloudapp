@@ -680,7 +680,10 @@ const UserHomeScreen = React.memo(function UserHomeScreen() {
           <View style={[styles.section, { paddingHorizontal: adaptive.horizontal, marginBottom: adaptive.gap }]}>
             <Text style={[styles.sectionTitle, { fontSize: adaptive.small, marginBottom: adaptive.micro }]}>Поддержка</Text>
             
-            <TouchableOpacity style={[styles.supportCard, { borderRadius: adaptive.cardRadius, padding: adaptive.vertical }]}>
+            <TouchableOpacity 
+              style={[styles.supportCard, { borderRadius: adaptive.cardRadius, padding: adaptive.vertical }]}
+              onPress={() => router.push('/support-ticket' as any)}
+            >
               <View style={styles.supportCardContent}>
                 <View style={[styles.supportIconContainer, {
                   width: adaptive.icon,

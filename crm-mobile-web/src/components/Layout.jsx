@@ -1,12 +1,13 @@
 import {
-    LayoutDashboard,
-    LogOut,
-    Menu,
-    Server,
-    Settings,
-    ShoppingCart,
-    Users,
-    X
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  MessageSquare,
+  Server,
+  Settings,
+  ShoppingCart,
+  Users,
+  X
 } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
@@ -26,6 +27,7 @@ export default function Layout({ children, setIsAuthenticated }) {
     { name: 'Главная', href: '/', icon: LayoutDashboard },
     { name: 'Пользователи', href: '/users', icon: Users },
     { name: 'Заказы', href: '/orders', icon: ShoppingCart },
+    { name: 'Тикеты', href: '/tickets', icon: MessageSquare },
     { name: 'Управление сервисами', href: '/services', icon: Settings },
     { name: 'VPS планы', href: '/vps-plans', icon: Server },
   ]

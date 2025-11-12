@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { clearAllCache } from './cache';
 
 interface User {
   user_id: number;
@@ -74,11 +75,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
+      // Очищаем токен и данные пользователя
       await AsyncStorage.multiRemove(['token', 'user']);
+      
+      // Очищаем весь кэш
+      await clearAllCache();
+      
+      // Обновляем состояние
       setToken(null);
       setUser(null);
+      
+      console.log('✅ Logout successful - all data cleared');
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error('❌ Error signing out:', error);
       throw error;
     }
   };

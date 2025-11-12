@@ -7,6 +7,7 @@ import Orders from './pages/Orders'
 import ServiceGroups from './pages/ServiceGroups'
 import ServicePlans from './pages/ServicePlans'
 import ServicesManagement from './pages/ServicesManagement'
+import Tickets from './pages/Tickets'
 import Users from './pages/Users'
 import VPSPlans from './pages/VPSPlans'
 
@@ -59,6 +60,7 @@ function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/users" element={<Users />} />
         <Route path="/orders" element={<Orders />} />
+        <Route path="/tickets" element={<Tickets />} />
         <Route path="/vps-plans" element={<VPSPlans />} />
         <Route path="/service-groups" element={<ServiceGroups />} />
         <Route path="/service-plans" element={<ServicePlans />} />
