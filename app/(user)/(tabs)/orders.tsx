@@ -37,6 +37,7 @@ interface Order {
   status: string;
   payment_status?: string;
   cpu_cores?: number;
+  cpu_model?: string;
   memory_gb?: number;
   storage_gb?: number;
   bandwidth_tb?: number;
@@ -273,7 +274,9 @@ const OrdersScreen = React.memo(function OrdersScreen() {
                     {item.cpu_cores && (
                       <View style={styles.tag}>
                         <Ionicons name="server-outline" size={14} color="#374151" />
-                        <Text style={styles.tagText}>{item.cpu_cores} vCPU</Text>
+                        <Text style={styles.tagText}>
+                          {item.cpu_cores} vCPU{item.cpu_model ? ` (${item.cpu_model})` : ''}
+                        </Text>
                       </View>
                     )}
                   </View>

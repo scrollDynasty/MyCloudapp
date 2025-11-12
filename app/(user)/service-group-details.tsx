@@ -286,13 +286,18 @@ export default function ServiceGroupDetailsScreen() {
   const formatPlanSpecs = (plan: ServicePlan) => {
     const specs: string[] = [];
     
-    // Ищем CPU, RAM, Storage в полях
-    const cpuField = plan.fields?.find(f => f.field_key.toLowerCase().includes('cpu'));
+    // Ищем CPU, CPU Model, RAM, Storage в полях
+    const cpuField = plan.fields?.find(f => f.field_key.toLowerCase() === 'cpu');
+    const cpuModelField = plan.fields?.find(f => f.field_key.toLowerCase() === 'cpu_model');
     const ramField = plan.fields?.find(f => f.field_key.toLowerCase().includes('ram') || f.field_key.toLowerCase().includes('memory'));
     const storageField = plan.fields?.find(f => f.field_key.toLowerCase().includes('storage') || f.field_key.toLowerCase().includes('ssd'));
     
     if (cpuField && cpuField.field_value_ru) {
-      specs.push(`${cpuField.field_value_ru} vCPU`);
+      let cpuText = `${cpuField.field_value_ru} vCPU`;
+      if (cpuModelField && cpuModelField.field_value_ru) {
+        cpuText += ` (${cpuModelField.field_value_ru})`;
+      }
+      specs.push(cpuText);
     }
     if (ramField && ramField.field_value_ru) {
       specs.push(`${ramField.field_value_ru} RAM`);

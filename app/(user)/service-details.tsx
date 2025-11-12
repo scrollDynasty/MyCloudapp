@@ -171,9 +171,11 @@ export default React.memo(function ServiceDetailsScreen() {
   }, [loadPlanData]);
 
   // Получение значения поля по ключу
-  const getFieldValue = useCallback((key: string): string => {
+  const getFieldValue = useCallback((key: string, exactMatch: boolean = false): string => {
     const field = plan?.fields?.find(f => 
-      f.field_key.toLowerCase().includes(key.toLowerCase())
+      exactMatch 
+        ? f.field_key.toLowerCase() === key.toLowerCase()
+        : f.field_key.toLowerCase().includes(key.toLowerCase())
     );
     return field?.field_value_ru || '';
   }, [plan]);
@@ -456,7 +458,7 @@ export default React.memo(function ServiceDetailsScreen() {
                 Виртуальные ядра
               </Text>
               <Text style={[styles.includedValue, { fontSize: adaptive.valueSize }]} numberOfLines={1}>
-                {getFieldValue('cpu') || getFieldValue('vCPU') || 'N/A'}
+                {getFieldValue('cpu', true) || getFieldValue('vCPU', true) || 'N/A'}
               </Text>
             </View>
             <View style={[styles.includedRow, { gap: adaptive.gap }]}>
@@ -508,6 +510,21 @@ export default React.memo(function ServiceDetailsScreen() {
             borderRadius: adaptive.borderRadius,
             gap: adaptive.gap 
           }]}>
+            {(getFieldValue('cpu_model', true) || getFieldValue('processor', true)) && (
+              <View style={[styles.configRow, { gap: adaptive.gap }]}>
+                <Text style={[styles.configLabel, { fontSize: adaptive.valueSize }]}>Процессор</Text>
+                <View style={[styles.configValueBadge, { 
+                  paddingHorizontal: adaptive.buttonPadding,
+                  paddingVertical: 8,
+                  borderRadius: adaptive.borderRadius,
+                  flex: 1
+                }]}>
+                  <Text style={[styles.configValueText, { fontSize: adaptive.textSize }]} numberOfLines={2}>
+                    {getFieldValue('cpu_model', true) || getFieldValue('processor', true)}
+                  </Text>
+                </View>
+              </View>
+            )}
             <View style={[styles.configRow, { gap: adaptive.gap }]}>
               <Text style={[styles.configLabel, { fontSize: adaptive.valueSize }]}>ОС</Text>
               <View style={[styles.configValueBadge, { 

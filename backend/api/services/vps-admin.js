@@ -11,6 +11,7 @@ router.post('/', authenticate, adminOnly, async (req, res) => {
       plan_name,
       provider,
       cpu_cores,
+      cpu_model,
       ram_gb,
       storage_gb,
       storage_type = 'SSD',
@@ -65,13 +66,14 @@ router.post('/', authenticate, adminOnly, async (req, res) => {
     // Insert new VPS plan
     const result = await db.query(`
       INSERT INTO vps_plans 
-      (provider_id, name, cpu_cores, ram_gb, storage_gb, 
+      (provider_id, name, cpu_cores, cpu_model, ram_gb, storage_gb, 
        bandwidth_gb, price_monthly, available, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
     `, [
       provider_id,
       plan_name,
       cpu_cores,
+      cpu_model || null,
       ram_gb,
       storage_gb,
       bandwidth_tb ? bandwidth_tb * 1000 : null,
@@ -105,6 +107,7 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
       plan_name,
       provider,
       cpu_cores,
+      cpu_model,
       ram_gb,
       storage_gb,
       bandwidth_tb,
@@ -154,6 +157,10 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
     if (cpu_cores !== undefined) {
       updateFields.push('cpu_cores = ?');
       updateValues.push(cpu_cores);
+    }
+    if (cpu_model !== undefined) {
+      updateFields.push('cpu_model = ?');
+      updateValues.push(cpu_model || null);
     }
     if (ram_gb !== undefined) {
       updateFields.push('ram_gb = ?');

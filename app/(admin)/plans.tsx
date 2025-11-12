@@ -38,6 +38,7 @@ interface VPSPlan {
   provider_name: string;
   provider_id: number;
   cpu_cores: number;
+  cpu_model?: string;
   memory_gb: number;
   storage_gb: number;
   bandwidth_tb: number;
@@ -68,6 +69,7 @@ export default function AdminPlansScreen() {
     plan_name: '',
     provider_id: '',
     cpu_cores: '',
+    cpu_model: '',
     memory_gb: '',
     storage_gb: '',
     bandwidth_tb: '',
@@ -137,6 +139,7 @@ export default function AdminPlansScreen() {
       plan_name: '',
       provider_id: providers[0]?.id.toString() || '',
       cpu_cores: '',
+      cpu_model: '',
       memory_gb: '',
       storage_gb: '',
       bandwidth_tb: '',
@@ -155,6 +158,7 @@ export default function AdminPlansScreen() {
       plan_name: plan.plan_name,
       provider_id: plan.provider_id?.toString() || '',
       cpu_cores: plan.cpu_cores?.toString() || '',
+      cpu_model: plan.cpu_model || '',
       memory_gb: plan.memory_gb?.toString() || '',
       storage_gb: plan.storage_gb?.toString() || '',
       bandwidth_tb: plan.bandwidth_tb?.toString() || '',
@@ -452,6 +456,16 @@ export default function AdminPlansScreen() {
                 placeholder="2"
                 placeholderTextColor="#999"
                 keyboardType="numeric"
+              />
+
+              {/* CPU Model */}
+              <Text style={styles.label}>Модель процессора</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.cpu_model}
+                onChangeText={(text) => setFormData({ ...formData, cpu_model: text })}
+                placeholder="Например: Intel Xeon E5-2680"
+                placeholderTextColor="#999"
               />
 
               {/* Memory */}

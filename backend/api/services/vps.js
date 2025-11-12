@@ -79,6 +79,7 @@ router.get('/', async (req, res) => {
         p.name as provider,
         vp.name as plan_name,
         vp.cpu_cores,
+        vp.cpu_model,
         vp.ram_gb as memory_gb,
         vp.storage_gb,
         vp.bandwidth_gb,
@@ -114,6 +115,7 @@ router.get('/', async (req, res) => {
       provider_name: plan.provider,
       plan_name: plan.plan_name,
       cpu_cores: plan.cpu_cores,
+      cpu_model: plan.cpu_model,
       ram_gb: plan.memory_gb, // совместимость с фронтендом
       memory_gb: plan.memory_gb,
       storage_gb: plan.storage_gb,

@@ -55,6 +55,7 @@ export default function VPSPlans() {
     setEditForm({
       plan_name: plan.plan_name || plan.name || '',
       cpu_cores: plan.cpu_cores || plan.cpu_ores || '',
+      cpu_model: plan.cpu_model || '',
       ram_gb: plan.ram_gb || '',
       storage_gb: plan.storage_gb || '',
       price_per_month: plan.price_per_month || plan.price_monthly || plan.price || '',
@@ -70,6 +71,7 @@ export default function VPSPlans() {
     setEditForm({
       plan_name: '',
       cpu_cores: '',
+      cpu_model: '',
       ram_gb: '',
       storage_gb: '',
       price_per_month: '',
@@ -117,8 +119,8 @@ export default function VPSPlans() {
         group_id: groupId,
         name_uz: vpsplan.plan_name || vpsplan.name || 'VPS Plan',
         name_ru: vpsplan.plan_name || vpsplan.name || 'VPS Plan',
-        description_uz: `VPS: ${vpsplan.cpu_cores || vpsplan.cpu_ores || 0} CPU, ${vpsplan.ram_gb || 0} GB RAM, ${vpsplan.storage_gb || 0} GB Storage`,
-        description_ru: `VPS: ${vpsplan.cpu_cores || vpsplan.cpu_ores || 0} CPU, ${vpsplan.ram_gb || 0} GB RAM, ${vpsplan.storage_gb || 0} GB Storage`,
+        description_uz: `VPS: ${vpsplan.cpu_cores || vpsplan.cpu_ores || 0} CPU${vpsplan.cpu_model ? ` (${vpsplan.cpu_model})` : ''}, ${vpsplan.ram_gb || 0} GB RAM, ${vpsplan.storage_gb || 0} GB Storage`,
+        description_ru: `VPS: ${vpsplan.cpu_cores || vpsplan.cpu_ores || 0} CPU${vpsplan.cpu_model ? ` (${vpsplan.cpu_model})` : ''}, ${vpsplan.ram_gb || 0} GB RAM, ${vpsplan.storage_gb || 0} GB Storage`,
         price: vpsplan.price_per_month || vpsplan.price_monthly || vpsplan.price || 0,
         currency: vpsplan.currency || vpsplan.currency_code || 'UZS',
         billing_period: 'monthly',
@@ -133,6 +135,15 @@ export default function VPSPlans() {
             field_type: 'text',
             display_order: 0
           },
+          ...(vpsplan.cpu_model ? [{
+            field_key: 'cpu_model',
+            field_label_uz: 'Model CPU',
+            field_label_ru: 'Модель процессора',
+            field_value_uz: vpsplan.cpu_model,
+            field_value_ru: vpsplan.cpu_model,
+            field_type: 'text',
+            display_order: 1
+          }] : []),
           {
             field_key: 'ram',
             field_label_uz: 'RAM',
@@ -140,7 +151,7 @@ export default function VPSPlans() {
             field_value_uz: `${vpsplan.ram_gb || 0} GB`,
             field_value_ru: `${vpsplan.ram_gb || 0} ГБ`,
             field_type: 'text',
-            display_order: 1
+            display_order: 2
           },
           {
             field_key: 'storage',
@@ -149,7 +160,7 @@ export default function VPSPlans() {
             field_value_uz: `${vpsplan.storage_gb || 0} GB ${vpsplan.storage_type || 'SSD'}`,
             field_value_ru: `${vpsplan.storage_gb || 0} ГБ ${vpsplan.storage_type || 'SSD'}`,
             field_type: 'text',
-            display_order: 2
+            display_order: 3
           },
           {
             field_key: 'location',
@@ -158,7 +169,7 @@ export default function VPSPlans() {
             field_value_uz: vpsplan.location || vpsplan.region?.name || vpsplan.region || 'N/A',
             field_value_ru: vpsplan.location || vpsplan.region?.name || vpsplan.region || 'Не указана',
             field_type: 'text',
-            display_order: 3
+            display_order: 4
           }
         ]
       }
@@ -331,7 +342,7 @@ export default function VPSPlans() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">CPU (ядер) *</label>
                   <input
@@ -342,6 +353,19 @@ export default function VPSPlans() {
                     required
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Модель процессора</label>
+                  <input
+                    type="text"
+                    value={editForm.cpu_model}
+                    onChange={(e) => setEditForm({ ...editForm, cpu_model: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="Например: Intel Xeon E5-2680"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">RAM (GB) *</label>
                   <input
@@ -462,7 +486,7 @@ export default function VPSPlans() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">CPU (ядер) *</label>
                   <input
@@ -475,6 +499,19 @@ export default function VPSPlans() {
                     required
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Модель процессора</label>
+                  <input
+                    type="text"
+                    value={editForm.cpu_model}
+                    onChange={(e) => setEditForm({ ...editForm, cpu_model: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="Например: Intel Xeon E5-2680"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">RAM (GB) *</label>
                   <input
