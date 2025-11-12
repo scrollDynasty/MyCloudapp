@@ -392,7 +392,7 @@ export default function AdminDashboardScreen() {
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.bottomNavItem}
-          onPress={() => router.push('/(user)/home')}
+          onPress={() => router.push('/(user)/home' as any)}
         >
           <View style={styles.bottomNavIcon}>
             <Ionicons name="grid" size={20} color="#9CA3AF" />
@@ -401,7 +401,7 @@ export default function AdminDashboardScreen() {
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.bottomNavItem}
-          onPress={() => router.push('/(user)/orders')}
+          onPress={() => router.push('/(user)/orders' as any)}
         >
           <View style={styles.bottomNavIcon}>
             <Ionicons name="cart" size={20} color="#9CA3AF" />

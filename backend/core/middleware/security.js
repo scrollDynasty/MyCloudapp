@@ -175,11 +175,79 @@ function securityHeaders(req, res, next) {
   next();
 }
 
+/**
+ * Middleware для фильтрации чувствительных полей из ответов
+ */
+function filterSensitiveFields(req, res, next) {
+  const originalJson = res.json.bind(res);
+  
+  res.json = function(data) {
+    if (data && typeof data === 'object') {
+      // Удаляем чувствительные поля
+      const filtered = securityUtils.sanitizeResponse(data, [
+        'password',
+        'password_hash',
+        'passwordHash',
+        'jwt_secret',
+        'api_key',
+        'secret',
+        'token_secret',
+        'refresh_token_secret',
+        'oauth_secret',
+        'private_key'
+      ]);
+      return originalJson(filtered);
+    }
+    return originalJson(data);
+  };
+  
+  next();
+}
+
+/**
+ * Middleware для валидации и ограничения пагинации
+ */
+function validatePagination(maxLimit = 100) {
+  return (req, res, next) => {
+    let { limit, offset } = req.query;
+    
+    // Преобразуем в числа
+    limit = parseInt(limit) || 20;
+    offset = parseInt(offset) || 0;
+    
+    // Ограничиваем максимальный лимит
+    if (limit > maxLimit) {
+      return res.status(400).json({
+        success: false,
+        error: 'Pagination limit exceeded',
+        message: `Maximum limit is ${maxLimit}, you requested ${limit}`
+      });
+    }
+    
+    // Проверяем на отрицательные значения
+    if (limit < 1 || offset < 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid pagination parameters',
+        message: 'Limit must be >= 1 and offset must be >= 0'
+      });
+    }
+    
+    // Устанавливаем валидированные значения
+    req.query.limit = limit;
+    req.query.offset = offset;
+    
+    next();
+  };
+}
+
 module.exports = {
   csrfProtection,
   setCSRFToken,
   rateLimit,
   validateInput,
-  securityHeaders
+  securityHeaders,
+  filterSensitiveFields,
+  validatePagination
 };
 

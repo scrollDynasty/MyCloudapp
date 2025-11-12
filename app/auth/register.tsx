@@ -1061,9 +1061,9 @@ const RegisterScreen: React.FC = () => {
         onRequestClose={() => {
           if (successUserData) {
             if (successUserData.role === 'admin') {
-              router.replace('/(admin)/dashboard');
+              router.replace('/(admin)/dashboard' as any);
             } else {
-              router.replace('/(user)/home');
+              router.replace('/(user)/home' as any);
             }
           }
         }}
@@ -1096,9 +1096,9 @@ const RegisterScreen: React.FC = () => {
                 setShowSuccessModal(false);
                 if (successUserData) {
                   if (successUserData.role === 'admin') {
-                    router.replace('/(admin)/dashboard');
+                    router.replace('/(admin)/dashboard' as any);
                   } else {
-                    router.replace('/(user)/home');
+                    router.replace('/(user)/home' as any);
                   }
                 }
               }}

@@ -1,24 +1,49 @@
 const jwt = require('jsonwebtoken');
 const db = require('../db/connection');
 
-// Generate JWT token
+// Generate JWT access token (short-lived)
 function generateToken(user) {
   const payload = {
     id: user.id,
     email: user.email,
-    role: user.role,
+    // Don't include role in JWT - we'll fetch from DB for security
     username: user.username
   };
   
   return jwt.sign(payload, process.env.JWT_SECRET || 'secret', {
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d'
+    expiresIn: process.env.JWT_EXPIRES_IN || '15m' // Shorter expiry for security
   });
 }
 
-// Verify JWT token
+// Generate refresh token (long-lived)
+function generateRefreshToken(user) {
+  const payload = {
+    id: user.id,
+    type: 'refresh'
+  };
+  
+  return jwt.sign(payload, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || 'refresh-secret', {
+    expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d'
+  });
+}
+
+// Verify JWT access token
 function verifyToken(token) {
   try {
     return jwt.verify(token, process.env.JWT_SECRET || 'secret');
+  } catch (error) {
+    return null;
+  }
+}
+
+// Verify refresh token
+function verifyRefreshToken(token) {
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || 'refresh-secret');
+    if (decoded.type !== 'refresh') {
+      return null;
+    }
+    return decoded;
   } catch (error) {
     return null;
   }
@@ -169,7 +194,9 @@ async function optionalAuth(req, res, next) {
 
 module.exports = {
   generateToken,
+  generateRefreshToken,
   verifyToken,
+  verifyRefreshToken,
   authenticate,
   authorize,
   adminOnly,

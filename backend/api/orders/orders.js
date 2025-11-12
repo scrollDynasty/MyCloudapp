@@ -1,11 +1,13 @@
 const express = require('express');
 const db = require('../../core/db/connection');
 const SQL = require('../../core/db/queries');
+const { authenticate, adminOnly, adminOrSelf } = require('../../core/utils/auth');
+const { validatePagination } = require('../../core/middleware/security');
 
 const router = express.Router();
 
-// GET /api/orders - Get all orders
-router.get('/', async (req, res) => {
+// GET /api/orders - Get all orders (Admin sees all, users see only their own)
+router.get('/', authenticate, validatePagination(100), async (req, res) => {
   try {
     // Database is already initialized at startup
     
@@ -19,7 +21,12 @@ router.get('/', async (req, res) => {
     let whereConditions = [];
     let params = [];
 
-    if (user_id) {
+    // BOLA/IDOR Protection: Non-admin users can only see their own orders
+    if (req.user.role !== 'admin') {
+      whereConditions.push('o.user_id = ?');
+      params.push(req.user.id);
+    } else if (user_id) {
+      // Admin can filter by user_id
       whereConditions.push('o.user_id = ?');
       params.push(user_id);
     }
@@ -131,7 +138,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST /api/orders - Create new order
-router.post('/', async (req, res) => {
+router.post('/', authenticate, async (req, res) => {
   try {
     // Database is already initialized at startup
     
@@ -142,21 +149,26 @@ router.post('/', async (req, res) => {
       notes
     } = req.body;
 
+    // BOLA/IDOR Protection: Users can only create orders for themselves
+    const effectiveUserId = req.user.role === 'admin' && user_id ? user_id : req.user.id;
+    
     // Validate input - need either vps_plan_id or service_plan_id
-    if (!user_id || (!vps_plan_id && !service_plan_id)) {
+    if (!vps_plan_id && !service_plan_id) {
       return res.status(400).json({
         success: false,
-        error: 'Missing required fields: user_id and (vps_plan_id or service_plan_id)'
+        error: 'Missing required fields: vps_plan_id or service_plan_id'
       });
     }
 
-    // Verify user exists
-    const userExists = await db.query('SELECT id FROM users WHERE id = ?', [user_id]);
-    if (userExists.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found'
-      });
+    // Verify user exists (if admin is creating for another user)
+    if (req.user.role === 'admin' && user_id && user_id !== req.user.id) {
+      const userExists = await db.query('SELECT id FROM users WHERE id = ?', [effectiveUserId]);
+      if (userExists.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'User not found'
+        });
+      }
     }
 
     let planDetails;
@@ -224,7 +236,7 @@ router.post('/', async (req, res) => {
       (user_id, vps_plan_id, service_plan_id, order_number, status, amount, total_amount, currency, notes, created_at, updated_at)
       VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, NOW(), NOW())
     `, [
-      user_id,
+      effectiveUserId,
       vps_plan_id || null,
       service_plan_id || null,
       orderNumber,
@@ -262,7 +274,7 @@ router.post('/', async (req, res) => {
 });
 
 // GET /api/orders/:id - Get specific order
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticate, async (req, res) => {
   try {
     // Database is already initialized at startup
     
@@ -279,6 +291,15 @@ router.get('/:id', async (req, res) => {
     }
 
     const orderData = basicOrder[0];
+    
+    // BOLA/IDOR Protection: Users can only access their own orders
+    if (req.user.role !== 'admin' && orderData.user_id !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied',
+        message: 'You can only access your own orders'
+      });
+    }
     let orderDetails;
 
     if (orderData.vps_plan_id) {
@@ -413,8 +434,8 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// PUT /api/orders/:id/status - Update order status
-router.put('/:id/status', async (req, res) => {
+// PUT /api/orders/:id/status - Update order status (Admin only)
+router.put('/:id/status', authenticate, adminOnly, async (req, res) => {
   try {
     // Database is already initialized at startup
     
@@ -436,10 +457,8 @@ router.put('/:id/status', async (req, res) => {
       });
     }
 
-    
-
     // Check if order exists
-    const orderExists = await db.query('SELECT id FROM orders WHERE id = ?', [id]);
+    const orderExists = await db.query('SELECT id, user_id FROM orders WHERE id = ?', [id]);
     if (orderExists.length === 0) {
       return res.status(404).json({
         success: false,

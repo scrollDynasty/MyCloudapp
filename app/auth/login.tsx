@@ -402,9 +402,9 @@ const LoginScreen: React.FC = () => {
 
         // Перенаправить в зависимости от роли
         if (data.data.user.role === 'admin') {
-          router.replace('/(admin)/dashboard');
+          router.replace('/(admin)/dashboard' as any);
         } else {
-          router.replace('/(user)/home');
+          router.replace('/(user)/home' as any);
         }
       } else {
         setLoginAttempts(prev => prev + 1);
@@ -483,9 +483,9 @@ const LoginScreen: React.FC = () => {
               await signIn(token, user);
               
               if (user.role === 'admin') {
-                router.replace('/(admin)/dashboard');
+                router.replace('/(admin)/dashboard' as any);
               } else {
-                router.replace('/(user)/home');
+                router.replace('/(user)/home' as any);
               }
             }
           }

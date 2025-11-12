@@ -2,10 +2,10 @@ const express = require('express');
 const passport = require('passport');
 const bcrypt = require('bcryptjs');
 const db = require('../../core/db/connection');
-const { generateToken, authenticate, adminOnly, adminOrSelf } = require('../../core/utils/auth');
+const { generateToken, generateRefreshToken, verifyRefreshToken, authenticate, adminOnly, adminOrSelf } = require('../../core/utils/auth');
 const SQL = require('../../core/db/queries');
 const securityUtils = require('../../core/utils/security');
-const { validateInput } = require('../../core/middleware/security');
+const { validateInput, validatePagination } = require('../../core/middleware/security');
 const emailUtil = require('../../core/utils/email');
 
 const router = express.Router();
@@ -203,8 +203,9 @@ router.post('/login', validateInput({
     // Update last login
     await db.query(SQL.UPDATE_LAST_LOGIN, [user.id]);
 
-    // Generate JWT token
+    // Generate JWT tokens (access + refresh)
     const token = generateToken(user);
+    const refreshToken = generateRefreshToken(user);
     
     // Combine first_name and last_name into full_name for response
     const userFullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
@@ -222,7 +223,8 @@ router.post('/login', validateInput({
           status: user.status
         },
         token: token,
-        expires_in: process.env.JWT_EXPIRES_IN || '7d'
+        refresh_token: refreshToken,
+        expires_in: process.env.JWT_EXPIRES_IN || '15m'
       }
     });
 
@@ -335,7 +337,7 @@ router.get('/me', authenticate, async (req, res) => {
 });
 
 // GET /api/auth/users - Get all users (Admin only)
-router.get('/users', authenticate, adminOnly, async (req, res) => {
+router.get('/users', authenticate, adminOnly, validatePagination(50), async (req, res) => {
   try {
     // Database is already initialized at startup
     
@@ -576,6 +578,73 @@ router.put('/users/:id', authenticate, adminOrSelf, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to update user',
+      message: error.message
+    });
+  }
+});
+
+// POST /api/auth/refresh - Refresh access token using refresh token
+router.post('/refresh', async (req, res) => {
+  try {
+    const { refresh_token } = req.body;
+    
+    if (!refresh_token) {
+      return res.status(400).json({
+        success: false,
+        error: 'Refresh token is required'
+      });
+    }
+    
+    // Verify refresh token
+    const decoded = verifyRefreshToken(refresh_token);
+    
+    if (!decoded) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid or expired refresh token'
+      });
+    }
+    
+    // Get user from database (fresh data)
+    const users = await db.query(
+      'SELECT id, username, email, role, status, first_name, last_name FROM users WHERE id = ?',
+      [decoded.id]
+    );
+    
+    if (users.length === 0) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+    
+    const user = users[0];
+    
+    // Check if user is active
+    if (user.status !== 'active') {
+      return res.status(403).json({
+        success: false,
+        error: 'Account is not active',
+        status: user.status
+      });
+    }
+    
+    // Generate new access token
+    const newToken = generateToken(user);
+    
+    res.json({
+      success: true,
+      data: {
+        token: newToken,
+        expires_in: process.env.JWT_EXPIRES_IN || '15m'
+      }
+    });
+    
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to refresh token',
       message: error.message
     });
   }
