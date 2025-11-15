@@ -6,6 +6,66 @@
 const mysql = require('mysql2/promise');
 const { dbConfig } = require('../core/config/database-extended');
 
+const serializeOptions = (options) => {
+  if (!options || !options.length) {
+    return null;
+  }
+  return JSON.stringify(options);
+};
+
+async function createTemplateBundle(connection, groupId, definitions) {
+  const templates = {};
+  for (const def of definitions) {
+    const [result] = await connection.execute(
+      `
+        INSERT INTO service_field_templates
+        (group_id, field_key, label_uz, label_ru, description_uz, description_ru, field_type,
+         options, is_required, default_value, unit_label, display_order)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      [
+        groupId,
+        def.field_key,
+        def.label_uz,
+        def.label_ru,
+        def.description_uz || null,
+        def.description_ru || null,
+        def.field_type || 'text',
+        serializeOptions(def.options),
+        def.is_required ? 1 : 0,
+        def.default_value || null,
+        def.unit_label || null,
+        def.display_order || 0,
+      ]
+    );
+
+    templates[def.field_key] = { ...def, id: result.insertId };
+  }
+
+  return templates;
+}
+
+async function insertFieldFromTemplate(connection, planId, template, values = {}) {
+  await connection.execute(
+    `
+      INSERT INTO plan_fields
+      (plan_id, definition_id, field_key, field_label_uz, field_label_ru, field_value_uz, field_value_ru, field_type, display_order)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+    [
+      planId,
+      template ? template.id : null,
+      template ? template.field_key : values.field_key,
+      template ? template.label_uz : values.field_label_uz,
+      template ? template.label_ru : values.field_label_ru,
+      values.field_value_uz || values.field_value || null,
+      values.field_value_ru || values.field_value || null,
+      template ? template.field_type : values.field_type || 'text',
+      values.display_order ?? template?.display_order ?? 0,
+    ]
+  );
+}
+
 async function setupServiceGroupsTables() {
   let connection;
   
@@ -50,6 +110,9 @@ async function setupServiceGroupsTables() {
         discount_price DECIMAL(12, 2) COMMENT 'Цена со скидкой',
         currency VARCHAR(10) DEFAULT 'UZS' COMMENT 'Валюта',
         billing_period VARCHAR(50) DEFAULT 'monthly' COMMENT 'Период оплаты: monthly, yearly, once',
+        status VARCHAR(32) NOT NULL DEFAULT 'active' COMMENT 'draft, active, inactive, archived',
+        domain_name VARCHAR(255) COMMENT 'Прикрепленный домен',
+        notes TEXT COMMENT 'Служебные заметки CRM',
         display_order INT DEFAULT 0 COMMENT 'Порядок отображения',
         is_active BOOLEAN DEFAULT true COMMENT 'Активен ли тариф',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -62,12 +125,39 @@ async function setupServiceGroupsTables() {
     `);
     console.log('✅ service_plans table created');
 
+    console.log('Creating service_field_templates table...');
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS service_field_templates (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        group_id INT NOT NULL COMMENT 'ID группы/типа сервиса',
+        field_key VARCHAR(100) NOT NULL COMMENT 'Уникальный ключ поля',
+        label_uz VARCHAR(255) NOT NULL COMMENT 'Название поля (UZ)',
+        label_ru VARCHAR(255) NOT NULL COMMENT 'Название поля (RU)',
+        description_uz TEXT COMMENT 'Описание (UZ)',
+        description_ru TEXT COMMENT 'Описание (RU)',
+        field_type VARCHAR(50) NOT NULL DEFAULT 'text' COMMENT 'text, number, select, date, price, boolean, textarea',
+        options JSON COMMENT 'Опции для select (JSON массив)',
+        is_required BOOLEAN NOT NULL DEFAULT false COMMENT 'Обязательность поля',
+        default_value VARCHAR(500) COMMENT 'Значение по умолчанию',
+        unit_label VARCHAR(50) COMMENT 'Ед. измерения',
+        display_order INT NOT NULL DEFAULT 0 COMMENT 'Порядок отображения',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_group_field_key (group_id, field_key),
+        INDEX idx_group_order (group_id, display_order),
+        FOREIGN KEY (group_id) REFERENCES service_groups(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      COMMENT='Шаблоны полей для разных типов сервисов'
+    `);
+    console.log('✅ service_field_templates table created');
+
     // Create plan_fields table (динамические поля для тарифов)
     console.log('Creating plan_fields table...');
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS plan_fields (
         id INT AUTO_INCREMENT PRIMARY KEY,
         plan_id INT NOT NULL COMMENT 'ID тарифа',
+        definition_id INT NULL COMMENT 'ID шаблона поля',
         field_key VARCHAR(100) NOT NULL COMMENT 'Ключ поля (cpu, ram, resolution и т.д.)',
         field_label_uz VARCHAR(255) NOT NULL COMMENT 'Название поля на узбекском',
         field_label_ru VARCHAR(255) NOT NULL COMMENT 'Название поля на русском',
@@ -78,8 +168,10 @@ async function setupServiceGroupsTables() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (plan_id) REFERENCES service_plans(id) ON DELETE CASCADE,
+        FOREIGN KEY (definition_id) REFERENCES service_field_templates(id) ON DELETE SET NULL,
         INDEX idx_plan_key (plan_id, field_key),
-        INDEX idx_plan_order (plan_id, display_order)
+        INDEX idx_plan_order (plan_id, display_order),
+        INDEX idx_plan_definition (definition_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
       COMMENT='Динамические поля характеристик для тарифов'
     `);

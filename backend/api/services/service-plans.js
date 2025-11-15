@@ -4,6 +4,49 @@ const { authenticate } = require('../../core/utils/auth');
 
 const router = express.Router();
 
+function safeJsonParse(value) {
+  if (!value) return null;
+  if (typeof value === 'object') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function formatFieldsResponse(rows) {
+  return rows.map((field) => {
+    const template = field.definition_id
+      ? {
+          id: field.definition_id,
+          label_ru: field.template_label_ru || field.field_label_ru,
+          label_uz: field.template_label_uz || field.field_label_uz,
+          field_type: field.template_field_type || field.field_type,
+          options: safeJsonParse(field.template_options),
+          is_required: Boolean(field.template_is_required),
+          description_ru: field.template_description_ru,
+          description_uz: field.template_description_uz,
+          unit_label: field.template_unit_label,
+          display_order: field.template_display_order,
+        }
+      : null;
+
+    return {
+      id: field.id,
+      plan_id: field.plan_id,
+      definition_id: field.definition_id,
+      field_key: field.field_key,
+      field_label_uz: field.field_label_uz,
+      field_label_ru: field.field_label_ru,
+      field_value_uz: field.field_value_uz,
+      field_value_ru: field.field_value_ru,
+      field_type: field.field_type,
+      display_order: field.display_order,
+      template,
+    };
+  });
+}
+
 // GET /api/service-plans/all - Get all service plans (for CRM)
 router.get('/all', authenticate, async (req, res) => {
   try {
@@ -105,12 +148,22 @@ router.get('/:id', authenticate, async (req, res) => {
 
     const plan = plans[0];
 
-    // Get plan fields
     const fieldsQuery = `
-      SELECT *
-      FROM plan_fields
-      WHERE plan_id = ?
-      ORDER BY display_order ASC
+      SELECT 
+        pf.*,
+        sft.label_ru as template_label_ru,
+        sft.label_uz as template_label_uz,
+        sft.field_type as template_field_type,
+        sft.options as template_options,
+        sft.is_required as template_is_required,
+        sft.description_ru as template_description_ru,
+        sft.description_uz as template_description_uz,
+        sft.display_order as template_display_order,
+        sft.unit_label as template_unit_label
+      FROM plan_fields pf
+      LEFT JOIN service_field_templates sft ON pf.definition_id = sft.id
+      WHERE pf.plan_id = ?
+      ORDER BY COALESCE(sft.display_order, pf.display_order), pf.id
     `;
 
     const fields = await db.query(fieldsQuery, [id]);
@@ -119,7 +172,7 @@ router.get('/:id', authenticate, async (req, res) => {
       success: true,
       data: {
         ...plan,
-        fields: fields
+        fields: formatFieldsResponse(fields)
       }
     });
 
